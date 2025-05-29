@@ -1,4 +1,4 @@
-# JUCE Plugin Starter -- WIP
+# JUCE Plugin Starter
 
 ## ℹ️ Overview
 
