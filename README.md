@@ -23,7 +23,7 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
   - [✅ Change Output Formats](#-change-output-formats)
   - [✅ Add Preprocessor Macros](#-add-preprocessor-macros)
 - [📦 Project File Structure](#-project-file-structure)
-- [🪄 Rename Your Plugin — What It Means](#-rename-your-plugin--what-it-means)
+- [🪄 Rename Your Plugin — What It Means](#-rename-your-plugin)
   - [✅ Steps to "Rename Your Plugin"](#-steps-to-rename-your-plugin)
 - [💡 Tips](#-tips)
   - [🔁 Building with AI Tools](#-building-with-ai-tools)
@@ -195,7 +195,7 @@ JUCE-Plugin-Starter/
 
 ---
 
-## 🪄 **Rename Your Plugin** — What It Means
+## 🪄 **Rename Your Plugin**
 
 When you're ready to make your own plugin using this JUCE starter template, you'll want to personalize the project so you're not stuck with generic names like `JUCE-Plugin-Starter` or `MyCoolPlugin`.
 
