@@ -227,7 +227,7 @@ This just makes the archive more recognizable.
 
 #### 3. **Update the `.env` File**
 
-Open your `.env` and change the project name and bundle ID to match your plugin:
+Open your `.env` and change the project name and any other paths that might have changed to match your plugin:
 
 ```env
 PROJECT_NAME=MyAwesomeSynth
