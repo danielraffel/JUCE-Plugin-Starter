@@ -31,7 +31,7 @@ To build and develop plugins with this template, you’ll need:
 
 ## 🚀 Quick Start
 
-### 1. Clone the Starter Template
+### 1. Clone JUCE and the JUCE Plugin Starter Template
 
 ```bash
 git clone --recurse-submodules https://github.com/juce-framework/JUCE.git
