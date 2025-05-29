@@ -76,8 +76,8 @@ Update your `.env` file to reflect:
 ```env
 PROJECT_NAME=MyCoolPlugin
 PROJECT_BUNDLE_ID=com.myname.mycoolplugin
-PROJECT_PATH=/Users/yourname/JUCE-Plugin-Starter
-JUCE_PATH=/Users/yourname/JUCE
+PROJECT_PATH=~/JUCE-Plugin-Starter
+JUCE_PATH=~/JUCE
 ```
 
 ---
