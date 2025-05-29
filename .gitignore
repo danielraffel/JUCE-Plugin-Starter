@@ -1,0 +1,27 @@
+# CMake
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+/Makefile
+/*.cmake
+/*.xcodeproj
+/*.sln
+/*.vcxproj*
+/compile_commands.json
+
+# JUCE-specific (optional)
+/Builds/
+/*.jucer
+
+# macOS
+.DS_Store
+
+# Plugin Binaries (optional)
+*.vst3/
+*.component/
+*.aaxplugin/
+*.app/
+
+# IDEs (optional)
+/.vscode/
+/.idea/
