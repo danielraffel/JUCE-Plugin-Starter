@@ -42,9 +42,15 @@ To build and develop plugins with this template, you’ll need:
 
 ### Dependencies
 
+> 💡 If you don’t have [Homebrew](https://brew.sh) installed, run this first:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+````
+
 | Tool            | Purpose                         | Install Command                                 |
 |-----------------|----------------------------------|--------------------------------------------------|
-| **JUCE**        | Audio plugin framework (AU/VST3) | _Included in step 1 under Quick Start_ |
+| **[JUCE](https://juce.com)**        | Audio plugin framework (AU/VST3) | _Included in step 1 under Quick Start_ |
 | **CMake**       | Build system configuration        | `brew install cmake`                            |
 | **Xcode Command Line Tools** | Xcode compiler & tools  | `xcode-select --install`                        |
 | **PluginVal**   | Plugin validation & testing       | `brew install --cask pluginval`                 |
