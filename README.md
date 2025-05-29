@@ -6,6 +6,31 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
 
 ---
 
+## 📑 Table of Contents
+
+- [ℹ️ Overview](#️-overview)
+- [🧰 Prerequisites](#-prerequisites)
+  - [System Requirements](#system-requirements)
+  - [Dependencies](#dependencies)
+- [🚀 Quick Start](#-quick-start)
+  - [1. Clone JUCE and the JUCE Plugin Starter Template](#1-clone-juce-and-the-juce-plugin-starter-template)
+  - [2. Generate the Xcode Project](#2-generate-the-xcode-project)
+- [🧱 Build Targets](#-build-targets)
+- [📁 Customize Your Plugin](#-customize-your-plugin)
+- [🛠️ How to Edit `CMakeLists.txt`](#️-how-to-edit-cmakeliststxt)
+  - [✅ Add Source Files](#-add-source-files)
+  - [✅ Add JUCE Modules](#-add-juce-modules)
+  - [✅ Change Output Formats](#-change-output-formats)
+  - [✅ Add Preprocessor Macros](#-add-preprocessor-macros)
+- [📦 Project File Structure](#-project-file-structure)
+- [🪄 Rename Your Plugin — What It Means](#-rename-your-plugin--what-it-means)
+  - [✅ Steps to "Rename Your Plugin"](#-steps-to-rename-your-plugin)
+- [💡 Tips](#-tips)
+  - [🔁 Building with AI Tools](#-building-with-ai-tools)
+- [📚 Resources](#-resources)
+
+---
+
 ## 🧰 Prerequisites
 
 To build and develop plugins with this template, you’ll need:
@@ -164,9 +189,66 @@ JUCE-Plugin-Starter/
 
 ---
 
+## 🪄 **Rename Your Plugin** — What It Means
+
+When you're ready to make your own plugin using this JUCE starter template, you'll want to personalize the project so you're not stuck with generic names like `JUCE-Plugin-Starter` or `MyCoolPlugin`.
+
+### ✅ Steps to "Rename Your Plugin":
+
+#### 1. **Rename the Project Folder**
+
+Change the name of the folder you cloned/unzipped:
+
+```bash
+mv JUCE-Plugin-Starter MyAwesomeSynth
+```
+
+Now your folder reflects your actual plugin name.
+
+---
+
+#### 2. **(Optional) Rename the ZIP File**
+
+If you're sharing or archiving the starter, give it a better name before sending it to others:
+
+```bash
+mv JUCE-Plugin-Starter.zip MyAwesomeSynth-Starter.zip
+```
+
+This just makes the archive more recognizable.
+
+---
+
+#### 3. **Update the `.env` File**
+
+Open your `.env` and change the project name and bundle ID to match your plugin:
+
+```env
+PROJECT_NAME=MyAwesomeSynth
+PROJECT_BUNDLE_ID=com.yourname.myawesomesynth
+PROJECT_PATH=/Users/yourname/Code/MyAwesomeSynth
+JUCE_PATH=/Users/yourname/Code/JUCE
+```
+
+This updates:
+
+* Your plugin’s internal name
+* The macOS bundle ID used for signing, packaging, and DAW recognition
+* The path where the script runs CMake
+
+---
+
+### 🧠 Why This Matters
+
+* These names will appear in Xcode, Logic Pro, Ableton, etc.
+* Your binary (`.vst3`, `.component`, `.app`) will use them.
+* Having a clear project folder structure helps avoid confusion.
+
+---
+
 ## 💡 Tips
 
-### 🔁 Regenerate with AI Tools
+### 🔁 Building with AI Tools
 
 Use in [AlexCodes.app](https://alexcodes.app) with the following project prompt:
 
@@ -175,10 +257,6 @@ Whenever the Xcode project file needs to be regenerated use run_shell to execute
 ```
 
 <img width="515" alt="regenerate-xcode-alexcodes" src="https://github.com/user-attachments/assets/158b6005-645f-410a-9fdb-51ef9479ac55" />
-
-### 🪄 Rename Your Plugin
-
-Rename your folder and `.zip` archive, then update `.env` with your real plugin name.
 
 ---
 
