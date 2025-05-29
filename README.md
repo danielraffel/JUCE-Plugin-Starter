@@ -41,6 +41,7 @@ To build and develop plugins with this template, you’ll need:
 - Additional IDE with AI ([Alex Sidebar](http://alexcodes.app), [Cursor](http://cursor.com), [Windsurf](http://windsurf.com), [Trae](http://trae.ai), or [VSCode](https://code.visualstudio.com)) recommended
 
 ### Dependencies
+You need to install each of these first.
 
 > 💡 If you don’t have [Homebrew](https://brew.sh) installed, run this first:
 
