@@ -19,7 +19,7 @@ To build and develop plugins with this template, you’ll need:
 
 | Tool            | Purpose                         | Install Command                                 |
 |-----------------|----------------------------------|--------------------------------------------------|
-| **JUCE**        | Audio plugin framework (AU/VST3) | [juce.com/get-juce](https://juce.com/get-juce) or clone from GitHub |
+| **JUCE**        | Audio plugin framework (AU/VST3) | _Included in step 1 under Quick Start_ |
 | **CMake**       | Build system configuration        | `brew install cmake`                            |
 | **Xcode Command Line Tools**       | Build system configuration        | `xcode-select --install`                            |
 | **PluginVal**   | Plugin validation & testing       | `brew install --cask pluginval`                 |
@@ -34,6 +34,7 @@ To build and develop plugins with this template, you’ll need:
 ### 1. Clone the Starter Template
 
 ```bash
+git clone --recurse-submodules https://github.com/juce-framework/JUCE.git
 git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git
 cd JUCE-Plugin-Starter
 cp .env.example .env
