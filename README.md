@@ -66,7 +66,7 @@ To build and develop plugins with this template, you’ll need:
 
 ```bash
 git clone --recurse-submodules https://github.com/juce-framework/JUCE.git
-git clone https://github.com/yourname/JUCE-Plugin-Starter.git
+git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git
 cd JUCE-Plugin-Starter
 cp .env.example .env
 ````
