@@ -109,6 +109,8 @@ Once the project is open in Xcode, you can build:
 * ✅ **VST3 Plugin** – for Reaper, Ableton Live, etc.
 
 > Switch targets using the Xcode scheme selector.
+> 
+<img width="352" alt="image" src="https://github.com/user-attachments/assets/4c3c3ac7-0613-46dc-a6b0-286743b858be" />
 
 > Make sure the `FORMATS AU VST3 Standalone` line is present in `CMakeLists.txt`.
 
