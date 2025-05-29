@@ -63,6 +63,7 @@ To build and develop plugins with this template, you’ll need:
 ## 🚀 Quick Start
 
 ### 1. Clone JUCE and the JUCE Plugin Starter Template
+> 💡 This setup will “just work” if you clone this repo into your home folder (i.e., run cd in Terminal before cloning).
 
 ```bash
 git clone --recurse-submodules https://github.com/juce-framework/JUCE.git
@@ -78,6 +79,13 @@ PROJECT_NAME=MyCoolPlugin
 PROJECT_BUNDLE_ID=com.myname.mycoolplugin
 PROJECT_PATH=~/JUCE-Plugin-Starter
 JUCE_PATH=~/JUCE
+```
+
+>💡 On macOS, .env files are hidden by default in Finder. Press `Cmd + Shift + .` to show or hide hidden files.
+You can also edit the file in Terminal using:
+
+```bash
+nano .env
 ```
 
 ---
