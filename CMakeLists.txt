@@ -24,6 +24,10 @@ project(${PROJECT_NAME} VERSION 0.1.0)
 
 # Fetch JUCE using FetchContent
 include(FetchContent)
+
+# Use shared JUCE cache to avoid re-downloading across projects
+set(FETCHCONTENT_BASE_DIR "$ENV{HOME}/.juce_cache")
+
 FetchContent_Declare(
     JUCE 
     GIT_REPOSITORY ${JUCE_REPO}
