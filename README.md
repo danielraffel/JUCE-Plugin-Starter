@@ -15,7 +15,8 @@ This is the fastest way to test-drive the JUCE Plugin Starter. It assumes you ha
 * ✅ Run a guided script to create your new plugin repo and push it to GitHub
 * ✅ Download JUCE and generate an Xcode project
   
-#### To get started paste this in your terminal
+> Heads up: This command runs several scripts and installs a number of components. It’s encouraged to read through the full README before running it.
+
 ```
 # Install required tools (Xcode CLT, Homebrew, CMake, PluginVal, etc.)
 bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/dependencies.sh)
@@ -46,7 +47,6 @@ chmod +x ./generate_and_open_xcode.sh
 
 - [ℹ️ Overview](#️-overview)
   - [How to Just Give This a Try (Without Reading the Full README)](#how-to-just-give-this-a-try-without-reading-the-full-readme)
-    - [To get started paste this in your terminal](#to-get-started-paste-this-in-your-terminal)
 - [🧰 Prerequisites](#-prerequisites)
   - [System Requirements](#system-requirements)
   - [Dependencies](#dependencies)
