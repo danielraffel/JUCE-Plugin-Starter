@@ -6,9 +6,46 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
 
 ---
 
+### ⚡️ How to Just Give This a Try (Without Reading the Full README)
+
+This is the fastest way to test-drive the JUCE Plugin Starter. It assumes you have [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12) installed and will:
+
+* ✅ Install all required dependencies (doesn't assume you have git)
+* ✅ Clone this repo and set up your environment
+* ✅ Run a guided script to create your new plugin repo and push it to GitHub
+* ✅ Download JUCE and generate an Xcode project
+  
+#### To get started paste this in your terminal
+```
+# Install required tools (Xcode CLT, Homebrew, CMake, PluginVal, etc.)
+bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/dependencies.sh)
+
+# Clone the starter project and set up environment
+git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git
+cd JUCE-Plugin-Starter
+cp .env.example .env
+
+# Run the first-time setup to configure your plugin project
+chmod +x ./init_plugin_project.sh
+./init_plugin_project.sh
+
+# Generate and open the Xcode project (downloads JUCE on first run)
+chmod +x ./generate_and_open_xcode.sh
+./generate_and_open_xcode.sh
+```
+
+* ✅ After setup, while developing your plugin you'll run this when you need to rebuild your project and reopen in Xcode:
+```
+./generate_and_open_xcode.sh .
+```
+
+---
+
 ## 📑 Table of Contents
 
 - [ℹ️ Overview](#️-overview)
+  - [⚡️ How to Just Give This a Try (Without Reading the Full README)](#⚡️-how-to-just-give-this-a-try-without-reading-the-full-readme)
+    - [To get started paste this in your terminal](#to-get-started-paste-this-in-your-terminal)
 - [🧰 Prerequisites](#-prerequisites)
   - [System Requirements](#system-requirements)
   - [Dependencies](#dependencies)
@@ -26,6 +63,7 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
   - [✅ Change Output Formats](#-change-output-formats)
   - [✅ Add Preprocessor Macros](#-add-preprocessor-macros)
 - [📦 Project File Structure](#-project-file-structure)
+  - [About the JUCE cache location](#about-the-juce-cache-location)
 - [💡 Tips](#-tips)
   - [🔁 Building with AI Tools](#-building-with-ai-tools)
 - [📚 Resources](#-resources)
@@ -113,7 +151,6 @@ Update your `.env` file to reflect:
 PROJECT_NAME=MyCoolPlugin  
 PROJECT_BUNDLE_ID=com.myname.mycoolplugin
 PROJECT_PATH=~/JUCE-Plugin-Starter
-JUCE_PATH=~/JUCE  # Defines where CMake will download JUCE automatically
 JUCE_REPO=https://github.com/juce-framework/JUCE.git
 JUCE_TAG=8.0.7  # Can use main for latest (not recommended for production)
 GITHUB_USERNAME=danielraffel
@@ -132,10 +169,10 @@ nano .env
 If you're planning to use this template to build your own plugin and eventually publish it to GitHub, this script is designed to help you do that quickly and cleanly.
 The script is smart and will:
 
-🔍 Auto-detect if you're working in a JUCE project directory that doesn't match your .env settings
-🏷️ Automatically suggest renaming your project folder to match your plugin name
-📄 Create basic plugin source files if they don't exist (ready-to-build template)
-🛡️ Confirm everything before making changes so you stay in control
+* 🔍 Auto-detect if you're working in a JUCE project directory that doesn't match your .env settings
+* 🏷️ Automatically suggest renaming your project folder to match your plugin name
+* 📄 Create basic plugin source files if they don't exist (ready-to-build template)
+* 🛡️ Confirm everything before making changes so you stay in control
 
 Just run the interactive setup script (it will help you configure everything):
 ```bash
@@ -145,25 +182,25 @@ chmod +x ./init_plugin_project.sh
 
 What the script does:
 
-🔍 Smart path detection - notices if you're in a different directory than your .env expects and offers to fix it
-🧠 Load and validate your .env settings
-✏️ Interactive editing of project name, GitHub username, and project path
-📁 Intelligent folder renaming - suggests renaming to match your plugin name (e.g., JUCE-Plugin-Starter → DelayR)
-📄 Template source file creation - generates PluginProcessor.cpp/.h and PluginEditor.cpp/.h if missing
-🔒 Repository visibility choice - asks if you want public or private
-✅ Clear confirmation - shows exactly what will be created before proceeding
-🧹 Clean slate - removes the template's Git history
-🐙 GitHub integration - creates your new repository using the GitHub CLI (gh)
-🚀 First commit - pushes your initial code and provides next steps
+* 🔍 Smart path detection - notices if you're in a different directory than your .env expects and offers to fix it
+* 🧠 Load and validate your .env settings
+* ✏️ Interactive editing of project name, GitHub username, and project path
+* 📁 Intelligent folder renaming - suggests renaming to match your plugin name (e.g., JUCE-Plugin-Starter → DelayR)
+* 📄 Template source file creation - generates PluginProcessor.cpp/.h and PluginEditor.cpp/.h if missing
+* 🔒 Repository visibility choice - asks if you want public or private
+* ✅ Clear confirmation - shows exactly what will be created before proceeding
+* 🧹 Clean slate - removes the template's Git history
+* 🐙 GitHub integration - creates your new repository using the GitHub CLI (gh)
+* 🚀 First commit - pushes your initial code and provides next steps
 
 Example flow:
-🔍 **PATH MISMATCH DETECTED** - Updates .env to match your current location
-🔁 Edit PROJECT_NAME? → "DelayR" 
-🔁 Rename folder to match project name? → JUCE-Plugin-Starter becomes DelayR
-📄 Checking for basic plugin source files... → Creates template files if missing
-🔒 Make this a private repository? → Choose public or private
-✅ Proceed with project creation? → Final confirmation
-🎉 Success! Ready to start coding your plugin
+* 🔍 **PATH MISMATCH DETECTED** - Updates .env to match your current location
+* 🔁 Edit PROJECT_NAME? → "DelayR" 
+* 🔁 Rename folder to match project name? → JUCE-Plugin-Starter becomes DelayR
+* 📄 Checking for basic plugin source files... → Creates template files if missing
+* 🔒 Make this a private repository? → Choose public or private
+* ✅ Proceed with project creation? → Final confirmation
+* 🎉 Success! Ready to start coding your plugin
 
 💡 Highly recommended for first-time users — the script handles all the setup automatically (including creating working plugin template files) while keeping you informed every step of the way. After running this script, you'll have a complete, buildable JUCE plugin ready to customize!
 
@@ -171,7 +208,7 @@ Example flow:
 
 ### 3. Generate the Xcode Project
 
-> 💡 First time setup: When you first run ./generate_and_open_xcode.sh, CMake will automatically download JUCE to your specified JUCE_PATH location. This may take a few minutes on the first run.
+> 💡 **First time setup**: When you first run `./generate_and_open_xcode.sh`, CMake will automatically download JUCE to `build/_deps/juce-src/` inside your project directory. This may take a few minutes on the first run. JUCE will be reused for subsequent builds and cleaned up when you delete the `build/` directory.
 
 Before running the script for the first time:
 
@@ -278,12 +315,26 @@ JUCE-Plugin-Starter/
 ├── .env.example               ← Template for your environment variables
 ├── CMakeLists.txt             ← Main build config for your JUCE project
 ├── init_plugin_project.sh     ← Script that will reinitialize this repo to make it yours, configure, rename and push it to GH
-├── README.md                  ← You’re reading it
+├── README.md                  ← You're reading it
 ├── generate_and_open_xcode.sh ← Script that loads `.env`, runs CMake, and opens Xcode
 ├── Source/                    ← Your plugin source code
 │   ├── PluginProcessor.cpp/.h
 │   └── PluginEditor.cpp/.h
+└── build/                     ← Generated by CMake (can be deleted anytime)
+    └── YourPlugin.xcodeproj   ← Generated Xcode project
+
+~/.juce_cache/                 ← Shared JUCE location (outside project)
+└── juce-src/                  ← JUCE framework (shared across all projects)
 ```
+
+### About the JUCE cache location:
+
+* ✅ Shared across projects: Multiple JUCE projects use the same download
+* ✅ Survives build cleaning: rm -rf build won't delete JUCE
+* ✅ Version controlled: Different projects can use different JUCE versions via JUCE_TAG
+
+
+>💡 You can safely `rm -rf` build without re-downloading JUCE every time.
 
 ---
 
@@ -300,7 +351,6 @@ Whenever the Xcode project file needs to be regenerated use run_shell to execute
 <img width="515" alt="regenerate-xcode-alexcodes" src="https://github.com/user-attachments/assets/158b6005-645f-410a-9fdb-51ef9479ac55" />
 
 ---
-
 ## 📚 Resources
 
 * [JUCE Documentation](https://docs.juce.com/)
