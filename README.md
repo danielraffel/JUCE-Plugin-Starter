@@ -12,6 +12,8 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
 - [🧰 Prerequisites](#-prerequisites)
   - [System Requirements](#system-requirements)
   - [Dependencies](#dependencies)
+    - [Automated Dependency Setup](#automated-dependency-setup)
+    - [Manual Dependency Setup](#manual-dependency-setup)
 - [🚀 Quick Start](#-quick-start)
   - [1. Clone JUCE and the JUCE Plugin Starter Template](#1-clone-juce-and-the-juce-plugin-starter-template)
   - [2. Generate the Xcode Project](#2-generate-the-xcode-project)
@@ -36,28 +38,63 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
 To build and develop plugins with this template, you’ll need:
 
 ### System Requirements
-- macOS 12.0 or later
-- [Xcode](https://developer.apple.com/download/all/) (latest version)
-- Additional IDE with AI ([Alex Sidebar](http://alexcodes.app), [Cursor](http://cursor.com), [Windsurf](http://windsurf.com), [Trae](http://trae.ai), or [VSCode](https://code.visualstudio.com)) recommended
+- macOS 15.0 or later
+- [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12) (latest version)
+- Recommended: Additional IDE with Support for 3rd Party AI Models ([Alex Sidebar](http://alexcodes.app), [Cursor](http://cursor.com), [Windsurf](http://windsurf.com), [Trae](http://trae.ai), or [VSCode](https://code.visualstudio.com))
 
-### Dependencies
-You need to install each of these first.
+---
 
-> 💡 If you don’t have [Homebrew](https://brew.sh) installed, run this first:
+### Additional Dependencies
+
+Before building the project, you need to install several development tools.
+
+You can choose **one of the following setup methods**:
+
+- [Automated Dependency Setup](#automated-dependency-setup) — Recommended for most users.
+- [Manual Dependency Setup](#manual-dependency-setup) — For those who prefer full control.
+
+---
+
+#### 🔧 Automated Dependency Setup
+
+Use the included [`dependencies.sh`](./dependencies.sh) script. It **checks for each required tool** and **installs it automatically if missing**. This is typically needed only for a **first-time setup**.
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-````
+chmod +x dependencies.sh
+./dependencies.sh
+```
 
-| Tool            | Purpose                         | Install Command                                 |
-|-----------------|----------------------------------|--------------------------------------------------|
-| **[JUCE](https://juce.com)**        | Audio plugin framework (AU/VST3) | _Included in step 1 under Quick Start_ |
-| **CMake**       | Build system configuration        | `brew install cmake`                            |
-| **Xcode Command Line Tools** | Xcode compiler & tools  | `xcode-select --install`                        |
-| **PluginVal**   | Plugin validation & testing       | `brew install --cask pluginval`                 |
-| **Faust** *(opt)* | DSP prototyping compiler       | `brew install faust`                            |
-| **GoogleTest** or **Catch2** *(opt)* | C++ unit testing | `brew install googletest` or `brew install catch2` |
-| **Python 3 + behave** *(opt)* | Natural language test automation | `pip3 install behave` |
+The script handles:
+
+* ✅ **Xcode Command Line Tools**
+* ✅ **Homebrew**
+* ✅ **CMake**
+* ✅ **PluginVal**
+
+It also includes **optional installs**, commented out by default:
+
+* **Faust** – DSP prototyping compiler
+* **GoogleTest** – C++ unit testing
+* **Python 3**, **pip3**, and **behave** – for behavior-driven development (BDD)
+
+> ✏️ To enable optional tools, simply **uncomment** the relevant lines in the script.
+
+---
+
+#### 🛠️ Manual Dependency Setup
+
+If you prefer, you can install all required tools manually:
+
+| Tool                                      | Purpose                          | Manual Install Command                                                                            |
+| ----------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **Xcode Command Line Tools**              | Xcode compiler & tools           | `xcode-select --install`                                                                          |
+| **CMake**                                 | Build system configuration       | `brew install cmake`                                                                              |
+| **Homebrew**                              | macOS package manager            | `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"` |
+| **PluginVal**                             | Plugin validation & testing      | `brew install --cask pluginval`                                                                   |
+| **Faust** *(optional)*                    | DSP prototyping compiler         | `brew install faust`                                                                              |
+| **GoogleTest** or **Catch2** *(optional)* | C++ unit testing                 | `brew install googletest` or `brew install catch2`                                                |
+| **Python 3 + behave** *(optional)*        | Natural language test automation | `brew install python && pip3 install behave`                                                      |
+| **[JUCE](https://juce.com)**              | Audio plugin framework (AU/VST3) | *Included in step 1 under Quick Start*                                                            |
 
 ---
 
