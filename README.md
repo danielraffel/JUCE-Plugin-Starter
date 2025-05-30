@@ -362,6 +362,8 @@ JUCE-Plugin-Starter/
 ├── init_plugin_project.sh     ← Script that will reinitialize this repo to make it yours, configure, rename and push it to GH
 ├── README.md                  ← You're reading it
 ├── generate_and_open_xcode.sh ← Script that loads `.env`, runs CMake, and opens Xcode
+├── scripts/                   ← Automation / helper scripts
+│   └── post_build.sh          ← Auto-increments bundle version so Logic reloads builds
 ├── Source/                    ← Your plugin source code
 │   ├── PluginProcessor.cpp/.h
 │   └── PluginEditor.cpp/.h
