@@ -268,6 +268,22 @@ fi
 # --- Begin repo setup with confirmation ---
 cd "$PROJECT_PATH"
 
+# --- Make scripts executable ---
+echo ""
+echo "🔧 Setting up build scripts..."
+
+if [[ -f "scripts/post_build.sh" ]]; then
+    chmod +x scripts/post_build.sh
+    echo "✅ Made scripts/post_build.sh executable"
+else
+    echo "⚠️  scripts/post_build.sh not found - you may need to add it manually"
+fi
+
+if [[ -f "generate_and_open_xcode.sh" ]]; then
+    chmod +x generate_and_open_xcode.sh
+    echo "✅ Made generate_and_open_xcode.sh executable"
+fi
+
 # --- Ensure basic source files exist ---
 echo ""
 echo "📄 Checking for basic plugin source files..."
