@@ -125,3 +125,32 @@ echo "🔍 Final Info.plist version strings:"
 /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$info_plist"
 
 echo "🔧 Post-build script finished."
+
+# --- Copy to System Plug-Ins Directory ---
+# The component_path variable already holds the path to the .component bundle in the build directory.
+# Example: /Users/danielraffel/Code/PlunderTube/build/PlunderTube_artefacts/Debug/AU/PlunderTube.component
+
+# Extract the component name (e.g., PlunderTube.component) from the component_path
+COMPONENT_NAME=$(basename "${component_path}")
+
+# Define the destination directory for AU plugins
+DEST_DIR="$HOME/Library/Audio/Plug-Ins/Components/"
+
+echo "ℹ️  Attempting to copy ${COMPONENT_NAME} from ${component_path} to ${DEST_DIR}"
+
+# Ensure the destination directory exists
+mkdir -p "${DEST_DIR}"
+
+# Copy the entire .component bundle using rsync
+# rsync is generally good for this as it handles directory contents well and can be efficient.
+# The trailing slash on the source path is important for rsync to copy the *contents* of the source directory.
+if rsync -av --delete "${component_path}/" "${DEST_DIR}${COMPONENT_NAME}/"; then
+    echo "✅ Successfully copied ${COMPONENT_NAME} to ${DEST_DIR}"
+    echo "🔔 For Logic Pro, you may need to open Plugin Manager and 'Reset & Rescan' ${PROJECT_NAME_FROM_CMAKE:-PlunderTube}."
+else
+    echo "❌ Error: Failed to copy ${COMPONENT_NAME} to ${DEST_DIR}. rsync exit code: $?"
+    # Decide if this should be a fatal error for the build
+    # exit 1 
+fi
+
+echo "🎉 All post-build operations complete."
