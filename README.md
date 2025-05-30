@@ -45,7 +45,7 @@ chmod +x ./generate_and_open_xcode.sh
 
 ## 📑 Table of Contents
 
-- [ℹ️ Overview](#️-overview)
+- [ℹ️ Overview](#-overview)
   - [How to Just Give This a Try (Without Reading the Full README)](#how-to-just-give-this-a-try-without-reading-the-full-readme)
 - [🧰 Prerequisites](#-prerequisites)
   - [System Requirements](#system-requirements)
