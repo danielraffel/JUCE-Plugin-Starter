@@ -155,6 +155,7 @@ PROJECT_PATH=~/JUCE-Plugin-Starter
 JUCE_REPO=https://github.com/juce-framework/JUCE.git
 JUCE_TAG=8.0.7  # Can use main for latest (not recommended for production)
 GITHUB_USERNAME=danielraffel
+BASE_PROJECT_VERSION="1.0."
 ```
 
 >💡 On macOS, .env files are hidden by default in Finder. Press `Cmd + Shift + .` to show or hide hidden files.
