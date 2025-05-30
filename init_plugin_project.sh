@@ -268,6 +268,289 @@ fi
 # --- Begin repo setup with confirmation ---
 cd "$PROJECT_PATH"
 
+# --- Ensure basic source files exist ---
+echo ""
+echo "📄 Checking for basic plugin source files..."
+
+# Create Source directory if it doesn't exist
+if [[ ! -d "Source" ]]; then
+  mkdir -p Source
+  echo "✅ Created Source/ directory"
+fi
+
+# Check if basic source files exist
+missing_files=()
+required_files=("Source/PluginProcessor.h" "Source/PluginProcessor.cpp" "Source/PluginEditor.h" "Source/PluginEditor.cpp")
+
+for file in "${required_files[@]}"; do
+  if [[ ! -f "$file" ]]; then
+    missing_files+=("$file")
+  fi
+done
+
+if [[ ${#missing_files[@]} -gt 0 ]]; then
+  echo "⚠️  Missing basic source files. Creating template files..."
+  
+  # Create PluginProcessor.h
+  if [[ ! -f "Source/PluginProcessor.h" ]]; then
+    cat > "Source/PluginProcessor.h" << 'EOF'
+#pragma once
+
+#include <juce_audio_processors/juce_audio_processors.h>
+
+class AudioPluginAudioProcessor : public juce::AudioProcessor
+{
+public:
+    AudioPluginAudioProcessor();
+    ~AudioPluginAudioProcessor() override;
+
+    void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+    void releaseResources() override;
+
+    bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
+
+    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+
+    juce::AudioProcessorEditor* createEditor() override;
+    bool hasEditor() const override;
+
+    const juce::String getName() const override;
+
+    bool acceptsMidi() const override;
+    bool producesMidi() const override;
+    bool isMidiEffect() const override;
+    double getTailLengthSeconds() const override;
+
+    int getNumPrograms() override;
+    int getCurrentProgram() override;
+    void setCurrentProgram (int index) override;
+    const juce::String getProgramName (int index) override;
+    void changeProgramName (int index, const juce::String& newName) override;
+
+    void getStateInformation (juce::MemoryBlock& destData) override;
+    void setStateInformation (const void* data, int sizeInBytes) override;
+
+private:
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
+};
+EOF
+    echo "✅ Created Source/PluginProcessor.h"
+  fi
+
+  # Create PluginProcessor.cpp
+  if [[ ! -f "Source/PluginProcessor.cpp" ]]; then
+    cat > "Source/PluginProcessor.cpp" << 'EOF'
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
+
+AudioPluginAudioProcessor::AudioPluginAudioProcessor()
+    : AudioProcessor (BusesProperties()
+                      .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
+                      .withOutput ("Output", juce::AudioChannelSet::stereo(), true))
+{
+}
+
+AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
+{
+}
+
+const juce::String AudioPluginAudioProcessor::getName() const
+{
+    return JucePlugin_Name;
+}
+
+bool AudioPluginAudioProcessor::acceptsMidi() const
+{
+   #if JucePlugin_WantsMidiInput
+    return true;
+   #else
+    return false;
+   #endif
+}
+
+bool AudioPluginAudioProcessor::producesMidi() const
+{
+   #if JucePlugin_ProducesMidiOutput
+    return true;
+   #else
+    return false;
+   #endif
+}
+
+bool AudioPluginAudioProcessor::isMidiEffect() const
+{
+   #if JucePlugin_IsMidiEffect
+    return true;
+   #else
+    return false;
+   #endif
+}
+
+double AudioPluginAudioProcessor::getTailLengthSeconds() const
+{
+    return 0.0;
+}
+
+int AudioPluginAudioProcessor::getNumPrograms()
+{
+    return 1;
+}
+
+int AudioPluginAudioProcessor::getCurrentProgram()
+{
+    return 0;
+}
+
+void AudioPluginAudioProcessor::setCurrentProgram (int index)
+{
+    juce::ignoreUnused (index);
+}
+
+const juce::String AudioPluginAudioProcessor::getProgramName (int index)
+{
+    juce::ignoreUnused (index);
+    return {};
+}
+
+void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String& newName)
+{
+    juce::ignoreUnused (index, newName);
+}
+
+void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+{
+    juce::ignoreUnused (sampleRate, samplesPerBlock);
+}
+
+void AudioPluginAudioProcessor::releaseResources()
+{
+}
+
+bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+{
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
+     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+        return false;
+
+    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+        return false;
+
+    return true;
+}
+
+void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
+                                              juce::MidiBuffer& midiMessages)
+{
+    juce::ignoreUnused (midiMessages);
+
+    juce::ScopedNoDenormals noDenormals;
+    auto totalNumInputChannels  = getTotalNumInputChannels();
+    auto totalNumOutputChannels = getTotalNumOutputChannels();
+
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+        buffer.clear (i, 0, buffer.getNumSamples());
+
+    // This is where you'd add your audio processing code
+    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    {
+        auto* channelData = buffer.getWritePointer (channel);
+        juce::ignoreUnused (channelData);
+    }
+}
+
+bool AudioPluginAudioProcessor::hasEditor() const
+{
+    return true;
+}
+
+juce::AudioProcessorEditor* AudioPluginAudioProcessor::createEditor()
+{
+    return new AudioPluginAudioProcessorEditor (*this);
+}
+
+void AudioPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+{
+    juce::ignoreUnused (destData);
+}
+
+void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+{
+    juce::ignoreUnused (data, sizeInBytes);
+}
+
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+{
+    return new AudioPluginAudioProcessor();
+}
+EOF
+    echo "✅ Created Source/PluginProcessor.cpp"
+  fi
+
+  # Create PluginEditor.h
+  if [[ ! -f "Source/PluginEditor.h" ]]; then
+    cat > "Source/PluginEditor.h" << 'EOF'
+#pragma once
+
+#include "PluginProcessor.h"
+#include <juce_audio_processors/juce_audio_processors.h>
+
+class AudioPluginAudioProcessorEditor : public juce::AudioProcessorEditor
+{
+public:
+    explicit AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor&);
+    ~AudioPluginAudioProcessorEditor() override;
+
+    void paint (juce::Graphics&) override;
+    void resized() override;
+
+private:
+    AudioPluginAudioProcessor& processorRef;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
+};
+EOF
+    echo "✅ Created Source/PluginEditor.h"
+  fi
+
+  # Create PluginEditor.cpp
+  if [[ ! -f "Source/PluginEditor.cpp" ]]; then
+    cat > "Source/PluginEditor.cpp" << 'EOF'
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
+
+AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
+    : AudioProcessorEditor (&p), processorRef (p)
+{
+    juce::ignoreUnused (processorRef);
+    setSize (400, 300);
+}
+
+AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
+{
+}
+
+void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
+{
+    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+
+    g.setColour (juce::Colours::white);
+    g.setFont (15.0f);
+    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+}
+
+void AudioPluginAudioProcessorEditor::resized()
+{
+    // This is where you'd lay out your UI components
+}
+EOF
+    echo "✅ Created Source/PluginEditor.cpp"
+  fi
+  
+  echo "✅ All basic source files are now ready!"
+else
+  echo "✅ All required source files already exist"
+fi
+
 echo ""
 echo "🚀 **READY TO CREATE YOUR PLUGIN PROJECT**"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
