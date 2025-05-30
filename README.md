@@ -17,6 +17,7 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
 - [🚀 Quick Start](#-quick-start)
   - [1. Clone JUCE and the JUCE Plugin Starter Template](#1-clone-juce-and-the-juce-plugin-starter-template)
   - [2. Generate the Xcode Project](#2-generate-the-xcode-project)
+  - [3. Optional: Initialize Your Plugin Project with the Setup Script](#3-optional-initialize-your-plugin-project-with-the-setup-script)
 - [🧱 Build Targets](#-build-targets)
 - [📁 Customize Your Plugin](#-customize-your-plugin)
 - [🛠️ How to Edit `CMakeLists.txt`](#️-how-to-edit-cmakeliststxt)
@@ -144,6 +145,38 @@ Then generate your project:
 ```
 
 ✅ No need to run `cmake` manually — it's handled for you.
+
+That’s a great addition — and your instinct is right on target. To improve clarity and accessibility for users who might be **less familiar with GitHub**, here’s a more polished and explanatory rewrite of that section.
+
+---
+
+### 3. Optional: Initialize Your Plugin Project with Git Using a Setup Script
+
+If you're planning to use this template to build your own plugin and eventually publish it to GitHub, this script is designed to help you do that quickly and cleanly.
+
+It assumes you've cloned this repository and now want to:
+- Rename the folder and project to match your plugin
+- Remove the original Git history so it’s not tied to the starter repo
+- Create a fresh GitHub repository for your plugin (using the GitHub CLI)
+- Push your new project to that repository
+
+Once your `.env` file is set up, just run the interactive setup script:
+
+```bash
+chmod +x ./init_plugin_project.sh
+./init_plugin_project.sh
+````
+
+This script will:
+
+* 🧠 Load and validate your `.env` settings
+* 🛠️ Offer to interactively edit any values (like project name, path, or your GitHub username)
+* 🧼 Remove the template’s Git history
+* 📁 Optionally rename the project folder to match your new plugin name
+* 🐙 Create a new **private** GitHub repo using the [GitHub CLI (`gh`)](https://cli.github.com/) you can change this to public later
+* 🚀 Push your first commit to that new repo
+
+> 💡 **Recommended** for first-time users — especially if you're not yet comfortable with Git and GitHub setup steps. This script handles the heavy lifting.
 
 ---
 
