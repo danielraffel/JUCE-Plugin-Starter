@@ -57,7 +57,7 @@ chmod +x ./generate_and_open_xcode.sh
   - [2. Initialize Your Plugin Project with Git Using a Setup Script](#2-initialize-your-plugin-project-with-git-using-a-setup-script)
   - [3. Generate the Xcode Project](#3-generate-the-xcode-project)
 - [🧱 Build Targets](#-build-targets)
-- [📍 Where Files Are Generated (Plugins + App)](#where-files-are-generated-plugins-app)
+- [📍 Where Files Are Generated (Plugins + App)](#where-files-are-generated-plugins--app)
   - [Where Plugin Files Are Installed](#where-plugin-files-are-installed)
 - [🔄 Auto-Versioning Plugin Builds in Logic Pro](#auto-versioning-plugin-builds-in-logic-pro)
 - [📁 Customize Your Plugin](#-customize-your-plugin)
