@@ -1,9 +1,48 @@
 cmake_minimum_required(VERSION 3.15)
 
+# Get environment variables
+set(PROJECT_NAME $ENV{PROJECT_NAME})
+set(PROJECT_BUNDLE_ID $ENV{PROJECT_BUNDLE_ID})
+set(JUCE_REPO $ENV{JUCE_REPO})
+set(JUCE_TAG $ENV{JUCE_TAG})
+
+# Fallback defaults if env vars not set
+if(NOT PROJECT_NAME)
+    set(PROJECT_NAME "MyCoolPlugin")
+endif()
+if(NOT PROJECT_BUNDLE_ID)
+    set(PROJECT_BUNDLE_ID "com.myname.mycoolplugin")
+endif()
+if(NOT JUCE_REPO)
+    set(JUCE_REPO "https://github.com/juce-framework/JUCE.git")
+endif()
+if(NOT JUCE_TAG)
+    set(JUCE_TAG "8.0.7")
+endif()
+
 project(${PROJECT_NAME} VERSION 0.1.0)
 
-add_subdirectory(${JUCE_PATH} JUCE)
+# Set JUCE download location
+set(JUCE_PATH $ENV{JUCE_PATH})
+if(NOT JUCE_PATH)
+    set(JUCE_PATH "~/JUCE")
+endif()
 
+# Expand tilde to home directory
+get_filename_component(JUCE_PATH ${JUCE_PATH} ABSOLUTE)
+
+# Fetch JUCE using FetchContent
+include(FetchContent)
+set(FETCHCONTENT_SOURCE_DIR_JUCE ${JUCE_PATH})
+FetchContent_Declare(
+    JUCE 
+    GIT_REPOSITORY ${JUCE_REPO}
+    GIT_TAG ${JUCE_TAG}
+    GIT_SHALLOW ON
+)
+FetchContent_MakeAvailable(JUCE)
+
+# Create the plugin
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME "Your Company Name"
     BUNDLE_ID ${PROJECT_BUNDLE_ID}
