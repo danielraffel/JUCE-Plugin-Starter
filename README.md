@@ -187,6 +187,7 @@ What the script does:
 * 🧠 Load and validate your .env settings
 * ✏️ Interactive editing of project name, GitHub username, and project path
 * 📁 Intelligent folder renaming - suggests renaming to match your plugin name (e.g., JUCE-Plugin-Starter → DelayR)
+* 🔧 Script setup - makes build scripts executable (post_build.sh, generate_and_open_xcode.sh)
 * 📄 Template source file creation - generates PluginProcessor.cpp/.h and PluginEditor.cpp/.h if missing
 * 🔒 Repository visibility choice - asks if you want public or private
 * ✅ Clear confirmation - shows exactly what will be created before proceeding
@@ -198,6 +199,7 @@ Example flow:
 * 🔍 **PATH MISMATCH DETECTED** - Updates .env to match your current location
 * 🔁 Edit PROJECT_NAME? → "DelayR" 
 * 🔁 Rename folder to match project name? → JUCE-Plugin-Starter becomes DelayR
+* 🔧 Setting up build scripts... → Makes scripts executable for immediate use
 * 📄 Checking for basic plugin source files... → Creates template files if missing
 * 🔒 Make this a private repository? → Choose public or private
 * ✅ Proceed with project creation? → Final confirmation
