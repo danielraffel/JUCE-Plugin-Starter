@@ -10,7 +10,7 @@ echo "This script will:"
 echo "• Use https://github.com/danielraffel/JUCE-Plugin-Starter.git as a template"
 echo "• Remove its git history"
 echo "• Initialize your new JUCE plugin project in a fresh Git repo"
-echo "• Create a new *private* GitHub repository via the GitHub CLI (gh)"
+echo "• Create a new GitHub repository (public or private) via the GitHub CLI (gh)"
 echo "• Push your first commit to that repo"
 echo ""
 read -p "❓ Do you want to continue? (Y/N): " confirm
@@ -250,7 +250,7 @@ if [[ ! -d "$PROJECT_PATH" ]]; then
     mkdir -p "$parent_dir"
     
     # Clone to a temporary name first, then rename
-    temp_clone_path="$parent_dir/JUCE-Plugin-Starter-temp-$"
+    temp_clone_path="$parent_dir/JUCE-Plugin-Starter-temp-$$"
     git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git "$temp_clone_path"
     if [[ $? -eq 0 ]]; then
       mv "$temp_clone_path" "$PROJECT_PATH"
@@ -283,23 +283,31 @@ echo "• Push your code to GitHub"
 echo ""
 
 # Ask for repository visibility
-read -p "🔒 Make this a private repository? (Y/N, default: Y): " private_repo
-if [[ "$private_repo" =~ ^[Nn]$ ]]; then
+echo "💾 What kind of GitHub repository do you want to create?"
+echo "1. 🔒 Private (recommended for personal/work projects)"
+echo "2. 🔓 Public (visible to everyone)"
+echo ""
+read -p "Enter choice (1/2, default: 1): " repo_choice
+
+if [[ "$repo_choice" == "2" ]]; then
   REPO_VISIBILITY="public"
   VISIBILITY_FLAG="--public"
-  echo "📖 Creating PUBLIC repository"
+  echo "You chose: 🔓 Public repository"
 else
   REPO_VISIBILITY="private"
   VISIBILITY_FLAG="--private"
-  echo "🔒 Creating PRIVATE repository"
+  echo "You chose: 🔒 Private repository"
 fi
 
 echo ""
-read -p "✅ Proceed with project creation? (Y/N): " final_confirm
-if [[ ! "$final_confirm" =~ ^[Yy]$ ]]; then
+read -p "✅ Confirm: Create $REPO_VISIBILITY repository? (Y/N): " visibility_confirm
+if [[ ! "$visibility_confirm" =~ ^[Yy]$ ]]; then
   echo "❌ Cancelled by user."
   exit 0
 fi
+
+echo ""
+echo "🚀 Starting project creation..."
 
 echo ""
 echo "🧹 Removing old git history..."
