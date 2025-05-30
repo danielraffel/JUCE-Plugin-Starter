@@ -358,3 +358,4 @@ Whenever the Xcode project file needs to be regenerated use run_shell to execute
 * [JUCE Tutorials](https://juce.com/learn/tutorials)
 * [JUCE Forum](https://forum.juce.com/)
 * [CMake Tutorial](https://cmake.org/learn/)
+* [pamplejuce: a far more robust JUCE audio plugin template](https://github.com/sudara/pamplejuce)
