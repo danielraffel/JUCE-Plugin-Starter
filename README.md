@@ -61,8 +61,7 @@ You can choose **one of the following setup methods**:
 Use the included [`dependencies.sh`](./dependencies.sh) script. It **checks for each required tool** and **installs it automatically if missing**. This is typically needed only for a **first-time setup**.
 
 ```bash
-chmod +x dependencies.sh
-./dependencies.sh
+bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/dependencies.sh)
 ```
 
 The script handles:
