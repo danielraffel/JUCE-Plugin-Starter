@@ -244,6 +244,48 @@ Once the project is open in Xcode, you can build:
 > Make sure the `FORMATS AU VST3 Standalone` line is present in `CMakeLists.txt`.
 
 ---
+## Where Files Are Generated (Plugins + App)
+
+### Where Plugin Files Are Installed
+
+When you build your plugin from Xcode, the following file types are generated and installed in the standard macOS plugin locations:
+- Audio Unit (AU) Component:
+```
+~/Library/Audio/Plug-Ins/Components/YourPlugin.component
+```
+- VST3 Plugin:
+```
+~/Library/Audio/Plug-Ins/VST3/YourPlugin.vst3
+```
+- Standalone App:
+```
+Found inside your build folder in your `PROJECT_NAME_artefacts` debug or release folder.
+```
+
+These paths are standard for macOS plugin development and are used by DAWs like Logic Pro, Ableton Live, Reaper, etc.
+
+---
+
+### ⚙️ Auto-Versioning Plugin Builds in Logic Pro
+
+This template includes a post-build script that automatically versions your plugin bundle, ensuring Logic Pro correctly reloads the updated component after each build.
+
+The script is called post_build.sh and is triggered from your CMakeLists.txt with:
+
+add_custom_command(TARGET ${PROJECT_NAME}
+    POST_BUILD
+    COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}.component"
+    COMMENT "Running post-build versioning and deployment script"
+)
+
+What It Does:
+	•	Ensures Logic Pro re-recognizes your Audio Unit after each rebuild
+	•	Increments version strings inside the .component/Contents/Info.plist
+	•	Keeps development iterative and frustration-free by preventing stale cache issues
+
+You can modify or extend this script if needed — it’s fully customizable.
+
+---
 
 ## 📁 Customize Your Plugin
 
