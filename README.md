@@ -55,7 +55,7 @@ You can choose **one of the following setup methods**:
 
 ---
 
-#### 🔧 Automated Dependency Setup
+#### Automated Dependency Setup
 
 Use the included [`dependencies.sh`](./dependencies.sh) script. It **checks for each required tool** and **installs it automatically if missing**. This is typically needed only for a **first-time setup**.
 
@@ -81,7 +81,7 @@ It also includes **optional installs**, commented out by default:
 
 ---
 
-#### 🛠️ Manual Dependency Setup
+#### Manual Dependency Setup
 
 If you prefer, you can install all required tools manually:
 
