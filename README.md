@@ -16,7 +16,7 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
     - [Manual Dependency Setup](#manual-dependency-setup)
 - [🚀 Quick Start](#-quick-start)
   - [1. Clone the JUCE Plugin Starter Template](#1-clone-the-juce-plugin-starter-template)
-  - [2. Optional: Initialize Your Plugin Project with the Setup Script](#2-optional-initialize-your-plugin-project-with-git-using-a-setup-script)
+  - [2. Initialize Your Plugin Project with the Setup Script](#2-initialize-your-plugin-project-with-git-using-a-setup-script)
   - [3. Generate the Xcode Project](#3-generate-the-xcode-project)
 - [🧱 Build Targets](#-build-targets)
 - [📁 Customize Your Plugin](#-customize-your-plugin)
@@ -128,13 +128,14 @@ nano .env
 
 ---
 
-### 2. Optional: Initialize Your Plugin Project with Git Using a Setup Script
+### 2. Initialize Your Plugin Project with Git Using a Setup Script
 If you're planning to use this template to build your own plugin and eventually publish it to GitHub, this script is designed to help you do that quickly and cleanly.
+The script is smart and will:
 
-The script is **smart** and will:
-- 🔍 **Auto-detect** if you're working in a JUCE project directory that doesn't match your `.env` settings
-- 🏷️ **Automatically suggest** renaming your project folder to match your plugin name
-- 🛡️ **Confirm everything** before making changes so you stay in control
+🔍 Auto-detect if you're working in a JUCE project directory that doesn't match your .env settings
+🏷️ Automatically suggest renaming your project folder to match your plugin name
+📄 Create basic plugin source files if they don't exist (ready-to-build template)
+🛡️ Confirm everything before making changes so you stay in control
 
 Just run the interactive setup script (it will help you configure everything):
 ```bash
@@ -142,28 +143,29 @@ chmod +x ./init_plugin_project.sh
 ./init_plugin_project.sh
 ```
 
-**What the script does:**
-* 🔍 **Smart path detection** - notices if you're in a different directory than your `.env` expects and offers to fix it
-* 🧠 **Load and validate** your `.env` settings
-* ✏️ **Interactive editing** of project name, GitHub username, and project path
-* 📁 **Intelligent folder renaming** - suggests renaming to match your plugin name (e.g., `JUCE-Plugin-Starter` → `DelayR`)
-* 🔒 **Repository visibility choice** - asks if you want public or private
-* ✅ **Clear confirmation** - shows exactly what will be created before proceeding
-* 🧹 **Clean slate** - removes the template's Git history
-* 🐙 **GitHub integration** - creates your new repository using the [GitHub CLI (`gh`)](https://cli.github.com/)
-* 🚀 **First commit** - pushes your initial code and provides next steps
+What the script does:
 
-**Example flow:**
-```
+🔍 Smart path detection - notices if you're in a different directory than your .env expects and offers to fix it
+🧠 Load and validate your .env settings
+✏️ Interactive editing of project name, GitHub username, and project path
+📁 Intelligent folder renaming - suggests renaming to match your plugin name (e.g., JUCE-Plugin-Starter → DelayR)
+📄 Template source file creation - generates PluginProcessor.cpp/.h and PluginEditor.cpp/.h if missing
+🔒 Repository visibility choice - asks if you want public or private
+✅ Clear confirmation - shows exactly what will be created before proceeding
+🧹 Clean slate - removes the template's Git history
+🐙 GitHub integration - creates your new repository using the GitHub CLI (gh)
+🚀 First commit - pushes your initial code and provides next steps
+
+Example flow:
 🔍 **PATH MISMATCH DETECTED** - Updates .env to match your current location
 🔁 Edit PROJECT_NAME? → "DelayR" 
 🔁 Rename folder to match project name? → JUCE-Plugin-Starter becomes DelayR
+📄 Checking for basic plugin source files... → Creates template files if missing
 🔒 Make this a private repository? → Choose public or private
 ✅ Proceed with project creation? → Final confirmation
 🎉 Success! Ready to start coding your plugin
-```
 
-> 💡 **Highly recommended** for first-time users — the script handles all the Git and GitHub setup automatically while keeping you informed every step of the way.
+💡 Highly recommended for first-time users — the script handles all the setup automatically (including creating working plugin template files) while keeping you informed every step of the way. After running this script, you'll have a complete, buildable JUCE plugin ready to customize!
 
 ---
 
