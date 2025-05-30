@@ -92,7 +92,7 @@ If you prefer, you can install all required tools manually:
 | **Faust** *(optional)*                    | DSP prototyping compiler         | `brew install faust`                                                                              |
 | **GoogleTest** or **Catch2** *(optional)* | C++ unit testing                 | `brew install googletest` or `brew install catch2`                                                |
 | **Python 3 + behave** *(optional)*        | Natural language test automation | `brew install python && pip3 install behave`                                                      |
-| **[JUCE](https://juce.com)**              | Audio plugin framework (AU/VST3) | *Included in step 1 under Quick Start*                                                            |
+| **[JUCE](https://juce.com)**              | Audio plugin framework (AU/VST3) | *Automatically downloaded by CMake/FetchContent*                                                            |
 
 ---
 
@@ -102,7 +102,6 @@ If you prefer, you can install all required tools manually:
 > 💡 This setup will “just work” if you clone this repo into your home folder (i.e., run cd in Terminal before cloning).
 
 ```bash
-git clone --recurse-submodules https://github.com/juce-framework/JUCE.git
 git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git
 cd JUCE-Plugin-Starter
 cp .env.example .env
@@ -111,10 +110,12 @@ cp .env.example .env
 Update your `.env` file to reflect:
 
 ```env
-PROJECT_NAME=MyCoolPlugin
+PROJECT_NAME=MyCoolPlugin  
 PROJECT_BUNDLE_ID=com.myname.mycoolplugin
 PROJECT_PATH=~/JUCE-Plugin-Starter
-JUCE_PATH=~/JUCE
+JUCE_PATH=~/JUCE  # Defines where CMake will download JUCE automatically
+JUCE_REPO=https://github.com/juce-framework/JUCE.git
+JUCE_TAG=8.0.  # Can use main for latest (not recommended for production)
 GITHUB_USERNAME=danielraffel
 ```
 
@@ -167,6 +168,8 @@ chmod +x ./init_plugin_project.sh
 ---
 
 ### 3. Generate the Xcode Project
+
+> 💡 First time setup: When you first run ./generate_and_open_xcode.sh, CMake will automatically download JUCE to your specified JUCE_PATH location. This may take a few minutes on the first run.
 
 Before running the script for the first time:
 
