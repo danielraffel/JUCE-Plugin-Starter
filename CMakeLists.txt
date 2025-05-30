@@ -45,7 +45,7 @@ juce_add_plugin(${PROJECT_NAME}
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
-    COPY_PLUGIN_AFTER_BUILD TRUE
+    COPY_PLUGIN_AFTER_BUILD FALSE
     PLUGIN_MANUFACTURER_CODE Juce
     PLUGIN_CODE MYPL
     FORMATS AU VST3 Standalone
@@ -81,9 +81,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     juce::juce_gui_extra
 )
 
-# Post-build step: Update Info.plist version string and copy to Components folder
-add_custom_command(TARGET ${PROJECT_NAME}
+# Post-build step for the Audio Unit target: Update Info.plist version string
+# The actual copying to the system Components folder is handled by JUCE's CMake scripts when COPY_PLUGIN_AFTER_BUILD is TRUE.
+add_custom_command(TARGET ${PROJECT_NAME}_AU
     POST_BUILD
-    COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}.component"
-    COMMENT "Running post-build versioning and deployment script"
+    COMMAND ${CMAKE_COMMAND} -E echo "Running post_build.sh for ${PROJECT_NAME}_AU..."
+    COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_AU>"
+    COMMENT "Updating Info.plist version for ${PROJECT_NAME}_AU"
+    VERBATIM
 )
