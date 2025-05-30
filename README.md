@@ -62,7 +62,7 @@ chmod +x ./generate_and_open_xcode.sh
 - [🔄 Auto-Versioning Plugin Builds in Logic Pro](#auto-versioning-plugin-builds-in-logic-pro)
 - [📁 Customize Your Plugin](#-customize-your-plugin)
 - [🛠️ How to Edit `CMakeLists.txt`](#️-how-to-edit-cmakeliststxt)
-  - [🔧 Common Edits](#🔧-common-edits)
+  - [🔧 Common Edits](#-common-edits)
     - [✅ Add Source Files](#-add-source-files)
     - [✅ Add JUCE Modules](#-add-juce-modules)
     - [✅ Change Output Formats](#-change-output-formats)
