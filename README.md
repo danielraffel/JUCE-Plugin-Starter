@@ -272,16 +272,18 @@ This template includes a post-build script that automatically versions your plug
 
 The script is called post_build.sh and is triggered from your CMakeLists.txt with:
 
+```
 add_custom_command(TARGET ${PROJECT_NAME}
     POST_BUILD
     COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}.component"
     COMMENT "Running post-build versioning and deployment script"
 )
+```
 
 What It Does:
-	•	Ensures Logic Pro re-recognizes your Audio Unit after each rebuild
-	•	Increments version strings inside the .component/Contents/Info.plist
-	•	Keeps development iterative and frustration-free by preventing stale cache issues
+- Ensures Logic Pro re-recognizes your Audio Unit after each rebuild
+- Increments version strings inside the .component/Contents/Info.plist
+- Keeps development iterative and frustration-free by preventing stale cache issues
 
 You can modify or extend this script if needed — it’s fully customizable.
 
