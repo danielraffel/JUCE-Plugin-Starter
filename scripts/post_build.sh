@@ -1,37 +1,30 @@
 #!/bin/bash
 set -e
 
-# Get the component path from first argument
-COMPONENT_PATH="$1"
-if [ -z "$COMPONENT_PATH" ]; then
-    echo "Error: No component path provided"
-    exit 1
+component_path="$1"
+info_plist="$component_path/Contents/Info.plist"
+
+echo "🔧 Post-build script running..."
+echo "📦 Component path received: $component_path"
+echo "📝 Looking for Info.plist at: $info_plist"
+
+# Check that Info.plist exists
+if [ ! -f "$info_plist" ]; then
+  echo "❌ Error: Info.plist not found at $info_plist"
+  exit 1
 fi
 
-echo "Component path: $COMPONENT_PATH"
+# Optional: Read project name from plist if needed
+project_name=$(/usr/libexec/PlistBuddy -c "Print :CFBundleName" "$info_plist" 2>/dev/null || echo "Unknown")
 
-# Find Info.plist inside the component bundle
-INFO_PLIST="$COMPONENT_PATH/Contents/Info.plist"
-if [ ! -f "$INFO_PLIST" ]; then
-    echo "Error: Info.plist not found at $INFO_PLIST"
-    exit 1
+# Optionally extract from env (fallback)
+if [ "$project_name" = "Unknown" ] && [ -n "$PROJECT_NAME" ]; then
+  project_name="$PROJECT_NAME"
 fi
 
-# Generate version string based on timestamp (YYMMDDHHmm)
-VERSION="1.0.$(date +%y%m%d%H%M)"
+echo "📛 Project name: $project_name"
 
-# Update both version strings
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$INFO_PLIST"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$INFO_PLIST"
+# Update version string
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 0.1.0" "$info_plist"
 
-echo "Updated version to $VERSION"
-
-# Copy to Components folder
-COMPONENTS_DIR="$HOME/Library/Audio/Plug-Ins/Components"
-mkdir -p "$COMPONENTS_DIR"
-
-# Copy and overwrite if exists
-cp -R "$COMPONENT_PATH" "$COMPONENTS_DIR/"
-
-echo "Copied to $COMPONENTS_DIR"
-echo "Remember to 'Reset & Rescan' in Logic Pro's Plugin Manager"
+echo "✅ Version updated in Info.plist for $project_name"
