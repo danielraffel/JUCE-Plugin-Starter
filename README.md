@@ -272,7 +272,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 JUCE-Plugin-Starter/
 ├── .env.example               ← Template for your environment variables
 ├── CMakeLists.txt             ← Main build config for your JUCE project
-├── init_plugin_project.sh     ← Script that will reinitialize this repo and help rename and push it
+├── init_plugin_project.sh     ← Script that will reinitialize this repo to make it yours, configure, rename and push it to GH
 ├── README.md                  ← You’re reading it
 ├── generate_and_open_xcode.sh ← Script that loads `.env`, runs CMake, and opens Xcode
 ├── Source/                    ← Your plugin source code
