@@ -117,6 +117,7 @@ PROJECT_NAME=MyCoolPlugin
 PROJECT_BUNDLE_ID=com.myname.mycoolplugin
 PROJECT_PATH=~/JUCE-Plugin-Starter
 JUCE_PATH=~/JUCE
+GITHUB_USERNAME=danielraffel
 ```
 
 >💡 On macOS, .env files are hidden by default in Finder. Press `Cmd + Shift + .` to show or hide hidden files.
