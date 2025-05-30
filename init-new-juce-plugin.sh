@@ -30,9 +30,58 @@ set -o allexport
 source .env
 set +o allexport
 
-# --- Validate required variables ---
+# --- Interactive Edit Prompt ---
+echo ""
+echo "📄 Current .env values:"
+echo "  PROJECT_NAME=$PROJECT_NAME"
+echo "  GITHUB_USERNAME=$GITHUB_USERNAME"
+echo "  PROJECT_PATH=$PROJECT_PATH"
+echo ""
+
+read -p "✏️  Do you want to edit any of these values? (Y/N): " edit_env
+if [[ "$edit_env" =~ ^[Yy]$ ]]; then
+  for var in PROJECT_NAME GITHUB_USERNAME PROJECT_PATH; do
+    current_val="${!var}"
+    echo ""
+    read -p "🔁 Do you want to edit $var? (Current: '$current_val') (Y/N): " edit_field
+    if [[ "$edit_field" =~ ^[Yy]$ ]]; then
+      while true; do
+        read -p "✏️  Enter new value for $var: " new_val
+        echo "You entered: '$new_val'"
+        read -p "✅ Is this correct? (Y/N): " confirm_val
+        if [[ "$confirm_val" =~ ^[Yy]$ ]]; then
+          export $var="$new_val"
+          break
+        fi
+      done
+    fi
+  done
+
+  # --- Validate PROJECT_NAME format ---
+  validate_project_name() {
+    local name="$1"
+    [[ "$name" =~ ^[a-zA-Z0-9._-]+$ ]]
+  }
+
+  while ! validate_project_name "$PROJECT_NAME"; do
+    echo "❌ Invalid PROJECT_NAME: '$PROJECT_NAME'"
+    echo "✅ Must use only letters, numbers, hyphens (-), underscores (_), or periods (.)"
+    read -p "🔁 Enter a new valid PROJECT_NAME (or leave blank to cancel): " new_name
+    [[ -z "$new_name" ]] && echo "❌ Cancelled by user." && exit 1
+    PROJECT_NAME="$new_name"
+  done
+
+  # --- Update .env safely ---
+  echo "📝 Updating .env with new values..."
+  sed -i.bak "s|^PROJECT_NAME=.*|PROJECT_NAME=$PROJECT_NAME|" .env
+  sed -i.bak "s|^GITHUB_USERNAME=.*|GITHUB_USERNAME=$GITHUB_USERNAME|" .env
+  sed -i.bak "s|^PROJECT_PATH=.*|PROJECT_PATH=$PROJECT_PATH|" .env
+  rm .env.bak
+fi
+
+# --- Validate all required vars ---
 if [[ -z "$PROJECT_NAME" || -z "$GITHUB_USERNAME" || -z "$PROJECT_PATH" ]]; then
-  echo "❌ Missing one of: PROJECT_NAME, GITHUB_USERNAME, PROJECT_PATH in .env"
+  echo "❌ Missing one of: PROJECT_NAME, GITHUB_USERNAME, PROJECT_PATH"
   exit 1
 fi
 
@@ -49,30 +98,6 @@ if ! gh auth status &> /dev/null; then
   exit 1
 fi
 
-# --- Validate and sanitize GitHub project name ---
-validate_project_name() {
-  local name="$1"
-  if [[ "$name" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-while ! validate_project_name "$PROJECT_NAME"; do
-  echo ""
-  echo "❌ Invalid GitHub repo name: '$PROJECT_NAME'"
-  echo "✅ Repo names can include: letters, numbers, hyphens (-), underscores (_), or periods (.)"
-  read -p "🔁 Enter a new valid PROJECT_NAME (or leave blank to cancel): " new_name
-
-  if [[ -z "$new_name" ]]; then
-    echo "❌ Cancelled by user."
-    exit 1
-  fi
-
-  PROJECT_NAME="$new_name"
-fi
-
 # --- Check and rename project folder if using default starter path ---
 if [[ "$PROJECT_PATH" == *"JUCE-Plugin-Starter" && -d "$PROJECT_PATH" ]]; then
   SUGGESTED_PATH="$(dirname "$PROJECT_PATH")/$PROJECT_NAME"
@@ -85,7 +110,7 @@ if [[ "$PROJECT_PATH" == *"JUCE-Plugin-Starter" && -d "$PROJECT_PATH" ]]; then
   mv "$PROJECT_PATH" "$SUGGESTED_PATH"
   PROJECT_PATH="$SUGGESTED_PATH"
 
-  # --- Update PROJECT_PATH in .env ---
+  # Update PROJECT_PATH in .env again
   echo "📝 Updating PROJECT_PATH in .env..."
   sed -i.bak "s|^PROJECT_PATH=.*|PROJECT_PATH=$PROJECT_PATH|" .env
   rm .env.bak
