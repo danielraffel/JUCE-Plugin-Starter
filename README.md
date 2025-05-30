@@ -49,20 +49,24 @@ chmod +x ./generate_and_open_xcode.sh
   - [How to Just Give This a Try (Without Reading the Full README)](#how-to-just-give-this-a-try-without-reading-the-full-readme)
 - [🧰 Prerequisites](#-prerequisites)
   - [System Requirements](#system-requirements)
-  - [Dependencies](#dependencies)
+  - [Additional Dependencies](#additional-dependencies)
     - [Automated Dependency Setup](#automated-dependency-setup)
     - [Manual Dependency Setup](#manual-dependency-setup)
 - [🚀 Quick Start](#-quick-start)
   - [1. Clone the JUCE Plugin Starter Template](#1-clone-the-juce-plugin-starter-template)
-  - [2. Initialize Your Plugin Project with the Setup Script](#2-initialize-your-plugin-project-with-git-using-a-setup-script)
+  - [2. Initialize Your Plugin Project with Git Using a Setup Script](#2-initialize-your-plugin-project-with-git-using-a-setup-script)
   - [3. Generate the Xcode Project](#3-generate-the-xcode-project)
 - [🧱 Build Targets](#-build-targets)
+- [📍 Where Files Are Generated (Plugins + App)](#where-files-are-generated-plugins-app)
+  - [Where Plugin Files Are Installed](#where-plugin-files-are-installed)
+- [🔄 Auto-Versioning Plugin Builds in Logic Pro](#auto-versioning-plugin-builds-in-logic-pro)
 - [📁 Customize Your Plugin](#-customize-your-plugin)
 - [🛠️ How to Edit `CMakeLists.txt`](#️-how-to-edit-cmakeliststxt)
-  - [✅ Add Source Files](#-add-source-files)
-  - [✅ Add JUCE Modules](#-add-juce-modules)
-  - [✅ Change Output Formats](#-change-output-formats)
-  - [✅ Add Preprocessor Macros](#-add-preprocessor-macros)
+  - [🔧 Common Edits](#🔧-common-edits)
+    - [✅ Add Source Files](#-add-source-files)
+    - [✅ Add JUCE Modules](#-add-juce-modules)
+    - [✅ Change Output Formats](#-change-output-formats)
+    - [✅ Add Preprocessor Macros](#-add-preprocessor-macros)
 - [📦 Project File Structure](#-project-file-structure)
   - [About the JUCE cache location](#about-the-juce-cache-location)
 - [💡 Tips](#-tips)
@@ -267,26 +271,48 @@ These paths are standard for macOS plugin development and are used by DAWs like 
 
 ---
 
-### ⚙️ Auto-Versioning Plugin Builds in Logic Pro
+## Auto-Versioning Plugin Builds in Logic Pro
 
-This template includes a post-build script that automatically versions your plugin bundle, ensuring Logic Pro correctly reloads the updated component after each build.
+This template includes a post-build script (`scripts/post_build.sh`) that automatically versions your plugin bundle after each build, ensuring Logic Pro correctly reloads the updated component.
 
-The script is called post_build.sh and is triggered from your CMakeLists.txt with:
+**How Versioning Works:**
 
-```
-add_custom_command(TARGET ${PROJECT_NAME}
-    POST_BUILD
-    COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}.component"
-    COMMENT "Running post-build versioning and deployment script"
-)
-```
+- The base version is set in your `.env` file with `BASE_PROJECT_VERSION`. By default, it's:
+  ```
+  BASE_PROJECT_VERSION="1.0."
+  ```
+  You can edit this value to manage your major/minor version. The script will always append a build timestamp to ensure each build is unique.
 
-What It Does:
-- Ensures Logic Pro re-recognizes your Audio Unit after each rebuild
-- Increments version strings inside the .component/Contents/Info.plist
-- Keeps development iterative and frustration-free by preventing stale cache issues
+- After each build, the script:
+  - Reads `BASE_PROJECT_VERSION` from `.env` (or uses a default if not found).
+  - Appends a timestamp to generate a unique version (e.g., `1.0.2505302321`).
+  - Updates your plugin’s `Info.plist` with:
+    - `CFBundleShortVersionString` = base version (e.g., `1.0.`)
+    - `CFBundleVersion` = base version + timestamp (e.g., `1.0.2505302321`)
+  - Only the full (timestamped) version is visible in the `Info.plist`, not in the plugin UI.
 
-You can modify or extend this script if needed — it’s fully customizable.
+- The script is triggered from your CMake build with:
+  ```cmake
+  add_custom_command(TARGET ${PROJECT_NAME}_AU
+      POST_BUILD
+      COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_AU>"
+      COMMENT "Updating Info.plist version for ${PROJECT_NAME}_AU"
+      VERBATIM
+  )
+  ```
+
+**What This Solves:**
+- Ensures Logic Pro re-recognizes your Audio Unit after every build
+- Prevents stale cache/version issues
+- Keeps development iterative and frustration-free
+
+**How to Manage Versions:**
+- Edit `.env` and change `BASE_PROJECT_VERSION` (e.g., bump from `1.0.` to `1.1.` for a new feature).
+- The timestamp is always unique per build, so you don't have to manage patch versions manually.
+- The timestamped build version is only visible in the plugin's `Info.plist`, not in the UI.
+
+**Customization:**
+- You can modify `scripts/post_build.sh` to change how versions are generated or update which fields are set in `Info.plist`.
 
 ---
 
