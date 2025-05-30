@@ -16,8 +16,8 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
     - [Manual Dependency Setup](#manual-dependency-setup)
 - [🚀 Quick Start](#-quick-start)
   - [1. Clone JUCE and the JUCE Plugin Starter Template](#1-clone-juce-and-the-juce-plugin-starter-template)
-  - [2. Generate the Xcode Project](#2-generate-the-xcode-project)
-  - [3. Optional: Initialize Your Plugin Project with the Setup Script](#3-optional-initialize-your-plugin-project-with-git-using-a-setup-script)
+  - [2. Optional: Initialize Your Plugin Project with the Setup Script](#3-optional-initialize-your-plugin-project-with-git-using-a-setup-script)
+  - [3. Generate the Xcode Project](#2-generate-the-xcode-project)
 - [🧱 Build Targets](#-build-targets)
 - [📁 Customize Your Plugin](#-customize-your-plugin)
 - [🛠️ How to Edit `CMakeLists.txt`](#️-how-to-edit-cmakeliststxt)
@@ -129,27 +129,7 @@ nano .env
 
 ---
 
-### 2. Generate the Xcode Project
-
-Before running the script for the first time:
-
-```bash
-chmod +x ./generate_and_open_xcode.sh
-```
-
-Then generate your project:
-
-```bash
-./generate_and_open_xcode.sh
-```
-
-✅ No need to run `cmake` manually — it's handled for you.
-
-That’s a great addition — and your instinct is right on target. To improve clarity and accessibility for users who might be **less familiar with GitHub**, here’s a more polished and explanatory rewrite of that section.
-
----
-
-### 3. Optional: Initialize Your Plugin Project with Git Using a Setup Script
+### 2. Optional: Initialize Your Plugin Project with Git Using a Setup Script
 
 If you're planning to use this template to build your own plugin and eventually publish it to GitHub, this script is designed to help you do that quickly and cleanly.
 
@@ -176,6 +156,26 @@ This script will:
 * 🚀 Push your first commit to that new repo
 
 > 💡 **Recommended** for first-time users — especially if you're not yet comfortable with Git and GitHub setup steps. This script handles the heavy lifting.
+
+---
+
+### 3. Generate the Xcode Project
+
+Before running the script for the first time:
+
+```bash
+chmod +x ./generate_and_open_xcode.sh
+```
+
+Then generate your project:
+
+```bash
+./generate_and_open_xcode.sh
+```
+
+✅ No need to run `cmake` manually — it's handled for you.
+
+That’s a great addition — and your instinct is right on target. To improve clarity and accessibility for users who might be **less familiar with GitHub**, here’s a more polished and explanatory rewrite of that section.
 
 ---
 
