@@ -17,7 +17,7 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
 - [🚀 Quick Start](#-quick-start)
   - [1. Clone JUCE and the JUCE Plugin Starter Template](#1-clone-juce-and-the-juce-plugin-starter-template)
   - [2. Generate the Xcode Project](#2-generate-the-xcode-project)
-  - [3. Optional: Initialize Your Plugin Project with the Setup Script](#3-optional-initialize-your-plugin-project-with-the-setup-script)
+  - [3. Optional: Initialize Your Plugin Project with the Setup Script](#3-optional-initialize-your-plugin-project-with-git-using-a-setup-script)
 - [🧱 Build Targets](#-build-targets)
 - [📁 Customize Your Plugin](#-customize-your-plugin)
 - [🛠️ How to Edit `CMakeLists.txt`](#️-how-to-edit-cmakeliststxt)
