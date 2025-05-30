@@ -130,32 +130,41 @@ nano .env
 ---
 
 ### 2. Optional: Initialize Your Plugin Project with Git Using a Setup Script
-
 If you're planning to use this template to build your own plugin and eventually publish it to GitHub, this script is designed to help you do that quickly and cleanly.
 
-It assumes you've cloned this repository and now want to:
-- Rename the folder and project to match your plugin
-- Remove the original Git history so it’s not tied to the starter repo
-- Create a fresh GitHub repository for your plugin (using the GitHub CLI)
-- Push your new project to that repository
+The script is **smart** and will:
+- 🔍 **Auto-detect** if you're working in a JUCE project directory that doesn't match your `.env` settings
+- 🏷️ **Automatically suggest** renaming your project folder to match your plugin name
+- 🛡️ **Confirm everything** before making changes so you stay in control
 
-Once your `.env` file is set up, just run the interactive setup script:
-
+Just run the interactive setup script (it will help you configure everything):
 ```bash
 chmod +x ./init_plugin_project.sh
 ./init_plugin_project.sh
-````
+```
 
-This script will:
+**What the script does:**
+* 🔍 **Smart path detection** - notices if you're in a different directory than your `.env` expects and offers to fix it
+* 🧠 **Load and validate** your `.env` settings
+* ✏️ **Interactive editing** of project name, GitHub username, and project path
+* 📁 **Intelligent folder renaming** - suggests renaming to match your plugin name (e.g., `JUCE-Plugin-Starter` → `DelayR`)
+* 🔒 **Repository visibility choice** - asks if you want public or private
+* ✅ **Clear confirmation** - shows exactly what will be created before proceeding
+* 🧹 **Clean slate** - removes the template's Git history
+* 🐙 **GitHub integration** - creates your new repository using the [GitHub CLI (`gh`)](https://cli.github.com/)
+* 🚀 **First commit** - pushes your initial code and provides next steps
 
-* 🧠 Load and validate your `.env` settings
-* 🛠️ Offer to interactively edit any values (like project name, path, or your GitHub username)
-* 🧼 Remove the template’s Git history
-* 📁 Optionally rename the project folder to match your new plugin name
-* 🐙 Create a new **private** GitHub repo using the [GitHub CLI (`gh`)](https://cli.github.com/) you can change this to public later
-* 🚀 Push your first commit to that new repo
+**Example flow:**
+```
+🔍 **PATH MISMATCH DETECTED** - Updates .env to match your current location
+🔁 Edit PROJECT_NAME? → "DelayR" 
+🔁 Rename folder to match project name? → JUCE-Plugin-Starter becomes DelayR
+🔒 Make this a private repository? → Choose public or private
+✅ Proceed with project creation? → Final confirmation
+🎉 Success! Ready to start coding your plugin
+```
 
-> 💡 **Recommended** for first-time users — especially if you're not yet comfortable with Git and GitHub setup steps. This script handles the heavy lifting.
+> 💡 **Highly recommended** for first-time users — the script handles all the Git and GitHub setup automatically while keeping you informed every step of the way.
 
 ---
 
