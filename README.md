@@ -15,7 +15,7 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
     - [Automated Dependency Setup](#automated-dependency-setup)
     - [Manual Dependency Setup](#manual-dependency-setup)
 - [🚀 Quick Start](#-quick-start)
-  - [1. Clone JUCE and the JUCE Plugin Starter Template](#1-clone-juce-and-the-juce-plugin-starter-template)
+  - [1. Clone the JUCE Plugin Starter Template](#1-clone-the-juce-plugin-starter-template)
   - [2. Optional: Initialize Your Plugin Project with the Setup Script](#2-optional-initialize-your-plugin-project-with-git-using-a-setup-script)
   - [3. Generate the Xcode Project](#3-generate-the-xcode-project)
 - [🧱 Build Targets](#-build-targets)
@@ -98,7 +98,7 @@ If you prefer, you can install all required tools manually:
 
 ## 🚀 Quick Start
 
-### 1. Clone JUCE and the JUCE Plugin Starter Template
+### 1. Clone the JUCE Plugin Starter Template
 > 💡 This setup will “just work” if you clone this repo into your home folder (i.e., run cd in Terminal before cloning).
 
 ```bash
@@ -115,7 +115,7 @@ PROJECT_BUNDLE_ID=com.myname.mycoolplugin
 PROJECT_PATH=~/JUCE-Plugin-Starter
 JUCE_PATH=~/JUCE  # Defines where CMake will download JUCE automatically
 JUCE_REPO=https://github.com/juce-framework/JUCE.git
-JUCE_TAG=8.0.  # Can use main for latest (not recommended for production)
+JUCE_TAG=8.0.7  # Can use main for latest (not recommended for production)
 GITHUB_USERNAME=danielraffel
 ```
 
