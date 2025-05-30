@@ -38,6 +38,7 @@ chmod +x ./generate_and_open_xcode.sh
 ```
 ./generate_and_open_xcode.sh .
 ```
+[📖 Skip to Full Quick Start →](#-quick-start)
 
 ---
 
