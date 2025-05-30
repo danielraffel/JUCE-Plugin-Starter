@@ -80,3 +80,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     juce::juce_gui_basics
     juce::juce_gui_extra
 )
+
+# Post-build step: Update Info.plist version string and copy to Components folder
+add_custom_command(TARGET ${PROJECT_NAME}
+    POST_BUILD
+    COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}.component"
+    COMMENT "Running post-build versioning and deployment script"
+)
