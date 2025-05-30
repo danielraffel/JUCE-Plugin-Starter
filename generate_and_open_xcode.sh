@@ -2,7 +2,8 @@
 
 # Load environment variables from .env
 if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
+  # Export variables while stripping inline comments and expanding tildes
+  export $(grep -v '^#' .env | sed 's/#.*//' | sed 's|~|'"$HOME"'|g' | xargs)
 else
   echo ".env file not found. Please create one from .env.example"
   exit 1
@@ -12,6 +13,12 @@ fi
 if [ -z "$PROJECT_PATH" ] || [ -z "$PROJECT_NAME" ]; then
   echo "Missing required PROJECT_PATH or PROJECT_NAME in .env"
   exit 1
+fi
+
+# Use current directory if PROJECT_PATH doesn't exist
+if [ ! -d "$PROJECT_PATH" ]; then
+  echo "Warning: PROJECT_PATH ($PROJECT_PATH) not found. Using current directory."
+  PROJECT_PATH=$(pwd)
 fi
 
 # Set derived paths
