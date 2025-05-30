@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-# ===============================
-# JUCE Plugin Starter Setup Script
-# ===============================
+# ==============================================================
+# JUCE Plugin Starter: Automated Dependency Setup Script
+# ==============================================================
 # This script checks for and installs essential tools required for JUCE plugin development.
 # You can uncomment optional tools if needed.
 
 set -e
 
-echo "🚀 JUCE Plugin Starter Setup"
+echo "🚀 JUCE Plugin Starter: Automated Dependency Setup Script"
 echo "This script will check for and install required tools for JUCE plugin development."
 read -p "Would you like to continue? (Y/N): " confirm
 
@@ -103,4 +103,4 @@ check_brew_cask "pluginval"
 #   echo "✅ behave is already installed."
 # fi
 
-echo "🎉 JUCE Plugin Starter Setup Complete!"
+echo "🎉 JUCE Plugin Starter: Automated Dependency Setup Script is Complete!"
