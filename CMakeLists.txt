@@ -22,18 +22,8 @@ endif()
 
 project(${PROJECT_NAME} VERSION 0.1.0)
 
-# Set JUCE download location
-set(JUCE_PATH $ENV{JUCE_PATH})
-if(NOT JUCE_PATH)
-    set(JUCE_PATH "~/JUCE")
-endif()
-
-# Expand tilde to home directory
-get_filename_component(JUCE_PATH ${JUCE_PATH} ABSOLUTE)
-
 # Fetch JUCE using FetchContent
 include(FetchContent)
-set(FETCHCONTENT_SOURCE_DIR_JUCE ${JUCE_PATH})
 FetchContent_Declare(
     JUCE 
     GIT_REPOSITORY ${JUCE_REPO}
