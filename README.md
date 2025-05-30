@@ -6,7 +6,7 @@ This is a beginner-friendly JUCE plugin starter template using CMake and environ
 
 ---
 
-### ⚡️ How to Just Give This a Try (Without Reading the Full README)
+### How to Just Give This a Try (Without Reading the Full README)
 
 This is the fastest way to test-drive the JUCE Plugin Starter. It assumes you have [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12) installed and will:
 
