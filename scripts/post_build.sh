@@ -82,19 +82,20 @@ else
 fi
 
 # Generate dynamic bundle version with timestamp (YYMMDDHHMM)
-# If VERSION_SHORT is "1.0.", we append the date. Example: "1.0.2505301505"
+# Append the timestamp to both version strings for consistency
 TIMESTAMP=$(date +'%y%m%d%H%M')
+VERSION_SHORT_WITH_TIMESTAMP="${VERSION_SHORT}${TIMESTAMP}"
 VERSION_BUNDLE="${VERSION_SHORT}${TIMESTAMP}"
 
-echo "ℹ️ Final CFBundleShortVersionString: $VERSION_SHORT"
+echo "ℹ️ Final CFBundleShortVersionString: $VERSION_SHORT_WITH_TIMESTAMP"
 echo "ℹ️ Final CFBundleVersion: $VERSION_BUNDLE"
 # --- End Versioning Configuration ---
 
 # --- Update CFBundleShortVersionString ---
-echo "🚀 Attempting to Add/Set CFBundleShortVersionString to $VERSION_SHORT..."
-if ! /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $VERSION_SHORT" "$info_plist" 2>/dev/null; then
+echo "🚀 Attempting to Add/Set CFBundleShortVersionString to $VERSION_SHORT_WITH_TIMESTAMP..."
+if ! /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $VERSION_SHORT_WITH_TIMESTAMP" "$info_plist" 2>/dev/null; then
   echo "ℹ️ Add CFBundleShortVersionString failed (key might already exist or other issue), attempting Set..."
-  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_SHORT" "$info_plist"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_SHORT_WITH_TIMESTAMP" "$info_plist"
 fi
 update_status_short=$?
 
@@ -102,7 +103,7 @@ if [ $update_status_short -ne 0 ]; then
   echo "❌ Error: PlistBuddy failed to update CFBundleShortVersionString. Exit code: $update_status_short"
   exit $update_status_short
 fi
-echo "✅ CFBundleShortVersionString updated to $VERSION_SHORT successfully."
+echo "✅ CFBundleShortVersionString updated to $VERSION_SHORT_WITH_TIMESTAMP successfully."
 
 # --- Update CFBundleVersion ---
 echo "🚀 Attempting to Add/Set CFBundleVersion to $VERSION_BUNDLE..."
