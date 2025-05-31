@@ -22,7 +22,13 @@ endif()
 
 # Get timestamp for unique version
 string(TIMESTAMP VERSION_TIMESTAMP "%y%m%d%H%M" UTC)
-set(BASE_PROJECT_VERSION "1.1.")
+
+# Read version base from env or fallback
+set(BASE_PROJECT_VERSION $ENV{BASE_PROJECT_VERSION})
+if(NOT BASE_PROJECT_VERSION)
+    set(BASE_PROJECT_VERSION "1.1.")
+endif()
+
 set(PLUGIN_VERSION "${BASE_PROJECT_VERSION}${VERSION_TIMESTAMP}")
 
 project(${PROJECT_NAME} VERSION ${PLUGIN_VERSION})
