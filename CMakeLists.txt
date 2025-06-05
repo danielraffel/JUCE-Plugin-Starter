@@ -5,6 +5,8 @@ set(PROJECT_NAME $ENV{PROJECT_NAME})
 set(PROJECT_BUNDLE_ID $ENV{PROJECT_BUNDLE_ID})
 set(JUCE_REPO $ENV{JUCE_REPO})
 set(JUCE_TAG $ENV{JUCE_TAG})
+set(COMPANY_NAME $ENV{COMPANY_NAME})
+
 
 # Fallback defaults if env vars not set
 if(NOT PROJECT_NAME)
@@ -18,6 +20,9 @@ if(NOT JUCE_REPO)
 endif()
 if(NOT JUCE_TAG)
     set(JUCE_TAG "8.0.7")
+endif()
+if(NOT COMPANY_NAME)
+    set(COMPANY_NAME "Default Company Name")
 endif()
 
 # Get timestamp for unique version
@@ -49,7 +54,7 @@ FetchContent_MakeAvailable(JUCE)
 
 # Create the plugin
 juce_add_plugin(${PROJECT_NAME}
-    COMPANY_NAME "Your Company Name"
+    COMPANY_NAME ${COMPANY_NAME}
     BUNDLE_ID ${PROJECT_BUNDLE_ID}
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
