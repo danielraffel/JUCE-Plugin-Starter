@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Load environment variables from .env
+# Load environment variables from .env safely
 if [ -f .env ]; then
-  # Export variables while stripping inline comments and expanding tildes
-  export $(grep -v '^#' .env | sed 's/#.*//' | sed 's|~|'"$HOME"'|g' | xargs)
+  set -o allexport
+  source .env
+  set +o allexport
 else
   echo ".env file not found. Please create one from .env.example"
   exit 1
