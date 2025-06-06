@@ -491,6 +491,8 @@ Whenever the Xcode project file needs to be regenerated use run_shell to execute
 
 Once your plugin is built and tested, you can package it for safe, notarized distribution via Apple’s system using the built-in `sign_and_package_plugin.sh` script.
 
+> 💭 Interested in more details? [Check out this walkthrough on macOS audio plug-in code signing and notarization](https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/).
+
 ---
 
 ### 🛠️ Requirements
