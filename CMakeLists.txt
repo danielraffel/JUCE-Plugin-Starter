@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 # Set minimum macOS version before defining the project
-set(CMAKE_OSX_DEPLOYMENT_TARGET "15.5" CACHE STRING "Minimum macOS version")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "Minimum macOS version")
 
 # Get environment variables
 set(PROJECT_NAME $ENV{PROJECT_NAME})
