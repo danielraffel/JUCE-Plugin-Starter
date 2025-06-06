@@ -72,6 +72,7 @@ chmod +x ./generate_and_open_xcode.sh
     - [✅ Add JUCE Modules](#-add-juce-modules)
     - [✅ Change Output Formats](#-change-output-formats)
     - [✅ Add Preprocessor Macros](#-add-preprocessor-macros)
+    - [✅ Set Minimum macOS Deployment Target](#-set-minimum-macos-deployment-target)
 - [📦 Project File Structure](#-project-file-structure)
   - [About the JUCE cache location](#about-the-juce-cache-location)
 - [💡 Tips](#-tips)
@@ -95,7 +96,7 @@ chmod +x ./generate_and_open_xcode.sh
 To build and develop plugins with this template, you’ll need:
 
 ### System Requirements
-- macOS 15.0 or later ([you can adjust the minimum macOS version in CMakeLists.txt](https://github.com/danielraffel/JUCE-Plugin-Starter/blob/ec4162b7fb21c5c86c25398aa072a64dd7cd818c/CMakeLists.txt#L3))
+- macOS 15.0 or later
 - [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12) (latest version)
 - Recommended: Additional IDE with Support for 3rd Party AI Models ([Alex Sidebar](http://alexcodes.app), [Cursor](http://cursor.com), [Windsurf](http://windsurf.com), [Trae](http://trae.ai), or [VSCode](https://code.visualstudio.com))
 
@@ -402,6 +403,15 @@ FORMATS VST3 Standalone
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     USE_MY_DSP_ENGINE=1
 )
+```
+
+#### ✅ Set Minimum macOS Deployment Target
+
+To ensure your project builds against a specific minimum macOS version, set the CMAKE_OSX_DEPLOYMENT_TARGET before defining the project in your CMakeLists.txt.
+
+```cmake
+# Set minimum macOS version before defining the project
+set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "Minimum macOS version")
 ```
 
 > After making changes, just re-run:
