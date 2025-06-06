@@ -517,8 +517,9 @@ Make note of the exact names — you'll reference these in your `.env` file.
 #### ✅ App-Specific Password for Notarization
 
 1. Go to [appleid.apple.com](https://appleid.apple.com)
-2. Under **Security**, click **Generate Password** (app-specific)
-3. Save this password securely — you'll need it every time you notarize.
+2. Under **Sign-In and Security**, click **App-Specific Passwords**
+3. Click ➕ "Generate App-Specific Password" and consider using your project name as the identifier
+4. Make sure to store this password safely — it’s required for every notarization and must be added to your .env
 
 ---
 
