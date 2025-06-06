@@ -77,6 +77,8 @@ chmod +x ./generate_and_open_xcode.sh
   - [About the JUCE cache location](#about-the-juce-cache-location)
 - [💡 Tips](#-tips)
   - [🔁 Building with AI Tools](#-building-with-ai-tools)
+    - [Using with Cursor](#using-with-cursor)
+    - [Using with Alex Sidebar](#using-with-alex-sidebar)
 - [📦 How to Distribute Your Plugin](#-how-to-distribute-your-plugin)
   - [🛠️ Requirements](#️-requirements)
     - [✅ Apple Developer Program Membership](#-apple-developer-program-membership)
@@ -459,7 +461,23 @@ JUCE-Plugin-Starter/
 
 ### 🔁 Building with AI Tools
 
-Use in [AlexCodes.app](https://alexcodes.app) with the following project prompt:
+#### Using with Cursor 
+
+The `generate_and_open_xcode.sh` script includes a line that automatically opens the generated Xcode project. Since Cursor doesn’t require this, I strongly recommend commenting out the following section:
+
+```bash
+# Open the generated Xcode project
+if [ -d "$XCODE_PROJECT" ]; then
+  open "$XCODE_PROJECT"
+else
+  echo "Xcode project not found: $XCODE_PROJECT"
+  exit 1
+fi
+```
+
+
+#### Using with Alex Sidebar
+To use `generate_and_open_xcode.sh` with [AlexCodes.app](https://alexcodes.app), I’ve found the following project prompt helpful for managing when and how the Xcode project is compiled and opened:
 
 ```text
 Whenever the Xcode project file needs to be regenerated use run_shell to execute $PROJECT_PATH/generate_and_open_xcode.sh
