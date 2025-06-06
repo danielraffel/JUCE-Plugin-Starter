@@ -72,6 +72,15 @@ chmod +x ./generate_and_open_xcode.sh
 - [💡 Tips](#-tips)
   - [🔁 Building with AI Tools](#-building-with-ai-tools)
 - [📦 How to Distribute Your Plugin](#-how-to-distribute-your-plugin)
+  - [🛠️ Requirements](#️-requirements)
+    - [✅ Apple Developer Program Membership](#✅-apple-developer-program-membership)
+    - [✅ Code Signing Certificates](#✅-code-signing-certificates)
+    - [📥 How to Generate and Install Certificates](#📥-how-to-generate-and-install-certificates)
+    - [🔍 How to Verify They're Installed](#🔍-how-to-verify-theyre-installed)
+    - [✅ App-Specific Password for Notarization](#✅-app-specific-password-for-notarization)
+  - [⚙️ Distribution-Specific Environment Variables](#️-distribution-specific-environment-variables)
+  - [🎛️ What Gets Packaged](#️-what-gets-packaged)
+  - [🚀 Run the Distribution Script](#-run-the-distribution-script)
 - [📚 Resources](#-resources)
 
 ---
@@ -521,7 +530,26 @@ INSTALLER_CERT="Developer ID Installer: Your Name (TEAM_ID)"
 TEAM_ID=YOUR_TEAM_ID
 ```
 
-> 💡 Make sure your `.env` file is listed in `.gitignore` to avoid exposing credentials.
+> 💡 Always make sure your `.env` file is listed in `.gitignore` to avoid exposing credentials.
+
+---
+
+### 🎛️ What Gets Packaged
+
+This starter will automatically detect and package the following plugin formats if they exist:
+
+| Format | Extension    | Path |
+|--------|--------------|------|
+| AU     | `.component` | `~/Library/Audio/Plug-Ins/Components/` |
+| VST3   | `.vst3`      | `~/Library/Audio/Plug-Ins/VST3/` |
+| AAX    | `.aaxplugin` | `/Library/Application Support/Avid/Audio/Plug-Ins/` |
+
+- The script signs, notarizes, and staples each format (if found)
+- All formats are bundled into a **single `.pkg` installer**
+- The `.pkg` is signed and notarized
+- Finally, the `.pkg` is included in a **ready-to-share `.dmg`**
+
+> 💡 **Missing formats are skipped**, but the script will print a warning if none are found and exit gracefully.
 
 ---
 
