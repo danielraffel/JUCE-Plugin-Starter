@@ -444,7 +444,7 @@ Whenever the Xcode project file needs to be regenerated use run_shell to execute
 
 ---
 
-## 📦 How to Distribute Your Plugin (macOS Notarization)
+## 📦 How to Distribute Your Plugin
 
 Once your AudioUnit plugin (`.component`) is built and tested, you can package it for safe, notarized distribution via Apple’s system using the built-in `sign_and_package_plugin.sh` script.
 
