@@ -75,7 +75,7 @@ chmod +x ./generate_and_open_xcode.sh
   - [🛠️ Requirements](#️-requirements)
     - [✅ Apple Developer Program Membership](#-apple-developer-program-membership)
     - [✅ Code Signing Certificates](#-code-signing-certificates)
-    - [📥 How to Generate and Install Certificates](#�-how-to-generate-and-install-certificates)
+    - [📥 How to Generate and Install Certificates](#-how-to-generate-and-install-certificates)
     - [🔍 How to Verify They're Installed](#-how-to-verify-theyre-installed)
     - [✅ App-Specific Password for Notarization](#-app-specific-password-for-notarization)
   - [⚙️ Distribution-Specific Environment Variables](#️-distribution-specific-environment-variables)
