@@ -71,6 +71,7 @@ chmod +x ./generate_and_open_xcode.sh
   - [About the JUCE cache location](#about-the-juce-cache-location)
 - [💡 Tips](#-tips)
   - [🔁 Building with AI Tools](#-building-with-ai-tools)
+- [📦 How to Distribute Your Plugin](#-how-to-distribute-your-plugin)
 - [📚 Resources](#-resources)
 
 ---
@@ -153,14 +154,29 @@ cp .env.example .env
 Update your `.env` file to reflect:
 
 ```env
-PROJECT_NAME=MyCoolPlugin  
+PROJECT_NAME=MyCoolPlugin
 PROJECT_BUNDLE_ID=com.myname.mycoolplugin
 PROJECT_PATH=~/JUCE-Plugin-Starter
+COMPANY_NAME="Your Company Name"
 JUCE_REPO=https://github.com/juce-framework/JUCE.git
-JUCE_TAG=8.0.7  # Can use main for latest (not recommended for production)
+JUCE_TAG=8.0.7
 GITHUB_USERNAME=danielraffel
 BASE_PROJECT_VERSION="1.0."
+
+# --- Apple Notarization ---
+# You only need to edit the fields below when you're ready to distribute your plugin.
+# Until then, feel free to leave these default placeholder values as-is.
+APPLE_ID=your@email.com
+APP_SPECIFIC_PASSWORD=your-app-password
+APP_CERT="Developer ID Application: Your Name (TEAM_ID)"
+INSTALLER_CERT="Developer ID Installer: Your Name (TEAM_ID)"
+TEAM_ID=YOUR_TEAM_ID
 ```
+
+After cloning and configuring `.env`, remember:
+
+- `PROJECT_NAME` is used as the name of your plugin. This will appear in DAWs like Logic, so name it accordingly.
+- `COMPANY_NAME` sets the developer name displayed in the plugin browser.
 
 >💡 On macOS, .env files are hidden by default in Finder. Press `Cmd + Shift + .` to show or hide hidden files.
 You can also edit the file in Terminal using:
@@ -425,6 +441,107 @@ Whenever the Xcode project file needs to be regenerated use run_shell to execute
 ```
 
 <img width="515" alt="regenerate-xcode-alexcodes" src="https://github.com/user-attachments/assets/158b6005-645f-410a-9fdb-51ef9479ac55" />
+
+---
+
+## 📦 How to Distribute Your Plugin (macOS Notarization)
+
+Once your AudioUnit plugin (`.component`) is built and tested, you can package it for safe, notarized distribution via Apple’s system using the built-in `sign_and_package_plugin.sh` script.
+
+---
+
+### 🛠️ Requirements
+
+#### ✅ Apple Developer Program Membership
+
+- Join at [developer.apple.com/programs](https://developer.apple.com/programs)
+
+#### ✅ Code Signing Certificates
+
+You’ll need two certificates installed in **Keychain Access** (login keychain):
+
+1. **Developer ID Application**
+2. **Developer ID Installer**
+
+> These allow Apple to verify your identity and authorize your software for distribution.
+
+---
+
+#### 📥 How to Generate and Install Certificates
+
+1. Go to [Apple Developer Certificates Portal](https://developer.apple.com/account/resources/certificates)
+2. Click ➕ “Create Certificate”
+3. Choose:
+   - `Developer ID Application`
+   - `Developer ID Installer`
+4. Follow Apple’s steps to:
+   - Create a Certificate Signing Request (CSR) using Keychain Access
+   - Download the signed certificate
+   - Double-click it to install into your Keychain
+
+---
+
+#### 🔍 How to Verify They're Installed
+
+In Terminal, run:
+
+```bash
+security find-identity -v -p codesigning
+```
+
+You should see both listed, like:
+
+```
+  1) A1B2C3D4E5... "Developer ID Application: Your Name (TEAMID)"
+  2) F6G7H8I9J0... "Developer ID Installer: Your Name (TEAMID)"
+```
+
+Make note of the exact names — you'll reference these in your `.env` file.
+
+---
+
+#### ✅ App-Specific Password for Notarization
+
+1. Go to [appleid.apple.com](https://appleid.apple.com)
+2. Under **Security**, click **Generate Password** (app-specific)
+3. Save this password securely — you'll need it every time you notarize.
+
+---
+
+### ⚙️ Distribution-Specific Environment Variables
+
+Add these values to your main `.env` file:
+
+```env
+# Notarization credentials
+APPLE_ID=your@email.com
+APP_SPECIFIC_PASSWORD=abcd-efgh-ijkl-mnop
+APP_CERT="Developer ID Application: Your Name (TEAM_ID)"
+INSTALLER_CERT="Developer ID Installer: Your Name (TEAM_ID)"
+TEAM_ID=YOUR_TEAM_ID
+```
+
+> 💡 Make sure your `.env` file is listed in `.gitignore` to avoid exposing credentials.
+
+---
+
+### 🚀 Run the Distribution Script
+
+From your project root:
+
+```bash
+cd scripts
+chmod +x sign_and_package_plugin.sh
+./sign_and_package_plugin.sh
+```
+
+This script will:
+
+- ✅ Sign and notarize your `.component`
+- ✅ Create a signed `.pkg` installer and notarize it
+- ✅ Bundle it into a distributable `.dmg`
+
+> 📂 Output files (`.zip`, `.pkg`, `.dmg`) will be saved to your Desktop for easy sharing.
 
 ---
 ## 📚 Resources
