@@ -39,6 +39,11 @@ chmod +x ./generate_and_open_xcode.sh
 ```
 ./generate_and_open_xcode.sh .
 ```
+
+> ✅ **Note:** This setup gives you a fully working plugin on your local machine for development and testing.<br>
+> 🧳 To share or distribute your plugin to others, you'll need to configure code signing and notarization — when ready see [📦 How to Distribute Your Plugin](#-how-to-distribute-your-plugin) for full instructions.
+
+
 [📖 Skip to Full Quick Start →](#-quick-start)
 
 ---
