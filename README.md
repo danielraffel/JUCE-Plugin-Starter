@@ -90,7 +90,7 @@ chmod +x ./generate_and_open_xcode.sh
 To build and develop plugins with this template, you’ll need:
 
 ### System Requirements
-- macOS 15.0 or later
+- macOS 15.0 or later ([you can adjust the minimum macOS version in CMakeLists.txt](https://github.com/danielraffel/JUCE-Plugin-Starter/blob/ec4162b7fb21c5c86c25398aa072a64dd7cd818c/CMakeLists.txt#L3))
 - [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12) (latest version)
 - Recommended: Additional IDE with Support for 3rd Party AI Models ([Alex Sidebar](http://alexcodes.app), [Cursor](http://cursor.com), [Windsurf](http://windsurf.com), [Trae](http://trae.ai), or [VSCode](https://code.visualstudio.com))
 
