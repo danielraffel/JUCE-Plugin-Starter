@@ -31,3 +31,6 @@
 
 # Exclude environment variables
 .env
+
+# Exclude project plans
+plan.txt
