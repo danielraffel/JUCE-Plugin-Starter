@@ -19,7 +19,7 @@ This is the fastest way to test-drive the JUCE Plugin Starter. It assumes you ha
 
 ```
 # Install required tools (Xcode CLT, Homebrew, CMake, PluginVal, etc.)
-bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/scripts/dependencies.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/dependencies.sh)
 
 # Clone the starter project and set up environment
 git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git
@@ -76,8 +76,6 @@ scripts/generate_and_open_xcode.sh .
   - [About the JUCE cache location](#about-the-juce-cache-location)
 - [💡 Tips](#-tips)
   - [🔁 Building with AI Tools](#-building-with-ai-tools)
-    - [Using with Cursor](#using-with-cursor)
-    - [Using with Alex Sidebar](#using-with-alex-sidebar)
 - [📦 How to Distribute Your Plugin](#-how-to-distribute-your-plugin)
   - [🛠️ Requirements](#️-requirements)
     - [✅ Apple Developer Program Membership](#-apple-developer-program-membership)
@@ -427,7 +425,8 @@ JUCE-Plugin-Starter/
 │   └── postinstall.example               ← Post-installation script template
 │   └── preinstall.example                ← Pre-installation script template
 │   └── TERMS.txt.example                 ← Software license agreement template
-│   └── Welcome.txt.example               Installer welcome message template
+│   └── THIRD_PARTY_LICENSES.md           ← Third-party software licenses template
+│   └── Welcome.txt.example               ← Installer welcome message template
 ├── CMakeLists.txt                        ← Main build config for your JUCE project
 ├── initialize_JUCE-plugin_project        ← Script that will reinitialize this repo to make it yours, configure, rename and push it to GitHub
 ├── README.md                             ← You're reading it
@@ -597,8 +596,9 @@ This starter will automatically detect and package the following plugin formats 
 From your project root:
 
 ```bash
-chmod +x scripts/sign_and_package_plugin.sh
-scripts/sign_and_package_plugin.sh
+cd scripts
+chmod +x sign_and_package_plugin.sh
+./sign_and_package_plugin.sh
 ```
 
 This script will:
