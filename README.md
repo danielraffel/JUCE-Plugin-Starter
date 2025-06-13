@@ -19,7 +19,7 @@ This is the fastest way to test-drive the JUCE Plugin Starter. It assumes you ha
 
 ```
 # Install required tools (Xcode CLT, Homebrew, CMake, PluginVal, etc.)
-bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/dependencies.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/scripts/dependencies.sh)
 
 # Clone the starter project and set up environment
 git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git
