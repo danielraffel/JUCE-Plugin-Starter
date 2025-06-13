@@ -76,6 +76,8 @@ scripts/generate_and_open_xcode.sh .
   - [About the JUCE cache location](#about-the-juce-cache-location)
 - [💡 Tips](#-tips)
   - [🔁 Building with AI Tools](#-building-with-ai-tools)
+    - [Using with Cursor](#using-with-cursor)
+    - [Using with Alex Sidebar](#using-with-alex-sidebar)
 - [📦 How to Distribute Your Plugin](#-how-to-distribute-your-plugin)
   - [🛠️ Requirements](#️-requirements)
     - [✅ Apple Developer Program Membership](#-apple-developer-program-membership)
