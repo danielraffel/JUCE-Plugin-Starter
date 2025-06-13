@@ -1,0 +1,15 @@
+Welcome to [PROJECT_NAME] Installation
+
+This installer will install the [PROJECT_NAME] audio plugin to your system.
+
+Supported formats:
+• Audio Unit (AU) - Compatible with Logic Pro, GarageBand, and other AU hosts
+• VST3 - Compatible with most modern DAWs
+
+System Requirements:
+• macOS 15.0 or later
+• Compatible audio host application
+
+[Customize this welcome message for your plugin]
+
+For documentation and support, visit: [Your Website]

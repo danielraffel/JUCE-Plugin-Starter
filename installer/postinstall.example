@@ -1,0 +1,43 @@
+#!/bin/bash
+# Optional post-installation script
+# Uncomment and customize as needed
+
+# === Phase 2: Optional UV Setup ===
+# Uncomment the following section to enable Python virtual environment setup
+# This will create a UV-managed Python environment for additional dependencies
+
+# ENABLE_UV_SETUP=false  # Set to true to enable UV environment setup
+# 
+# if [ "$ENABLE_UV_SETUP" = true ]; then
+#     echo "🐍 Setting up Python environment with UV..."
+#     SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+#     ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+#     
+#     # Check if setup script exists
+#     if [ -f "$ROOT_DIR/scripts/setup_uv_environment.sh" ]; then
+#         bash "$ROOT_DIR/scripts/setup_uv_environment.sh" "[PROJECT_NAME]"
+#     else
+#         echo "⚠️  UV setup script not found, skipping Python environment setup"
+#     fi
+# else
+#     echo "ℹ️  UV Python environment setup disabled (set ENABLE_UV_SETUP=true to enable)"
+# fi
+
+# Example: Set up additional resources
+# ACTUAL_USER=$(stat -f "%Su" /dev/console)
+# TARGET_DIR="/Users/$ACTUAL_USER/Documents/[PROJECT_NAME]"
+# mkdir -p "$TARGET_DIR"
+
+# Example: Copy additional files
+# cp -R "/tmp/[PROJECT_NAME]_installer_resources/"* "$TARGET_DIR/"
+
+# Example: Set permissions
+# chown -R "$ACTUAL_USER:staff" "$TARGET_DIR"
+
+echo "[PROJECT_NAME] installation completed successfully!"
+echo "Plugin installed to: /Library/Audio/Plug-Ins/Components/[PROJECT_NAME].component"
+
+# Log installation
+echo "$(date): [PROJECT_NAME] installed successfully" >> "/tmp/[PROJECT_NAME]_install.log"
+
+exit 0

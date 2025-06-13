@@ -22,6 +22,12 @@
 *.aaxplugin/
 *.app/
 
+# Test Scripts (optional)
+/scripts/tests/
+
 # IDEs (optional)
 /.vscode/
 /.idea/
+
+# Exclude environment variables
+.env

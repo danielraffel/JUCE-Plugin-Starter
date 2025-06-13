@@ -38,9 +38,19 @@ cd "$BUILD_DIR" || { echo "Failed to enter build directory."; exit 1; }
 /opt/homebrew/bin/cmake .. -G "Xcode" -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 
 # Open the generated Xcode project
-if [ -d "$XCODE_PROJECT" ]; then
-  open "$XCODE_PROJECT"
-else
-  echo "Xcode project not found: $XCODE_PROJECT"
-  exit 1
-fi
+# === Phase 5 Enhancement: Optional Xcode Auto-Open ===
+# Xcode auto-open is disabled by default for better IDE compatibility
+# Uncomment the lines below to enable automatic Xcode opening:
+
+# echo "🚀 Opening Xcode project..."
+# if [ -d "$XCODE_PROJECT" ]; then
+#   open "$XCODE_PROJECT"
+# else
+#   echo "❌ Xcode project not found: $XCODE_PROJECT"
+#   exit 1
+# fi
+
+echo "✅ Xcode project generated successfully!"
+echo "📁 Project location: $XCODE_PROJECT"
+echo "💡 To open in Xcode: open \"$XCODE_PROJECT\""
+echo "💡 To enable auto-open: uncomment the Xcode opening section in this script"

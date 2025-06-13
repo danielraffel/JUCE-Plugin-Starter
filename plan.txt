@@ -1,0 +1,223 @@
+1. Identify Optional Installer Assets
+
+Task: Review the installer packaging process in
+
+sign_and_package_plugin.sh as well as related files like distribution.xml and postinstall .
+
+Goals:
+
+• Detect optional UI/installer components such as:
+
+• Welcome prompts
+
+• Customization options
+
+• Post-install screens or UI logic
+
+• Determine how they are used in the packaging process.
+
+Plan:
+
+• Propose a detection-and-opt-in mode (keep it simple maybe just renaming templates):
+
+• If optional files exist, acknowledge and run them.
+
+• If not, log their absence by finding the example templates included and continue gracefully.
+
+• Preserve modularity and allow “smart discovery.”
+
+⸻
+
+2. Analyze and Modularize the Post-Install UV Setup
+
+Task: Examine the postinstall script and its logic around:
+
+• Setting up a Python virtual environment with UV
+
+• Installing dependencies
+
+Goals:
+
+• Design a pattern for optional use, activated only when desired.
+
+Plan:
+
+• Introduce a reusable script (e.g., setup_uv_environment.sh and determine if we need the installer_binaries folder and how to make it easy to populate if we do)
+
+• Leave a stub file (postinstall.example) in the root with guidance to rename it to activate
+
+• Unless you have a better idea include a commented block in postinstall and a message in sign_and_package_plugin.sh that explains how to enable it
+
+• Ensure this is fully optional and does nothing unless activated
+
+⸻
+
+3. Design a Plug-and-Play Architecture
+
+Task: Generalize useful logic from PlunderTube (without project-specific branding) to make JUCE-Plugin-Starter more modular.
+
+Goals:
+
+• Support optional features like:
+
+• Custom installer UI logic to enabe PKG features if files like terms, etc exist
+
+• Postinstall hooks
+
+• Dependency installers for UV in a virtual environment
+
+• Maintain template cleanliness and avoid bloat
+
+Plan:
+
+• Rely only on generic filenames and ENV variables
+
+• Auto-detect optional scripts and integrate only if present
+
+• Ensure full backward compatibility with minimal required config
+
+⸻
+
+4. Evaluate .env and CMakeLists.txt Adjustments in PlunderTube
+
+Task: Review whether updates to .env.example or CMakeLists.txt in JUCE-Plugin-Starer would be needed to support modular behavior.
+
+Plan:
+
+• Propose minimal additions only
+
+• Document all changes clearly and ensure they’re opt-in
+
+• Preserve portability and usability across use cases
+
+⸻
+
+5. Update the README.md (Distribution Section Only)
+
+Task: Review the distribution section of the JUCE-Plugin-Starter README and insert explanations of the new capabilities.
+
+Goals:
+
+• Document proposed modular behaviors without labeling them as “new”
+
+• Avoid rewriting the full README
+
+Plan:
+
+• Update where appropriate to describe:
+
+• Optional installer asset inclusion
+
+• UV setup scripting and explain the value of a virtual environment when distributing packages like specific python dependencies and additional libraries
+
+• Add support to sign_and_package_plugin.sh to Zip PKG and uninstaller logic like sign_and_package_plugin.sh
+
+⸻
+
+6. Add Optional Uninstaller Script Support
+
+Task: Propose a pattern for developers to include an uninstaller script (uninstall_plugin.sh) in the .dmg.
+
+Plan:
+
+• Use a standard location such as installer/uninstall_plugin.sh
+
+• In sign_and_package_plugin.sh, check for its presence and add it to the .dmg if available and keep it up-to-date
+
+⸻
+
+7. Support Zipping the DMG During Packaging
+
+Task: Mirror PlunderTube’s behavior by ensuring the .dmg is zipped after creation.
+
+Plan:
+
+• Add zip logic to sign_and_package_plugin.sh, behind an optional flag or automatic default
+
+• Ensure the zipped .dmg is easy to find and use in CI or manual distribution
+
+⸻
+
+8. Prepare for Milestone-Based Implementation
+
+Once we agree on the plan, implementation will proceed in phased milestones to keep progress manageable and reviewable.
+
+Example Milestones:
+
+1. Installer asset detection + modular packaging
+
+2. Postinstall + UV setup opt-in structure
+
+3. Config file updates (.env, CMakeLists.txt)
+
+4. README revisions
+
+5. Uninstaller + zipped DMG support
+
+6. Script refactors and developer UX polish
+
+⸻
+
+9. Xcode Auto-Open Toggle + Doc Update
+
+Task: In generate_and_open_xcode.sh, comment out the auto-opening of the Xcode project:
+
+# # Open the generated Xcode project
+
+# if [ -d "$XCODE_PROJECT" ]; then
+
+#   open "$XCODE_PROJECT"
+
+# else
+
+#   echo "Xcode project not found: $XCODE_PROJECT"
+
+#   exit 1
+
+# fi
+
+Plan:
+
+• Leave this block commented by default
+
+• In the README’s AI Tools → Alex Sidebar section, mention:
+
+• This behavior is optional
+
+• Recommended for users not using Cursor or who want to immediately launch Xcode after regeneration
+
+• Safe to leave disabled if working in alternative editors
+
+⸻
+
+10. Refactor Scripts to a /scripts Directory
+
+Task: Propose moving utility scripts to a consistent folder and clean up calls throughout the project.
+
+Plan:
+
+• Move the following (with naming cleanup if needed):
+
+• generate_and_open_xcode.sh → scripts/
+
+• init_plugin_project.sh → scripts/
+
+• dependencies.sh → scripts/
+
+• Audit all references to these scripts and update paths as necessary (codebase-wide)
+
+• Ensure this change is thoroughly tested
+
+⸻
+
+11. Add Cursor Rules for AI Behavior
+
+Task: Create a .cursor/rules/plugin_starter.mdc file that helps AI tools (like Cursor or Alex Sidebar) follow best practices.
+
+Plan:
+
+• Rule example: “Always place test scripts in scripts/tests/ when generating or suggesting CLI tooling.”
+
+• Include guidance for code structure, naming conventions, and optional file handling
+
+• Make it helpful, not restrictive — the goal is to assist contributors using AI tools

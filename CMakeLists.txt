@@ -40,6 +40,14 @@ set(PLUGIN_VERSION "${BASE_PROJECT_VERSION}${VERSION_TIMESTAMP}")
 
 project(${PROJECT_NAME} VERSION ${PLUGIN_VERSION})
 
+# === Configuration Summary ===
+message(STATUS "🎛️  Plugin Configuration Summary:")
+message(STATUS "   Project Name: ${PROJECT_NAME}")
+message(STATUS "   Bundle ID: ${PROJECT_BUNDLE_ID}")
+message(STATUS "   Company: ${COMPANY_NAME}")
+message(STATUS "   Version: ${PLUGIN_VERSION}")
+message(STATUS "   JUCE Version: ${JUCE_TAG}")
+
 # Fetch JUCE using FetchContent
 include(FetchContent)
 
@@ -54,24 +62,132 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
-# Create the plugin
+# === Plugin Configuration Categories ===
+
+# 🎵 Audio Plugin Type Configuration - Read from Environment
+set(PLUGIN_IS_SYNTH $ENV{PLUGIN_IS_SYNTH})
+set(PLUGIN_NEEDS_MIDI_INPUT $ENV{PLUGIN_NEEDS_MIDI_INPUT})
+set(PLUGIN_NEEDS_MIDI_OUTPUT $ENV{PLUGIN_NEEDS_MIDI_OUTPUT})
+set(PLUGIN_IS_MIDI_EFFECT $ENV{PLUGIN_IS_MIDI_EFFECT})
+
+# Fallback defaults if env vars not set
+if(NOT PLUGIN_IS_SYNTH)
+    set(PLUGIN_IS_SYNTH TRUE)
+endif()
+if(NOT PLUGIN_NEEDS_MIDI_INPUT)
+    set(PLUGIN_NEEDS_MIDI_INPUT TRUE)
+endif()
+if(NOT PLUGIN_NEEDS_MIDI_OUTPUT)
+    set(PLUGIN_NEEDS_MIDI_OUTPUT FALSE)
+endif()
+if(NOT PLUGIN_IS_MIDI_EFFECT)
+    set(PLUGIN_IS_MIDI_EFFECT FALSE)
+endif()
+
+# 🎹 Editor Configuration
+set(PLUGIN_EDITOR_WANTS_KEYBOARD_FOCUS $ENV{PLUGIN_EDITOR_WANTS_KEYBOARD_FOCUS})
+if(NOT PLUGIN_EDITOR_WANTS_KEYBOARD_FOCUS)
+    set(PLUGIN_EDITOR_WANTS_KEYBOARD_FOCUS TRUE)
+endif()
+
+# 📦 Build Configuration
+set(PLUGIN_COPY_AFTER_BUILD $ENV{PLUGIN_COPY_AFTER_BUILD})
+if(NOT PLUGIN_COPY_AFTER_BUILD)
+    set(PLUGIN_COPY_AFTER_BUILD TRUE)
+endif()
+
+# 🏷️ Plugin Identification - Read from Environment
+set(PLUGIN_MANUFACTURER_CODE $ENV{PLUGIN_MANUFACTURER_CODE})
+set(PLUGIN_CODE $ENV{PLUGIN_CODE})
+
+if(NOT PLUGIN_MANUFACTURER_CODE)
+    set(PLUGIN_MANUFACTURER_CODE "Juce")
+endif()
+if(NOT PLUGIN_CODE)
+    set(PLUGIN_CODE "MYPL")
+endif()
+
+# 🎯 Plugin Formats - Read from Environment
+set(PLUGIN_FORMATS $ENV{PLUGIN_FORMATS})
+if(NOT PLUGIN_FORMATS)
+    set(PLUGIN_FORMATS "AU;VST3;Standalone")
+endif()
+
+# 🎼 Audio Unit Specific Configuration
+set(PLUGIN_AU_MAIN_TYPE $ENV{PLUGIN_AU_MAIN_TYPE})
+if(NOT PLUGIN_AU_MAIN_TYPE)
+    set(PLUGIN_AU_MAIN_TYPE "kAudioUnitType_MusicDevice")
+endif()
+
+set(PLUGIN_AU_EXPORT_PREFIX $ENV{PLUGIN_AU_EXPORT_PREFIX})
+if(NOT PLUGIN_AU_EXPORT_PREFIX)
+    set(PLUGIN_AU_EXPORT_PREFIX "${PROJECT_NAME}AU")
+endif()
+
+# VST3 Categories - Read from Environment
+set(PLUGIN_VST3_CATEGORIES $ENV{PLUGIN_VST3_CATEGORIES})
+if(NOT PLUGIN_VST3_CATEGORIES)
+    set(PLUGIN_VST3_CATEGORIES "Synth")
+endif()
+
+# === Optional JUCE Modules - Read from Environment ===
+set(ENABLE_JUCE_DSP $ENV{ENABLE_JUCE_DSP})
+set(ENABLE_JUCE_OPENGL $ENV{ENABLE_JUCE_OPENGL})
+set(ENABLE_JUCE_CRYPTOGRAPHY $ENV{ENABLE_JUCE_CRYPTOGRAPHY})
+
+# Default to ON for DSP, OFF for others
+if(NOT ENABLE_JUCE_DSP)
+    set(ENABLE_JUCE_DSP ON)
+endif()
+if(NOT ENABLE_JUCE_OPENGL)
+    set(ENABLE_JUCE_OPENGL OFF)
+endif()
+if(NOT ENABLE_JUCE_CRYPTOGRAPHY)
+    set(ENABLE_JUCE_CRYPTOGRAPHY OFF)
+endif()
+
+# Create the plugin with organized configuration
 juce_add_plugin(${PROJECT_NAME}
+    # Basic Information
     COMPANY_NAME ${COMPANY_NAME}
     BUNDLE_ID ${PROJECT_BUNDLE_ID}
-    IS_SYNTH TRUE
-    NEEDS_MIDI_INPUT TRUE
-    NEEDS_MIDI_OUTPUT FALSE
-    IS_MIDI_EFFECT FALSE
-    EDITOR_WANTS_KEYBOARD_FOCUS TRUE
-    COPY_PLUGIN_AFTER_BUILD TRUE
-    PLUGIN_MANUFACTURER_CODE Juce
-    PLUGIN_CODE MYPL
-    FORMATS AU VST3 Standalone
     PRODUCT_NAME ${PROJECT_NAME}
-    AU_MAIN_TYPE "kAudioUnitType_MusicDevice"
-    AU_EXPORT_PREFIX "${PROJECT_NAME}AU"
-    VST3_CATEGORIES "Synth"
+    
+    # Plugin Type Configuration
+    IS_SYNTH ${PLUGIN_IS_SYNTH}
+    NEEDS_MIDI_INPUT ${PLUGIN_NEEDS_MIDI_INPUT}
+    NEEDS_MIDI_OUTPUT ${PLUGIN_NEEDS_MIDI_OUTPUT}
+    IS_MIDI_EFFECT ${PLUGIN_IS_MIDI_EFFECT}
+    
+    # Editor Configuration
+    EDITOR_WANTS_KEYBOARD_FOCUS ${PLUGIN_EDITOR_WANTS_KEYBOARD_FOCUS}
+    
+    # Build Configuration
+    COPY_PLUGIN_AFTER_BUILD ${PLUGIN_COPY_AFTER_BUILD}
+    
+    # Plugin Identification
+    PLUGIN_MANUFACTURER_CODE ${PLUGIN_MANUFACTURER_CODE}
+    PLUGIN_CODE ${PLUGIN_CODE}
+    
+    # Supported Formats
+    FORMATS ${PLUGIN_FORMATS}
+    
+    # Format-Specific Configuration
+    AU_MAIN_TYPE ${PLUGIN_AU_MAIN_TYPE}
+    AU_EXPORT_PREFIX ${PLUGIN_AU_EXPORT_PREFIX}
+    VST3_CATEGORIES ${PLUGIN_VST3_CATEGORIES}
 )
+
+# Display enhanced plugin configuration summary
+message(STATUS "🎵 Plugin Type: ${PLUGIN_IS_SYNTH}")
+message(STATUS "🎹 MIDI Input: ${PLUGIN_NEEDS_MIDI_INPUT}")
+message(STATUS "📦 Formats: ${PLUGIN_FORMATS}")
+message(STATUS "🎼 AU Type: ${PLUGIN_AU_MAIN_TYPE}")
+message(STATUS "🎛️  VST3 Category: ${PLUGIN_VST3_CATEGORIES}")
+message(STATUS "🔧 Optional Modules:")
+message(STATUS "   DSP: ${ENABLE_JUCE_DSP}")
+message(STATUS "   OpenGL: ${ENABLE_JUCE_OPENGL}")
+message(STATUS "   Cryptography: ${ENABLE_JUCE_CRYPTOGRAPHY}")
 
 juce_generate_juce_header(${PROJECT_NAME})
 
@@ -88,7 +204,8 @@ target_sources(${PROJECT_NAME} PRIVATE
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
+# === Conditional JUCE Module Linking ===
+set(JUCE_MODULES
     juce::juce_audio_basics
     juce::juce_audio_devices
     juce::juce_audio_formats
@@ -96,11 +213,30 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     juce::juce_audio_utils
     juce::juce_core
     juce::juce_data_structures
-    juce::juce_dsp
     juce::juce_events
     juce::juce_graphics
     juce::juce_gui_basics
     juce::juce_gui_extra
+)
+
+# Add optional modules based on environment variables
+if(ENABLE_JUCE_DSP)
+    list(APPEND JUCE_MODULES juce::juce_dsp)
+    message(STATUS "✅ Including JUCE DSP module")
+endif()
+
+if(ENABLE_JUCE_OPENGL)
+    list(APPEND JUCE_MODULES juce::juce_opengl)
+    message(STATUS "✅ Including JUCE OpenGL module")
+endif()
+
+if(ENABLE_JUCE_CRYPTOGRAPHY)
+    list(APPEND JUCE_MODULES juce::juce_cryptography)
+    message(STATUS "✅ Including JUCE Cryptography module")
+endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    ${JUCE_MODULES}
     ${PROJECT_NAME}_Resources
 )
 

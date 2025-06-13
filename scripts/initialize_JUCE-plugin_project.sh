@@ -30,6 +30,33 @@ set -o allexport
 source .env
 set +o allexport
 
+# --- Process installer templates ---
+echo ""
+echo "📄 Processing installer templates..."
+
+# Create actual files from examples with replaced variables
+for template_file in installer/*.example; do
+  if [[ -f "$template_file" ]]; then
+    # Get the base filename without .example extension
+    base_name=$(basename "$template_file" .example)
+    output_file="installer/$base_name"
+    
+    # Create the file with replaced variables
+    cat "$template_file" | \
+      sed "s/\[PROJECT_NAME\]/$PROJECT_NAME/g" | \
+      sed "s/\[Your Company Name\]/$COMPANY_NAME/g" | \
+      sed "s/com\.yourcompany\.yourplugin/$PROJECT_BUNDLE_ID/g" > "$output_file"
+    
+    # Make scripts executable
+    if [[ "$base_name" == "postinstall" ]]; then
+      chmod +x "$output_file"
+      echo "✅ Created executable $output_file"
+    else
+      echo "✅ Created $output_file"
+    fi
+  fi
+done
+
 # --- Function to detect if we're in a JUCE project directory ---
 is_juce_project_directory() {
   local dir="${1:-$(pwd)}"
@@ -625,6 +652,63 @@ gh repo create "$GITHUB_USERNAME/$PROJECT_NAME" \
   --push \
   --confirm
 
+# --- Handle README files ---
+echo ""
+echo "📝 Setting up README files..."
+
+# Rename original README to JUCE-README.md if it exists and we haven't already done so
+if [[ -f "README.md" && ! -f "JUCE-README.md" ]]; then
+  mv "README.md" "JUCE-README.md"
+  echo "✅ Renamed original README.md to JUCE-README.md"
+  
+  # Create new project-specific README.md
+  cat > "README.md" << EOF
+# $PROJECT_NAME
+
+A JUCE-based audio plugin created with JUCE-Plugin-Starter.
+
+## Overview
+
+[Describe your plugin here]
+
+## Features
+
+- [Feature 1]
+- [Feature 2]
+- [Feature 3]
+
+## Installation
+
+### Prerequisites
+
+- macOS 10.13 or later
+- Compatible DAW or host application
+
+### Install
+
+1. Download the latest release from the [Releases](https://github.com/$GITHUB_USERNAME/$PROJECT_NAME/releases) page
+2. Run the installer package
+3. Follow the on-screen instructions
+
+## Development
+
+This project was created using [JUCE-Plugin-Starter](https://github.com/danielraffel/JUCE-Plugin-Starter).
+
+For development instructions, see [JUCE-README.md](JUCE-README.md).
+
+## License
+
+[Your license information]
+
+## Support
+
+[Your support information]
+
+Copyright © $(date +"%Y") $COMPANY_NAME. All rights reserved.
+EOF
+  echo "✅ Created new project-specific README.md"
+fi
+
 echo ""
 echo "🎉 **SUCCESS!**"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -635,7 +719,8 @@ echo "🚀 You're ready to start working on your new plugin!"
 echo "   Working directory: $PROJECT_PATH"
 echo ""
 echo "Next steps:"
-echo "• Run ./generate_and_open_xcode.sh to open in Xcode"
+# Line 722: Update the reference
+echo "• Run scripts/generate_and_open_xcode.sh to open in Xcode"
 echo "• Edit source files to build your plugin"
 echo "• Commit changes: git add . && git commit -m \"Your changes\""
 echo "• Push updates: git push"

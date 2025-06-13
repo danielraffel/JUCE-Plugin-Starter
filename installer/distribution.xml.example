@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <pkg-ref id="com.yourcompany.yourplugin.component"/>
+    <options customize="never" require-scripts="false" hostArchitectures="x86_64,arm64"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.yourcompany.yourplugin.component"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.yourcompany.yourplugin.component" visible="false">
+        <pkg-ref id="com.yourcompany.yourplugin.component"/>
+    </choice>
+    <pkg-ref id="com.yourcompany.yourplugin.component" version="1.0" onConclusion="none">[PROJECT_NAME]_component.pkg</pkg-ref>
+</installer-gui-script>
