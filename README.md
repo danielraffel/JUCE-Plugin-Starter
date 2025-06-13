@@ -597,9 +597,8 @@ This starter will automatically detect and package the following plugin formats 
 From your project root:
 
 ```bash
-cd scripts
-chmod +x sign_and_package_plugin.sh
-./sign_and_package_plugin.sh
+chmod +x scripts/sign_and_package_plugin.sh
+scripts/sign_and_package_plugin.sh
 ```
 
 This script will:
