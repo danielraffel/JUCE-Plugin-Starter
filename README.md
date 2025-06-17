@@ -44,7 +44,7 @@ chmod +x ./generate_and_open_xcode.sh
 
 * 👨‍💻 You can now open your project folder in your favorite IDE and start building your JUCE plugin.
 
-* ✅ After setup, while developing your plugin you'll run this command anytime you need to manually rebuild your project and reopen in Xcode:
+* ✅ Once setup is complete, run this command whenever you need to manually rebuild your project and reopen it in Xcode during development. (If you’re collaborating with an AI developer tool, [here are some common ways to automate this step](https://github.com/danielraffel/JUCE-Plugin-Starter/blob/main/README.md#-building-with-ai-tools):)
 ```
 ./generate_and_open_xcode.sh .
 ```
