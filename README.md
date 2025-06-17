@@ -21,6 +21,11 @@ This is the fastest way to test-drive the JUCE Plugin Starter. It assumes you ha
 # Install required tools (Xcode CLT, Homebrew, CMake, PluginVal, etc.)
 bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/dependencies.sh)
 
+# The commands above install software like Homebrew.
+# During installation, you may be prompted to add Homebrew to your PATH manually:
+# echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.bash_profile
+# eval "$(/opt/homebrew/bin/brew shellenv)"
+
 # Clone the starter project and set up environment
 git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git
 cd JUCE-Plugin-Starter
@@ -136,6 +141,13 @@ It also includes **optional installs**, commented out by default:
 * **Faust** – DSP prototyping compiler
 * **GoogleTest** – C++ unit testing
 * **Python 3**, **pip3**, and **behave** – for behavior-driven development (BDD)
+
+> ✏️ When you run `dependencies.sh` software like Homebrew may ask you to do additonal configurations to complete your setup:
+```
+# During installation, you may be prompted to add Homebrew to your PATH manually:
+# echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.bash_profile
+# eval "$(/opt/homebrew/bin/brew shellenv)"
+```
 
 > ✏️ To enable optional tools, simply **uncomment** the relevant lines in the script.
 
