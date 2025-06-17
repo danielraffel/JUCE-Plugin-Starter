@@ -2,7 +2,7 @@
 
 ## ℹ️ Overview
 
-This is a beginner-friendly JUCE plugin starter template using CMake and environment-based configuration. It allows you to create standalone apps and audio plugins (AU/VST3) for macOS using Xcode. It’s designed for quick setup, ease of customization, and modern JUCE development workflows.
+This is a JUCE plugin starter template using CMake and environment-based configuration for folks new to audio plugin development on macOS. It allows you to create standalone apps and audio plugins (AU/VST3) for macOS using Xcode. It’s designed for quick setup, ease of customization, and modern JUCE development workflows.
 
 ---
 
