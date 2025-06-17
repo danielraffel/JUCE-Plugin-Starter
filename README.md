@@ -429,6 +429,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "Minimum macOS version")
 ```
 JUCE-Plugin-Starter/
 ├── .env.example                   ← Template for your environment variables
+├── CLAUDE.md                      ← Project details for Claude Code
 ├── CMakeLists.txt                 ← Main build config for your JUCE project
 ├── init_plugin_project.sh         ← Script that will reinitialize this repo to make it yours, configure, rename and push it to GH
 ├── README.md                      ← You're reading it
