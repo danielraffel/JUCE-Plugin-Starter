@@ -67,6 +67,7 @@ check_brew_cask() {
 }
 
 check_brew_package "cmake" "brew install cmake"
+check_brew_package "gh" "brew install gh"
 check_brew_cask "pluginval"
 
 # -------------------------------
