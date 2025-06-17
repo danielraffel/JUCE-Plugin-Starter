@@ -22,6 +22,7 @@ The `generate_and_open_xcode.sh` script handles:
 - **Build system**: CMake with custom Xcode generation
 - **IDE**: Xcode (auto-opened by build script)
 - **Build directory**: `./build/`
+- **JUCE directory**: `../JUCE/`
 
 ## Common Mistakes to Avoid
 
