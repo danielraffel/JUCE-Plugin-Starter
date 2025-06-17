@@ -79,6 +79,7 @@ chmod +x ./generate_and_open_xcode.sh
   - [🔁 Building with AI Tools](#-building-with-ai-tools)
     - [Using with Cursor](#using-with-cursor)
     - [Using with Alex Sidebar](#using-with-alex-sidebar)
+    - [Using with Claude Code](#using-with-claude-code)
 - [📦 How to Distribute Your Plugin](#-how-to-distribute-your-plugin)
   - [🛠️ Requirements](#️-requirements)
     - [✅ Apple Developer Program Membership](#-apple-developer-program-membership)
@@ -485,6 +486,10 @@ Whenever the Xcode project file needs to be regenerated use run_shell to execute
 ```
 
 <img width="515" alt="regenerate-xcode-alexcodes" src="https://github.com/user-attachments/assets/158b6005-645f-410a-9fdb-51ef9479ac55" />
+
+
+#### Using with Claude Code
+To use `generate_and_open_xcode.sh` with [Claude Code](https://www.anthropic.com/claude-code), I’ve created CLAUDE.md and added it to the root of the repo. It instructs the agent how to properly recreate the project file.
 
 ---
 
