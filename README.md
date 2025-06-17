@@ -17,7 +17,7 @@ This is the fastest way to test-drive the JUCE Plugin Starter. It assumes you ha
   
 > **Heads up:** This command runs several scripts and installs multiple components. To avoid surprises, it’s a good idea to read through the full README before running it in your terminal. And, to watch the output in the event you're asked to take manual actions.
 >
-> **Step 1: Paste the entire section below directly into your terminal.**
+> **Setup Instructions:** Paste the entire section below directly into your terminal.
 
 ```
 # Install required tools (Xcode CLT, Homebrew, CMake, PluginVal, etc.)
