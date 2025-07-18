@@ -80,10 +80,6 @@ target_sources(${PROJECT_NAME} PRIVATE
     Source/PluginProcessor.h
     Source/PluginEditor.cpp
     Source/PluginEditor.h
-    Source/SampleCellComponent.cpp
-    Source/SampleCellComponent.h
-    Source/SettingsComponent.cpp
-    Source/SettingsComponent.h
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
