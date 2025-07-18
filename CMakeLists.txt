@@ -21,7 +21,7 @@ if(NOT JUCE_REPO)
     set(JUCE_REPO "https://github.com/juce-framework/JUCE.git")
 endif()
 if(NOT JUCE_TAG)
-    set(JUCE_TAG "8.0.7")
+    set(JUCE_TAG "8.0.8")
 endif()
 if(NOT COMPANY_NAME)
     set(COMPANY_NAME "Default Company Name")
@@ -196,11 +196,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     Source/PluginProcessor.h
     Source/PluginEditor.cpp
     Source/PluginEditor.h
-    Source/SampleCellComponent.cpp
-    Source/SampleCellComponent.h
-    Source/SettingsComponent.cpp
-    Source/SettingsComponent.h
-)
+ )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
