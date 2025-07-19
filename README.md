@@ -381,6 +381,30 @@ Add more `.cpp/.h` files as needed for a modular architecture.
 
 Your `CMakeLists.txt` is where the plugin’s structure and build config live. Open it with any code editor.
 
+All CMake configuration is centralized in the top-level `CMakeLists.txt` file. If you need to:
+
+* Add source files
+* Link dependencies
+* Define feature flags
+* Toggle plugin modes
+* Set test builds
+
+Then this is where to do it.
+
+🕒 **Tip**: If you only modified non-CMake files and want a quicker build, you can skip regeneration using:
+
+```bash
+SKIP_CMAKE_REGEN=1 ./generate_and_open_xcode.sh
+```
+
+Otherwise, always use:
+
+```bash
+./generate_and_open_xcode.sh
+```
+
+If you're [developing using an agent like Claude Code](#using-with-claude-code) it will determine which build approach is best using instructions in the `CLAUDE.md` in this repository.
+
 ### 🔧 Common Edits
 
 #### ✅ Add Source Files
@@ -505,7 +529,17 @@ Whenever the Xcode project file needs to be regenerated use run_shell to execute
 
 
 #### Using with Claude Code
-To use `generate_and_open_xcode.sh` with [Claude Code](https://www.anthropic.com/claude-code), I’ve created CLAUDE.md and added it to the root of the repo. It instructs the agent how to properly recreate the project file.
+To use `generate_and_open_xcode.sh` with [Claude Code](https://www.anthropic.com/claude-code), I’ve created a [CLAUDE.md](CLAUDE.md) and added it to the root of the repo. It instructs the agent how and when to properly recreate the project file. It can help you build and run the project by invoking the proper script:
+
+```bash
+./generate_and_open_xcode.sh
+```
+
+**Claude will determine whether a full regeneration is needed based on recent file changes or build errors.**. The [CLAUDE.md](CLAUDE.md) explains when it's best to regenerate the Xcode project and how to optionally skip regeneration for faster builds using:
+
+```bash
+SKIP_CMAKE_REGEN=1 ./generate_and_open_xcode.sh
+```
 
 ---
 
