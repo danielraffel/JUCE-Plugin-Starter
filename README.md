@@ -476,8 +476,14 @@ JUCE-Plugin-Starter/
 ├── README.md                      ← You're reading it
 ├── generate_and_open_xcode.sh     ← Script that loads `.env`, runs CMake, and opens Xcode
 ├── scripts/                       ← Automation / helper scripts
-│   └── post_build.sh              ← Auto-increments bundle version so Logic reloads builds
-│   └── sign_and_package_plugin.sh ← Auto-package plug-in(s) for safe, notarized distribution via PKG and DMG files
+│   ├── about/                     ← Documentation
+│   │   └── build_system.md        ← Comprehensive build system documentation
+│   ├── build.sh                   ← Unified build system (local, test, sign, notarize, publish)
+│   ├── bump_version.py            ← Semantic version management
+│   ├── diagnose_plugin.sh         ← Plugin diagnostic tool
+│   ├── generate_release_notes.py  ← AI-powered release notes generator
+│   ├── post_build.sh              ← Enhanced version handling with semantic versioning
+│   └── validate_plugin.sh         ← Plugin validation tool
 ├── Source/                        ← Your plugin source code
 │   ├── PluginProcessor.cpp/.h
 │   └── PluginEditor.cpp/.h
@@ -496,6 +502,53 @@ JUCE-Plugin-Starter/
 
 
 >💡 You can safely `rm -rf` build without re-downloading JUCE every time.
+
+---
+
+## 🔨 Enhanced Build System
+
+This template now includes a unified build system (`scripts/build.sh`) that provides comprehensive functionality:
+
+### Quick Build Commands
+
+```bash
+# Quick local build (all formats)
+./scripts/build.sh
+
+# Build specific format
+./scripts/build.sh au          # Audio Unit only
+./scripts/build.sh vst3        # VST3 only  
+./scripts/build.sh standalone  # Standalone app only
+
+# Build with testing
+./scripts/build.sh all test    # Build and run PluginVal tests
+
+# Production builds
+./scripts/build.sh all sign     # Build and codesign
+./scripts/build.sh all notarize # Build, sign, and notarize
+./scripts/build.sh all publish  # Full release with installer and GitHub publishing
+```
+
+### Automatic Version Management
+
+- **Semantic Versioning**: Automatic version bumping with `scripts/bump_version.py`
+- **Build Integration**: Versions are automatically managed during builds
+- **Manual Control**: Bump major/minor versions manually when needed
+
+```bash
+python3 scripts/bump_version.py minor  # 0.0.3 → 0.1.0
+python3 scripts/bump_version.py major  # 0.1.0 → 1.0.0
+```
+
+### Additional Tools
+
+- **Plugin Validation**: `./scripts/validate_plugin.sh` - Comprehensive plugin validation
+- **Diagnostic Tool**: `./scripts/diagnose_plugin.sh` - Troubleshoot plugin issues
+- **AI Release Notes**: `./scripts/generate_release_notes.py` - Generate release notes from git history
+
+### Complete Documentation
+
+For comprehensive build system documentation, see [`scripts/about/build_system.md`](scripts/about/build_system.md).
 
 ---
 

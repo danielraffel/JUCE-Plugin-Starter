@@ -6,9 +6,10 @@ This file provides guidelines for AI tools (like Cursor, Claude, etc.) when work
 
 ### Script Organization
 - **All utility scripts** should be placed in `/scripts/` directory
-- **Test scripts** should be placed in `/scripts/tests/` directory
-- **Build scripts** (post_build.sh, sign_and_package_plugin.sh) belong in `/scripts/`
-- **Main project scripts** (generate_and_open_xcode.sh, dependencies.sh) belong in `/scripts/`
+- **Test scripts** should be placed in `/scripts/tests/` directory (if created)
+- **Build scripts** (post_build.sh, build.sh, bump_version.py) belong in `/scripts/`
+- **Main project scripts** (generate_and_open_xcode.sh, init_plugin_project.sh, dependencies.sh) belong in project root
+- **Documentation** should be placed in `/scripts/about/` directory
 
 ### File Naming Conventions
 - Use **snake_case** for script files (e.g., `setup_uv_environment.sh`)
@@ -23,6 +24,9 @@ This file provides guidelines for AI tools (like Cursor, Claude, etc.) when work
 - Use `set -o allexport; source .env; set +o allexport` pattern
 - Validate required environment variables before proceeding
 - Provide clear error messages for missing variables
+- **Required variables**: PROJECT_NAME, PROJECT_BUNDLE_ID (minimum for build system)
+- **Version variables**: VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD
+- **Apple signing**: APPLE_ID, APP_CERT, INSTALLER_CERT, TEAM_ID, APP_PASSWORD
 
 ### Script Best Practices
 - Start scripts with `#!/bin/bash` or `#!/usr/bin/env bash`
@@ -34,6 +38,33 @@ This file provides guidelines for AI tools (like Cursor, Claude, etc.) when work
 - Always check if required files/directories exist before operations
 - Provide helpful error messages with suggested solutions
 - Use appropriate exit codes (0 for success, 1+ for errors)
+
+## 🔨 Build System Guidelines
+
+### Unified Build System (`scripts/build.sh`)
+- **Primary build tool**: Use `scripts/build.sh` for all build operations
+- **Supports targets**: `all`, `au`, `vst3`, `standalone`
+- **Supports actions**: `local`, `test`, `sign`, `notarize`, `publish`
+- **Requires .env**: Always validate environment configuration before building
+- **Example usage**: `./scripts/build.sh vst3 test` or `./scripts/build.sh all publish`
+
+### Version Management (`scripts/bump_version.py`)
+- **Semantic versioning**: Uses MAJOR.MINOR.PATCH.BUILD format
+- **Auto-increment**: Build numbers increment automatically
+- **Manual control**: Use `--major`, `--minor`, `--patch` for manual version bumps
+- **Integration**: Works with CMake and Xcode project generation
+- **Environment**: Reads/writes version info to .env file
+
+### Legacy Build Support
+- **generate_and_open_xcode.sh**: Still available for direct Xcode project generation
+- **Version integration**: Now includes automatic version management
+- **Skip options**: Use `SKIP_VERSION_BUMP=1` and `SKIP_CMAKE_REGEN=1` for faster iterations
+
+### Additional Tools
+- **validate_plugin.sh**: Comprehensive plugin validation and testing
+- **diagnose_plugin.sh**: Plugin diagnostic and troubleshooting tool
+- **generate_release_notes.py**: AI-powered release notes from git history
+- **Documentation**: Complete build system docs in `scripts/about/build_system.md`
 
 ## 📋 Testing Guidelines
 
@@ -67,8 +98,10 @@ This file provides guidelines for AI tools (like Cursor, Claude, etc.) when work
 ## 🎯 AI Assistant Behavior
 
 ### When Suggesting Changes
-- **Always** place new test scripts in `scripts/tests/`
+- **Always** place new test scripts in `scripts/tests/` (if created)
 - **Always** place new utility scripts in `scripts/`
+- **Place** main project scripts (init, generate, dependencies) in project root
+- **Place** documentation in `scripts/about/`
 - **Prefer** modifying existing scripts over creating new ones
 - **Validate** that suggested file paths exist in the project
 - **Update** third-party license acknowledgements when adding/removing tools
