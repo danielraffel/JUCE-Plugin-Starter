@@ -177,7 +177,7 @@ If you prefer, you can install all required tools manually:
 | **Faust** *(optional)*                    | DSP prototyping compiler         | `brew install faust`                                                                              |
 | **GoogleTest** or **Catch2** *(optional)* | C++ unit testing                 | `brew install googletest` or `brew install catch2`                                                |
 | **Python 3 + behave** *(optional)*        | Natural language test automation | `brew install python && pip3 install behave`                                                      |
-| **[JUCE](https://juce.com)**              | Audio plugin framework (AU/VST3) | *Automatically downloaded by CMake/FetchContent*                                                            |
+| **[JUCE](https://juce.com)**              | Audio plugin framework (AU/VST3) | `git clone https://github.com/juce-framework/JUCE.git`                                                          |
 
 ---
 
