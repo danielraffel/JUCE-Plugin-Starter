@@ -25,3 +25,6 @@
 # IDEs (optional)
 /.vscode/
 /.idea/
+
+# Environment variables
+.env
