@@ -48,7 +48,7 @@ cd JUCE-Plugin-Starter
 * 🔨 **Build your plugin** using either:
   - **AI Tools**: If you're using Claude Code, it will automatically know how to build and test your plugin
   - **Manual**: Use `./scripts/build.sh standalone local` to quickly test the standalone app
-  - **Xcode**: Use `./scripts/generate_and_open_xcode.sh` to generate and open the Xcode project
+  - **Xcode**: Use `./scripts/generate_and_open_xcode.sh` to generate the Xcode project
 
 * 📖 **See [Enhanced Build System](#-enhanced-build-system) for quick build tips and commands**
 
