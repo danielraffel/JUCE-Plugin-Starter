@@ -8,7 +8,7 @@ If `CMakeLists.txt`, `.env`, or build-related config **has not changed**, Claude
 
 ```bash
 # Skip both CMake regeneration AND version bump
-SKIP_CMAKE_REGEN=1 SKIP_VERSION_BUMP=1 ./generate_and_open_xcode.sh
+SKIP_CMAKE_REGEN=1 SKIP_VERSION_BUMP=1 ./scripts/generate_and_open_xcode.sh
 ```
 
 This will:
@@ -27,12 +27,12 @@ Before each build, Claude must ask:
 * ✅ **If yes**, run full:
 
   ```bash
-  ./generate_and_open_xcode.sh
+  ./scripts/generate_and_open_xcode.sh
   ```
 * ✅ **If no**, run faster:
 
   ```bash
-  SKIP_CMAKE_REGEN=1 SKIP_VERSION_BUMP=1 ./generate_and_open_xcode.sh
+  SKIP_CMAKE_REGEN=1 SKIP_VERSION_BUMP=1 ./scripts/generate_and_open_xcode.sh
   ```
 
 If Claude skips regeneration but the build fails due to stale configuration, try again without `SKIP_CMAKE_REGEN`.
@@ -42,7 +42,7 @@ If Claude skips regeneration but the build fails due to stale configuration, try
 Claude must run the **full**:
 
 ```bash
-./generate_and_open_xcode.sh
+./scripts/generate_and_open_xcode.sh
 ```
 
 If any of the following are true:
@@ -56,7 +56,7 @@ If any of the following are true:
 Otherwise, Claude may run the **faster**:
 
 ```bash
-SKIP_CMAKE_REGEN=1 SKIP_VERSION_BUMP=1 ./generate_and_open_xcode.sh
+SKIP_CMAKE_REGEN=1 SKIP_VERSION_BUMP=1 ./scripts/generate_and_open_xcode.sh
 ```
 
 ### 📱 After Generating Xcode Project
@@ -144,7 +144,7 @@ The `scripts/build.sh` script provides:
 - `xcodebuild -project ...`
 
 ✅ Always use:
-- `./generate_and_open_xcode.sh` only when CMake regeneration is needed otherise use `SKIP_CMAKE_REGEN=1 ./generate_and_open_xcode.sh` only when `CMakeLists.txt`, `.env`, or build-related config **has not changed**, Claude can **skip regeneration** to save time:
+- `./scripts/generate_and_open_xcode.sh` only when CMake regeneration is needed otherise use `SKIP_CMAKE_REGEN=1 ./scripts/generate_and_open_xcode.sh` only when `CMakeLists.txt`, `.env`, or build-related config **has not changed**, Claude can **skip regeneration** to save time:
 - `./scripts/build.sh standalone` for building and then open the app once it's built
 
 ## Additional Project Info

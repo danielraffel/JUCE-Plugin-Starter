@@ -31,10 +31,10 @@ else
     # Check default locations
     if [ -d "$HOME/Library/Audio/Plug-Ins/Components/${PROJECT_NAME}.component" ]; then
         COMPONENT_PATH="$HOME/Library/Audio/Plug-Ins/Components/${PROJECT_NAME}.component"
-    elif [ -d "build/Griddy_artefacts/Debug/AU/${PROJECT_NAME}.component" ]; then
-        COMPONENT_PATH="build/Griddy_artefacts/Debug/AU/${PROJECT_NAME}.component"
-    elif [ -d "build/Griddy_artefacts/Release/AU/${PROJECT_NAME}.component" ]; then
-        COMPONENT_PATH="build/Griddy_artefacts/Release/AU/${PROJECT_NAME}.component"
+    elif [ -d "build/${PROJECT_NAME}_artefacts/Debug/AU/${PROJECT_NAME}.component" ]; then
+        COMPONENT_PATH="build/${PROJECT_NAME}_artefacts/Debug/AU/${PROJECT_NAME}.component"
+    elif [ -d "build/${PROJECT_NAME}_artefacts/Release/AU/${PROJECT_NAME}.component" ]; then
+        COMPONENT_PATH="build/${PROJECT_NAME}_artefacts/Release/AU/${PROJECT_NAME}.component"
     else
         echo -e "${RED}❌ Component not found in default locations${NC}"
         echo "   Please specify path as argument"

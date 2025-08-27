@@ -21,8 +21,22 @@ fi
 
 # --- Check .env exists ---
 if [[ ! -f .env ]]; then
-  echo "❌ .env file not found. Please run: cp .env.example .env"
-  exit 1
+  if [[ -f .env.example ]]; then
+    echo "❌ .env file not found. Please run: cp .env.example .env"
+    echo "💡 Or run this script again and it will copy .env.example for you automatically."
+    read -p "🔧 Would you like me to copy .env.example to .env now? (Y/N): " copy_env
+    if [[ "$copy_env" =~ ^[Yy]$ ]]; then
+      cp .env.example .env
+      echo "✅ Created .env from .env.example"
+    else
+      exit 1
+    fi
+  else
+    echo "❌ Neither .env nor .env.example found!"
+    echo "💡 Please ensure you have a valid .env.example file in this directory."
+    echo "   You can get one from: https://github.com/danielraffel/JUCE-Plugin-Starter"
+    exit 1
+  fi
 fi
 
 # --- Load .env variables ---
@@ -33,7 +47,7 @@ set +o allexport
 # --- Function to detect if we're in a JUCE project directory ---
 is_juce_project_directory() {
   local dir="${1:-$(pwd)}"
-  [[ -f "$dir/CMakeLists.txt" && -f "$dir/dependencies.sh" && -f "$dir/generate_and_open_xcode.sh" && -f "$dir/README.md" ]]
+  [[ -f "$dir/CMakeLists.txt" && -f "$dir/scripts/dependencies.sh" && -f "$dir/scripts/generate_and_open_xcode.sh" && -f "$dir/README.md" ]]
 }
 
 # --- Smart Path Detection ---
@@ -279,9 +293,9 @@ else
     echo "⚠️  scripts/post_build.sh not found - you may need to add it manually"
 fi
 
-if [[ -f "generate_and_open_xcode.sh" ]]; then
-    chmod +x generate_and_open_xcode.sh
-    echo "✅ Made generate_and_open_xcode.sh executable"
+if [[ -f "scripts/generate_and_open_xcode.sh" ]]; then
+    chmod +x scripts/generate_and_open_xcode.sh
+    echo "✅ Made scripts/generate_and_open_xcode.sh executable"
 fi
 
 # --- Ensure basic source files exist ---
@@ -635,7 +649,7 @@ echo "🚀 You're ready to start working on your new plugin!"
 echo "   Working directory: $PROJECT_PATH"
 echo ""
 echo "Next steps:"
-echo "• Run ./generate_and_open_xcode.sh to open in Xcode"
+echo "• Run ./scripts/generate_and_open_xcode.sh to open in Xcode"
 echo "• Edit source files to build your plugin"
 echo "• Commit changes: git add . && git commit -m \"Your changes\""
 echo "• Push updates: git push"

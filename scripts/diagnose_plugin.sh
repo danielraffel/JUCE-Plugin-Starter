@@ -17,8 +17,18 @@
 #
 # ============================================================================
 
+# Load environment variables to get project name
+if [ -f .env ]; then
+    set -o allexport
+    source .env
+    set +o allexport
+    PLUGIN_NAME="$PROJECT_NAME"
+else
+    echo "❌ .env file not found. Please run from project root directory."
+    exit 1
+fi
+
 # Configuration
-PLUGIN_NAME="Griddy"
 LOG_FILE="$HOME/Desktop/${PLUGIN_NAME}_diagnostic_$(date +%Y%m%d_%H%M%S).log"
 COMPONENT_PATH="/Library/Audio/Plug-Ins/Components/${PLUGIN_NAME}.component"
 
@@ -222,7 +232,7 @@ LOGIC_PREFS="$HOME/Library/Preferences/com.apple.logic10.plist"
 if [ -f "$LOGIC_PREFS" ]; then
     echo "Logic preferences file exists"
     # Check if plugin is in any block lists
-    defaults read com.apple.logic10 2>/dev/null | grep -i "griddy" | head -5
+    defaults read com.apple.logic10 2>/dev/null | grep -i "$PLUGIN_NAME" | head -5
 fi
 echo ""
 

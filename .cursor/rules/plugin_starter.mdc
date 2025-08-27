@@ -5,10 +5,10 @@ This file provides guidelines for AI tools (like Cursor, Claude, etc.) when work
 ## 📁 Project Structure Guidelines
 
 ### Script Organization
-- **All utility scripts** should be placed in `/scripts/` directory
+- **All scripts** should be placed in `/scripts/` directory for consistency
 - **Test scripts** should be placed in `/scripts/tests/` directory (if created)
 - **Build scripts** (post_build.sh, build.sh, bump_version.py) belong in `/scripts/`
-- **Main project scripts** (generate_and_open_xcode.sh, init_plugin_project.sh, dependencies.sh) belong in project root
+- **Main project scripts** (generate_and_open_xcode.sh, init_plugin_project.sh, dependencies.sh) belong in `/scripts/`
 - **Documentation** should be placed in `/scripts/about/` directory
 
 ### File Naming Conventions
@@ -56,7 +56,7 @@ This file provides guidelines for AI tools (like Cursor, Claude, etc.) when work
 - **Environment**: Reads/writes version info to .env file
 
 ### Legacy Build Support
-- **generate_and_open_xcode.sh**: Still available for direct Xcode project generation
+- **scripts/generate_and_open_xcode.sh**: Available for direct Xcode project generation
 - **Version integration**: Now includes automatic version management
 - **Skip options**: Use `SKIP_VERSION_BUMP=1` and `SKIP_CMAKE_REGEN=1` for faster iterations
 
@@ -100,7 +100,7 @@ This file provides guidelines for AI tools (like Cursor, Claude, etc.) when work
 ### When Suggesting Changes
 - **Always** place new test scripts in `scripts/tests/` (if created)
 - **Always** place new utility scripts in `scripts/`
-- **Place** main project scripts (init, generate, dependencies) in project root
+- **Always** place main project scripts (init, generate, dependencies) in `scripts/`
 - **Place** documentation in `scripts/about/`
 - **Prefer** modifying existing scripts over creating new ones
 - **Validate** that suggested file paths exist in the project
