@@ -19,7 +19,7 @@ This is the fastest way to test-drive the JUCE Plugin Starter. It assumes you ha
 
 **Setup Instructions:** Paste the entire section below directly into your terminal.
 
-```
+```bash
 # Install required tools (Xcode CLT, Homebrew, CMake, PluginVal, etc.)
 bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/scripts/dependencies.sh)
 
@@ -28,26 +28,29 @@ bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Sta
 # echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.bash_profile
 # eval "$(/opt/homebrew/bin/brew shellenv)"
 
-# Clone the starter project and set up environment
+# Clone the starter template
 git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git
 cd JUCE-Plugin-Starter
-cp .env.example .env
 
-# Run the first-time setup to configure your plugin project
-chmod +x ./scripts/init_plugin_project.sh
+# Run the interactive setup to create your new plugin project
 ./scripts/init_plugin_project.sh
-
-# Generate and open the Xcode project (downloads JUCE on first run)
-chmod +x ./scripts/generate_and_open_xcode.sh
-./scripts/generate_and_open_xcode.sh
 ```
 
-* 👨‍💻 You can now open your project folder in your favorite IDE (Xcode, VS Code, Cursor, Windsurf, etc) and start building your JUCE plugin.
+🎉 **That's it!** The script will:
+- Create a **new project folder** with your plugin name
+- Copy all template files and customize them
+- Initialize a fresh Git repo in your new project
+- Optionally create a GitHub repository
+- Leave this template untouched for future use
 
-* ✅ Once setup is complete, run this command whenever you need to manually rebuild your project and reopen it in Xcode during development. If you’re collaborating with an AI developer tool, [here are some common ways to automate executing this script](https://github.com/danielraffel/JUCE-Plugin-Starter/blob/main/README.md#-building-with-ai-tools).
-```
-./scripts/generate_and_open_xcode.sh .
-```
+* 👨‍💻 You can now open your **new project folder** in your favorite IDE (Xcode, VS Code, Cursor, Windsurf, etc) and start building your JUCE plugin.
+
+* 🔨 **Build your plugin** using either:
+  - **AI Tools**: If you're using Claude Code, it will automatically know how to build and test your plugin
+  - **Manual**: Use `./scripts/build.sh standalone local` to quickly test the standalone app
+  - **Xcode**: Use `./scripts/generate_and_open_xcode.sh` to generate and open the Xcode project
+
+* 📖 **See [Enhanced Build System](#-enhanced-build-system) for quick build tips and commands**
 
 > ✅ **Note:** This setup gives you a fully working plugin on your local machine for development and testing.<br>
 > 🧳 To share or distribute your plugin to others, you'll need to configure code signing and notarization — when ready see [📦 How to Distribute Your Plugin](#-how-to-distribute-your-plugin) for full instructions.
@@ -68,8 +71,12 @@ chmod +x ./scripts/generate_and_open_xcode.sh
     - [Manual Dependency Setup](#manual-dependency-setup)
 - [🚀 Quick Start](#-quick-start)
   - [1. Clone the JUCE Plugin Starter Template](#1-clone-the-juce-plugin-starter-template)
-  - [2. Initialize Your Plugin Project with Git Using a Setup Script](#2-initialize-your-plugin-project-with-git-using-a-setup-script)
-  - [3. Generate the Xcode Project](#3-generate-the-xcode-project)
+  - [2. Create Your Plugin Project](#2-create-your-plugin-project)
+  - [3. Build Your Plugin](#3-build-your-plugin)
+- [🔧 Advanced: Manual Environment Configuration](#-advanced-manual-environment-configuration)
+  - [🔄 Auto-Loaded Settings](#-auto-loaded-settings)
+  - [📝 How It Works](#-how-it-works)
+  - [⚙️ Manual Setup (Optional)](#️-manual-setup-optional)
 - [🧱 Build Targets](#-build-targets)
 - [📍 Where Files Are Generated (Plugins + App)](#where-files-are-generated-plugins--app)
   - [Where Plugin Files Are Installed](#where-plugin-files-are-installed)
@@ -177,110 +184,103 @@ If you prefer, you can install all required tools manually:
 ## 🚀 Quick Start
 
 ### 1. Clone the JUCE Plugin Starter Template
-> 💡 This setup will “just work” if you clone this repo into your home folder (i.e., run cd in Terminal before cloning).
 
 ```bash
 git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git
 cd JUCE-Plugin-Starter
-cp .env.example .env
-````
-
-Update your `.env` file to reflect:
-
-```env
-PROJECT_NAME=MyCoolPlugin
-PROJECT_BUNDLE_ID=com.myname.mycoolplugin
-PROJECT_PATH=~/JUCE-Plugin-Starter
-COMPANY_NAME="Your Company Name"
-JUCE_REPO=https://github.com/juce-framework/JUCE.git
-JUCE_TAG=8.0.7
-GITHUB_USERNAME=danielraffel
-BASE_PROJECT_VERSION="1.0."
-
-# --- Apple Notarization ---
-# You only need to edit the fields below when you're ready to distribute your plugin.
-# Until then, feel free to leave these default placeholder values as-is.
-APPLE_ID=your@email.com
-APP_SPECIFIC_PASSWORD=your-app-password
-APP_CERT="Developer ID Application: Your Name (TEAM_ID)"
-INSTALLER_CERT="Developer ID Installer: Your Name (TEAM_ID)"
-TEAM_ID=YOUR_TEAM_ID
 ```
 
-After cloning and configuring `.env`, remember:
-
-- `PROJECT_NAME` is used as the name of your plugin. This will appear in DAWs like Logic, so name it accordingly.
-- `COMPANY_NAME` sets the developer name displayed in the plugin browser.
-
->💡 On macOS, .env files are hidden by default in Finder. Press `Cmd + Shift + .` to show or hide hidden files.
-You can also edit the file in Terminal using:
-
-```bash
-nano .env
-```
+> 💡 This is just the template - you'll create your actual project in the next step!
 
 ---
 
-### 2. Initialize Your Plugin Project with Git Using a Setup Script
-If you're planning to use this template to build your own plugin and eventually publish it to GitHub, this script is designed to help you do that quickly and cleanly.
-The script is smart and will:
+### 2. Create Your Plugin Project
 
-* 🔍 Auto-detect if you're working in a JUCE project directory that doesn't match your .env settings
-* 🏷️ Automatically suggest renaming your project folder to match your plugin name
-* 📄 Create basic plugin source files if they don't exist (ready-to-build template)
-* 🛡️ Confirm everything before making changes so you stay in control
-
-Just run the interactive setup script (it will help you configure everything):
+Run the interactive setup script to create your new plugin project:
 ```bash
-chmod +x ./scripts/init_plugin_project.sh
 ./scripts/init_plugin_project.sh
 ```
 
-What the script does:
+The script will guide you through:
+* 🎵 **Plugin name** - What your plugin will be called
+* 🏢 **Developer info** - Your name/company details  
+* 📦 **Bundle ID** - Smart generation from your developer name
+* 🐙 **GitHub integration** - Optional repository creation
+* 🍎 **Apple Developer settings** - For future code signing (optional)
 
-* 🔍 Smart path detection - notices if you're in a different directory than your .env expects and offers to fix it
-* 🧠 Load and validate your .env settings
-* ✏️ Interactive editing of project name, GitHub username, and project path
-* 📁 Intelligent folder renaming - suggests renaming to match your plugin name (e.g., JUCE-Plugin-Starter → DelayR)
-* 🔧 Script setup - makes build scripts executable (post_build.sh, generate_and_open_xcode.sh)
-* 📄 Template source file creation - generates PluginProcessor.cpp/.h and PluginEditor.cpp/.h if missing
-* 🔒 Repository visibility choice - asks if you want public or private
-* ✅ Clear confirmation - shows exactly what will be created before proceeding
-* 🧹 Clean slate - removes the template's Git history
-* 🐙 GitHub integration - creates your new repository using the GitHub CLI (gh)
-* 🚀 First commit - pushes your initial code and provides next steps
+**What happens:**
+* 📁 **Creates new project folder** - `../your-plugin-name/` with all template files
+* 🎨 **Customizes all code** - Replaces placeholders with your actual plugin name and details
+* 🔧 **Sets up build system** - Makes all scripts executable and ready to use
+* 🗂️ **Fresh Git repository** - Initializes clean git history in your new project
+* 🐙 **GitHub integration** - Optionally creates and pushes to a new GitHub repo
+* ✨ **Template preserved** - Original template stays intact for future projects
 
-Example flow:
-* 🔍 **PATH MISMATCH DETECTED** - Updates .env to match your current location
-* 🔁 Edit PROJECT_NAME? → "DelayR" 
-* 🔁 Rename folder to match project name? → JUCE-Plugin-Starter becomes DelayR
-* 🔧 Setting up build scripts... → Makes scripts executable for immediate use
-* 📄 Checking for basic plugin source files... → Creates template files if missing
-* 🔒 Make this a private repository? → Choose public or private
-* ✅ Proceed with project creation? → Final confirmation
-* 🎉 Success! Ready to start coding your plugin
-
-💡 Highly recommended for first-time users — the script handles all the setup automatically (including creating working plugin template files) while keeping you informed every step of the way. After running this script, you'll have a complete, buildable JUCE plugin ready to customize!
+**Result:** You'll have a complete, buildable JUCE plugin in a new folder, ready to customize!
 
 ---
 
-### 3. Generate the Xcode Project
+### 3. Build Your Plugin
 
-> 💡 **First time setup**: When you first run `./generate_and_open_xcode.sh`, CMake will automatically download JUCE to `build/_deps/juce-src/` inside your project directory. This may take a few minutes on the first run. JUCE will be reused for subsequent builds and cleaned up when you delete the `build/` directory.
-
-Before running the script for the first time:
-
+**Change to your new project directory first:**
 ```bash
-chmod +x ./scripts/generate_and_open_xcode.sh
+cd ../your-plugin-name  # Use the actual folder name created in step 2
 ```
 
-Then generate your project:
+Then build using one of these methods:
 
+**🤖 AI Tools (Recommended):**
+If using Claude Code, it automatically knows how to build and test your plugin.
+
+**🔨 Quick Build & Test:**
 ```bash
-./scripts/generate_and_open_xcode.sh
+./scripts/build.sh standalone local  # Build and launch standalone app
 ```
 
-✅ No need to run `cmake` manually — it's handled for you.
+**🎯 Xcode Development:**
+```bash
+./scripts/generate_and_open_xcode.sh  # Generate and open Xcode project
+```
+
+> 💡 **First time setup**: When you first build, CMake will automatically download JUCE. This may take a few minutes on the first run.
+
+---
+
+## 🔧 Advanced: Manual Environment Configuration
+
+The `init_plugin_project.sh` script automatically loads certain developer settings from your template's `.env` file to speed up project creation. 
+
+### 🔄 Auto-Loaded Settings
+
+If you have a `.env` file in your template directory, the script will automatically load these **reusable developer settings**:
+
+| Setting | Purpose | Auto-Loaded |
+|---------|---------|-------------|
+| `DEVELOPER_NAME` | Your name/company | ✅ |
+| `APPLE_ID` | Apple Developer account | ✅ |  
+| `TEAM_ID` | Apple Developer Team ID | ✅ |
+| `APP_CERT` | Code signing certificate | ✅ |
+| `INSTALLER_CERT` | Installer signing certificate | ✅ |
+| `APP_SPECIFIC_PASSWORD` | Notarization password | ✅ |
+| `GITHUB_USER` | GitHub username | ✅ |
+
+### 📝 How It Works
+
+1. **Smart Loading**: Only loads values that differ from defaults
+2. **Placeholder Filtering**: Skips placeholder values like "Your Name" or "yourusername"  
+3. **Confirmation Only When Needed**: You'll only see "Is this correct?" if the loaded value differs from the template default
+4. **Project-Specific Settings**: Things like `PROJECT_NAME` and `PROJECT_BUNDLE_ID` are always configured fresh for each project
+
+### ⚙️ Manual Setup (Optional)
+
+Want to pre-configure your developer settings? 
+
+1. **Copy the template**: `cp .env.example .env` in your template directory
+2. **Edit your settings**: Update `DEVELOPER_NAME`, `GITHUB_USER`, Apple Developer info, etc.
+3. **Keep placeholders**: Leave project-specific settings as placeholders
+4. **Run script**: `./scripts/init_plugin_project.sh` will now use your settings
+
+> 💡 **Tip**: Check `.env.example` - it has clear sections showing which settings are auto-loaded vs. project-specific!
 
 ---
 
@@ -599,7 +599,7 @@ SKIP_CMAKE_REGEN=1 ./scripts/generate_and_open_xcode.sh
 
 ## 📦 How to Distribute Your Plugin
 
-Once your plugin is built and tested, you can package it for safe, notarized distribution via Apple’s system using the built-in `sign_and_package_plugin.sh` script.
+Once your plugin is built and tested, you can package it for safe, notarized distribution via Apple's system using the unified build system.
 
 > 💭 Interested in more details? [Check out this walkthrough on macOS audio plug-in code signing and notarization](https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/).
 
@@ -683,7 +683,7 @@ TEAM_ID=YOUR_TEAM_ID
 
 ### 🎛️ What Gets Packaged
 
-`sign_and_package_plugin.sh` will automatically detect and package the following plugin formats if they exist:
+The build system will automatically detect and package the following plugin formats if they exist:
 
 | Format | Extension    | Path |
 |--------|--------------|------|
@@ -705,16 +705,16 @@ TEAM_ID=YOUR_TEAM_ID
 From your project root:
 
 ```bash
-cd scripts
-chmod +x sign_and_package_plugin.sh
-./sign_and_package_plugin.sh
+./scripts/build.sh all publish
 ```
 
-This script will:
+This command will:
 
-- ✅ Sign and notarize your `.component`
+- ✅ Build all plugin formats
+- ✅ Sign and notarize your plugins
 - ✅ Create a signed `.pkg` installer and notarize it
 - ✅ Bundle it into a distributable `.dmg`
+- ✅ Create a GitHub release with all artifacts
 
 > 📂 Output files (`.zip`, `.pkg`, `.dmg`) will be saved to your Desktop for easy sharing.
 
