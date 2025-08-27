@@ -1,18 +1,19 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
+//==============================================================================
+CLASS_NAME_PLACEHOLDERAudioProcessorEditor::CLASS_NAME_PLACEHOLDERAudioProcessorEditor (CLASS_NAME_PLACEHOLDERAudioProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p)
 {
     juce::ignoreUnused (processorRef);
     setSize (400, 300);
 }
 
-AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
+CLASS_NAME_PLACEHOLDERAudioProcessorEditor::~CLASS_NAME_PLACEHOLDERAudioProcessorEditor()
 {
 }
 
-void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
+void CLASS_NAME_PLACEHOLDERAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
@@ -21,7 +22,7 @@ void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
     g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
 }
 
-void AudioPluginAudioProcessorEditor::resized()
+void CLASS_NAME_PLACEHOLDERAudioProcessorEditor::resized()
 {
     // This is where you'd lay out your UI components
 }

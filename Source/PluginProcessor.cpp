@@ -1,23 +1,24 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-AudioPluginAudioProcessor::AudioPluginAudioProcessor()
+//==============================================================================
+CLASS_NAME_PLACEHOLDERAudioProcessor::CLASS_NAME_PLACEHOLDERAudioProcessor()
     : AudioProcessor (BusesProperties()
                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true))
 {
 }
 
-AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
+CLASS_NAME_PLACEHOLDERAudioProcessor::~CLASS_NAME_PLACEHOLDERAudioProcessor()
 {
 }
 
-const juce::String AudioPluginAudioProcessor::getName() const
+const juce::String CLASS_NAME_PLACEHOLDERAudioProcessor::getName() const
 {
     return JucePlugin_Name;
 }
 
-bool AudioPluginAudioProcessor::acceptsMidi() const
+bool CLASS_NAME_PLACEHOLDERAudioProcessor::acceptsMidi() const
 {
    #if JucePlugin_WantsMidiInput
     return true;
@@ -26,7 +27,7 @@ bool AudioPluginAudioProcessor::acceptsMidi() const
    #endif
 }
 
-bool AudioPluginAudioProcessor::producesMidi() const
+bool CLASS_NAME_PLACEHOLDERAudioProcessor::producesMidi() const
 {
    #if JucePlugin_ProducesMidiOutput
     return true;
@@ -35,7 +36,7 @@ bool AudioPluginAudioProcessor::producesMidi() const
    #endif
 }
 
-bool AudioPluginAudioProcessor::isMidiEffect() const
+bool CLASS_NAME_PLACEHOLDERAudioProcessor::isMidiEffect() const
 {
    #if JucePlugin_IsMidiEffect
     return true;
@@ -44,47 +45,47 @@ bool AudioPluginAudioProcessor::isMidiEffect() const
    #endif
 }
 
-double AudioPluginAudioProcessor::getTailLengthSeconds() const
+double CLASS_NAME_PLACEHOLDERAudioProcessor::getTailLengthSeconds() const
 {
     return 0.0;
 }
 
-int AudioPluginAudioProcessor::getNumPrograms()
+int CLASS_NAME_PLACEHOLDERAudioProcessor::getNumPrograms()
 {
     return 1;
 }
 
-int AudioPluginAudioProcessor::getCurrentProgram()
+int CLASS_NAME_PLACEHOLDERAudioProcessor::getCurrentProgram()
 {
     return 0;
 }
 
-void AudioPluginAudioProcessor::setCurrentProgram (int index)
+void CLASS_NAME_PLACEHOLDERAudioProcessor::setCurrentProgram (int index)
 {
     juce::ignoreUnused (index);
 }
 
-const juce::String AudioPluginAudioProcessor::getProgramName (int index)
+const juce::String CLASS_NAME_PLACEHOLDERAudioProcessor::getProgramName (int index)
 {
     juce::ignoreUnused (index);
     return {};
 }
 
-void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void CLASS_NAME_PLACEHOLDERAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
     juce::ignoreUnused (index, newName);
 }
 
-void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void CLASS_NAME_PLACEHOLDERAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     juce::ignoreUnused (sampleRate, samplesPerBlock);
 }
 
-void AudioPluginAudioProcessor::releaseResources()
+void CLASS_NAME_PLACEHOLDERAudioProcessor::releaseResources()
 {
 }
 
-bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool CLASS_NAME_PLACEHOLDERAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
      && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
@@ -96,7 +97,7 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
     return true;
 }
 
-void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
+void CLASS_NAME_PLACEHOLDERAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
     juce::ignoreUnused (midiMessages);
@@ -116,27 +117,27 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     }
 }
 
-bool AudioPluginAudioProcessor::hasEditor() const
+bool CLASS_NAME_PLACEHOLDERAudioProcessor::hasEditor() const
 {
     return true;
 }
 
-juce::AudioProcessorEditor* AudioPluginAudioProcessor::createEditor()
+juce::AudioProcessorEditor* CLASS_NAME_PLACEHOLDERAudioProcessor::createEditor()
 {
-    return new AudioPluginAudioProcessorEditor (*this);
+    return new CLASS_NAME_PLACEHOLDERAudioProcessorEditor (*this);
 }
 
-void AudioPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void CLASS_NAME_PLACEHOLDERAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     juce::ignoreUnused (destData);
 }
 
-void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void CLASS_NAME_PLACEHOLDERAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     juce::ignoreUnused (data, sizeInBytes);
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new AudioPluginAudioProcessor();
+    return new CLASS_NAME_PLACEHOLDERAudioProcessor();
 }

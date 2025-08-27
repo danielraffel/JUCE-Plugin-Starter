@@ -2,11 +2,14 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-class AudioPluginAudioProcessor : public juce::AudioProcessor
+//==============================================================================
+/**
+*/
+class CLASS_NAME_PLACEHOLDERAudioProcessor : public juce::AudioProcessor
 {
 public:
-    AudioPluginAudioProcessor();
-    ~AudioPluginAudioProcessor() override;
+    CLASS_NAME_PLACEHOLDERAudioProcessor();
+    ~CLASS_NAME_PLACEHOLDERAudioProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -35,5 +38,5 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CLASS_NAME_PLACEHOLDERAudioProcessor)
 };

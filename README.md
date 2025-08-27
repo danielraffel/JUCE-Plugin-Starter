@@ -21,7 +21,7 @@ This is the fastest way to test-drive the JUCE Plugin Starter. It assumes you ha
 
 ```
 # Install required tools (Xcode CLT, Homebrew, CMake, PluginVal, etc.)
-bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/dependencies.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/scripts/dependencies.sh)
 
 # The commands above install software like Homebrew.
 # During installation, you may be prompted to add Homebrew to your PATH manually:
@@ -34,19 +34,19 @@ cd JUCE-Plugin-Starter
 cp .env.example .env
 
 # Run the first-time setup to configure your plugin project
-chmod +x ./init_plugin_project.sh
-./init_plugin_project.sh
+chmod +x ./scripts/init_plugin_project.sh
+./scripts/init_plugin_project.sh
 
 # Generate and open the Xcode project (downloads JUCE on first run)
-chmod +x ./generate_and_open_xcode.sh
-./generate_and_open_xcode.sh
+chmod +x ./scripts/generate_and_open_xcode.sh
+./scripts/generate_and_open_xcode.sh
 ```
 
 * 👨‍💻 You can now open your project folder in your favorite IDE (Xcode, VS Code, Cursor, Windsurf, etc) and start building your JUCE plugin.
 
 * ✅ Once setup is complete, run this command whenever you need to manually rebuild your project and reopen it in Xcode during development. If you’re collaborating with an AI developer tool, [here are some common ways to automate executing this script](https://github.com/danielraffel/JUCE-Plugin-Starter/blob/main/README.md#-building-with-ai-tools).
 ```
-./generate_and_open_xcode.sh .
+./scripts/generate_and_open_xcode.sh .
 ```
 
 > ✅ **Note:** This setup gives you a fully working plugin on your local machine for development and testing.<br>
@@ -127,10 +127,10 @@ You can choose **one of the following setup methods**:
 
 #### Automated Dependency Setup
 
-Use the included [`dependencies.sh`](./dependencies.sh) script. It **checks for each required tool** and **installs it automatically if missing**. This is typically needed only for a **first-time setup**.
+Use the included [`dependencies.sh`](./scripts/dependencies.sh) script. It **checks for each required tool** and **installs it automatically if missing**. This is typically needed only for a **first-time setup**.
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/dependencies.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/scripts/dependencies.sh)
 ```
 
 The script handles:
@@ -232,8 +232,8 @@ The script is smart and will:
 
 Just run the interactive setup script (it will help you configure everything):
 ```bash
-chmod +x ./init_plugin_project.sh
-./init_plugin_project.sh
+chmod +x ./scripts/init_plugin_project.sh
+./scripts/init_plugin_project.sh
 ```
 
 What the script does:
@@ -271,13 +271,13 @@ Example flow:
 Before running the script for the first time:
 
 ```bash
-chmod +x ./generate_and_open_xcode.sh
+chmod +x ./scripts/generate_and_open_xcode.sh
 ```
 
 Then generate your project:
 
 ```bash
-./generate_and_open_xcode.sh
+./scripts/generate_and_open_xcode.sh
 ```
 
 ✅ No need to run `cmake` manually — it's handled for you.
@@ -394,13 +394,13 @@ Then this is where to do it.
 🕒 **Tip**: If you only modified non-CMake files and want a quicker build, you can skip regeneration using:
 
 ```bash
-SKIP_CMAKE_REGEN=1 ./generate_and_open_xcode.sh
+SKIP_CMAKE_REGEN=1 ./scripts/generate_and_open_xcode.sh
 ```
 
 Otherwise, always use:
 
 ```bash
-./generate_and_open_xcode.sh
+./scripts/generate_and_open_xcode.sh
 ```
 
 If you're [developing using an agent like Claude Code](#using-with-claude-code) it will determine which build approach is best using instructions in the `CLAUDE.md` in this repository.
@@ -460,7 +460,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "Minimum macOS version")
 > After making changes, just re-run:
 
 ```bash
-./generate_and_open_xcode.sh
+./scripts/generate_and_open_xcode.sh
 ```
 
 ---
@@ -472,12 +472,19 @@ JUCE-Plugin-Starter/
 ├── .env.example                   ← Template for your environment variables
 ├── CLAUDE.md                      ← Project details for Claude Code
 ├── CMakeLists.txt                 ← Main build config for your JUCE project
-├── init_plugin_project.sh         ← Script that will reinitialize this repo to make it yours, configure, rename and push it to GH
 ├── README.md                      ← You're reading it
-├── generate_and_open_xcode.sh     ← Script that loads `.env`, runs CMake, and opens Xcode
 ├── scripts/                       ← Automation / helper scripts
-│   └── post_build.sh              ← Auto-increments bundle version so Logic reloads builds
-│   └── sign_and_package_plugin.sh ← Auto-package plug-in(s) for safe, notarized distribution via PKG and DMG files
+│   ├── about/                     ← Documentation
+│   │   └── build_system.md        ← Comprehensive build system documentation
+│   ├── build.sh                   ← Unified build system (local, test, sign, notarize, publish)
+│   ├── bump_version.py            ← Semantic version management
+│   ├── dependencies.sh            ← Automated dependency setup
+│   ├── diagnose_plugin.sh         ← Plugin diagnostic tool
+│   ├── generate_and_open_xcode.sh ← Script that loads `.env`, runs CMake, and opens Xcode
+│   ├── generate_release_notes.py  ← AI-powered release notes generator
+│   ├── init_plugin_project.sh     ← Script that reinitializes this repo to make it yours
+│   ├── post_build.sh              ← Enhanced version handling with semantic versioning
+│   └── validate_plugin.sh         ← Plugin validation tool
 ├── Source/                        ← Your plugin source code
 │   ├── PluginProcessor.cpp/.h
 │   └── PluginEditor.cpp/.h
@@ -496,6 +503,53 @@ JUCE-Plugin-Starter/
 
 
 >💡 You can safely `rm -rf` build without re-downloading JUCE every time.
+
+---
+
+## 🔨 Enhanced Build System
+
+This template now includes a unified build system (`scripts/build.sh`) that provides comprehensive functionality:
+
+### Quick Build Commands
+
+```bash
+# Quick local build (all formats)
+./scripts/build.sh
+
+# Build specific format
+./scripts/build.sh au          # Audio Unit only
+./scripts/build.sh vst3        # VST3 only  
+./scripts/build.sh standalone  # Standalone app only
+
+# Build with testing
+./scripts/build.sh all test    # Build and run PluginVal tests
+
+# Production builds
+./scripts/build.sh all sign     # Build and codesign
+./scripts/build.sh all notarize # Build, sign, and notarize
+./scripts/build.sh all publish  # Full release with installer and GitHub publishing
+```
+
+### Automatic Version Management
+
+- **Semantic Versioning**: Automatic version bumping with `scripts/bump_version.py`
+- **Build Integration**: Versions are automatically managed during builds
+- **Manual Control**: Bump major/minor versions manually when needed
+
+```bash
+python3 scripts/bump_version.py minor  # 0.0.3 → 0.1.0
+python3 scripts/bump_version.py major  # 0.1.0 → 1.0.0
+```
+
+### Additional Tools
+
+- **Plugin Validation**: `./scripts/validate_plugin.sh` - Comprehensive plugin validation
+- **Diagnostic Tool**: `./scripts/diagnose_plugin.sh` - Troubleshoot plugin issues
+- **AI Release Notes**: `./scripts/generate_release_notes.py` - Generate release notes from git history
+
+### Complete Documentation
+
+For comprehensive build system documentation, see [`scripts/about/build_system.md`](scripts/about/build_system.md).
 
 ---
 
@@ -519,26 +573,26 @@ fi
 
 
 #### Using with Alex Sidebar
-To use `generate_and_open_xcode.sh` with [AlexCodes.app](https://alexcodes.app), I’ve found the following project prompt helpful for managing when and how the Xcode project is compiled and opened:
+To use `generate_and_open_xcode.sh` with [AlexCodes.app](https://alexcodes.app), I've found the following project prompt helpful for managing when and how the Xcode project is compiled and opened:
 
 ```text
-Whenever the Xcode project file needs to be regenerated use run_shell to execute $PROJECT_PATH/generate_and_open_xcode.sh
+Whenever the Xcode project file needs to be regenerated use run_shell to execute $PROJECT_PATH/scripts/generate_and_open_xcode.sh
 ```
 
 <img width="515" alt="regenerate-xcode-alexcodes" src="https://github.com/user-attachments/assets/158b6005-645f-410a-9fdb-51ef9479ac55" />
 
 
 #### Using with Claude Code
-To use `generate_and_open_xcode.sh` with [Claude Code](https://www.anthropic.com/claude-code), I’ve created a [CLAUDE.md](CLAUDE.md) and added it to the root of the repo. It instructs the agent how and when to properly recreate the project file. It can help you build and run the project by invoking the proper script:
+To use `generate_and_open_xcode.sh` with [Claude Code](https://www.anthropic.com/claude-code), I've created a [CLAUDE.md](CLAUDE.md) and added it to the root of the repo. It instructs the agent how and when to properly recreate the project file. It can help you build and run the project by invoking the proper script:
 
 ```bash
-./generate_and_open_xcode.sh
+./scripts/generate_and_open_xcode.sh
 ```
 
 **Claude will determine whether a full regeneration is needed based on recent file changes or build errors.**. The [CLAUDE.md](CLAUDE.md) explains when it's best to regenerate the Xcode project and how to optionally skip regeneration for faster builds using:
 
 ```bash
-SKIP_CMAKE_REGEN=1 ./generate_and_open_xcode.sh
+SKIP_CMAKE_REGEN=1 ./scripts/generate_and_open_xcode.sh
 ```
 
 ---

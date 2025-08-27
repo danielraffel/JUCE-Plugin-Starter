@@ -58,34 +58,36 @@ DEFAULT_BASE_VERSION="0.1." # Defaulting to something like "0.1."
 BASE_VERSION_FROM_FILE=""
 
 if [ -f "$VERSION_CONFIG_FILE" ]; then
-  echo "ℹ️ Reading base version from: $VERSION_CONFIG_FILE"
-  # Source the file in a way that we can capture the specific variable
-  # Ensure the variable name in the file is BASE_PROJECT_VERSION
-  # Example content in .env: BASE_PROJECT_VERSION="1.0."
-  config_value=$(grep -E "^BASE_PROJECT_VERSION=" "$VERSION_CONFIG_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-  if [ -n "$config_value" ]; then
-    BASE_VERSION_FROM_FILE="$config_value"
-    echo "✅ Base version loaded from file: $BASE_VERSION_FROM_FILE"
+  echo "ℹ️ Reading version from: $VERSION_CONFIG_FILE"
+  # Read semantic version components
+  VERSION_MAJOR=$(grep -E "^VERSION_MAJOR=" "$VERSION_CONFIG_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+  VERSION_MINOR=$(grep -E "^VERSION_MINOR=" "$VERSION_CONFIG_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+  VERSION_PATCH=$(grep -E "^VERSION_PATCH=" "$VERSION_CONFIG_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+  
+  if [ -n "$VERSION_MAJOR" ] && [ -n "$VERSION_MINOR" ] && [ -n "$VERSION_PATCH" ]; then
+    VERSION_SHORT="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+    echo "✅ Version loaded from file: $VERSION_SHORT"
   else
-    echo "⚠️ BASE_PROJECT_VERSION not found or empty in $VERSION_CONFIG_FILE."
+    # Fall back to old format if new format not found
+    config_value=$(grep -E "^BASE_PROJECT_VERSION=" "$VERSION_CONFIG_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    if [ -n "$config_value" ]; then
+      BASE_VERSION_FROM_FILE="$config_value"
+      echo "✅ Base version loaded from file: $BASE_VERSION_FROM_FILE"
+      TIMESTAMP=$(date +'%y%m%d%H%M')
+      VERSION_SHORT="${BASE_VERSION_FROM_FILE}${TIMESTAMP}"
+    else
+      echo "⚠️ Version not found in $VERSION_CONFIG_FILE."
+      VERSION_SHORT="$DEFAULT_BASE_VERSION"
+    fi
   fi
 else
   echo "⚠️ Version config file not found: $VERSION_CONFIG_FILE."
-fi
-
-# Use loaded version or default
-if [ -n "$BASE_VERSION_FROM_FILE" ]; then
-  VERSION_SHORT="$BASE_VERSION_FROM_FILE"
-else
   VERSION_SHORT="$DEFAULT_BASE_VERSION"
-  echo "ℹ️ Using default base version: $VERSION_SHORT"
 fi
 
-# Generate dynamic bundle version with timestamp (YYMMDDHHMM)
-# Append the timestamp to both version strings for consistency
-TIMESTAMP=$(date +'%y%m%d%H%M')
-VERSION_SHORT_WITH_TIMESTAMP="${VERSION_SHORT}${TIMESTAMP}"
-VERSION_BUNDLE="${VERSION_SHORT}${TIMESTAMP}"
+# For semantic versioning, use the version as-is
+VERSION_SHORT_WITH_TIMESTAMP="$VERSION_SHORT"
+VERSION_BUNDLE="$VERSION_SHORT"
 
 echo "ℹ️ Final CFBundleShortVersionString: $VERSION_SHORT_WITH_TIMESTAMP"
 echo "ℹ️ Final CFBundleVersion: $VERSION_BUNDLE"
