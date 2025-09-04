@@ -245,7 +245,9 @@ echo -e "${CYAN}• Create a new GitHub repository (public or private)${NC}"
 echo -e "${CYAN}• Leave this template repository untouched${NC}"
 echo ""
 
-if ! get_yes_no "❓ Do you want to continue?" "y" >/dev/null; then
+if get_yes_no "❓ Do you want to continue?" "y" >/dev/null; then
+  echo ""  # Continue with the script
+else
   echo -e "${RED}❌ Cancelled by user.${NC}"
   exit 0
 fi
@@ -311,7 +313,9 @@ echo ""
 # Check if project folder already exists
 if [ -d "../$PROJECT_FOLDER" ]; then
     echo -e "${RED}Error: Project folder '../$PROJECT_FOLDER' already exists${NC}"
-    if ! get_yes_no "Do you want to overwrite it?" "n" >/dev/null; then
+    if get_yes_no "Do you want to overwrite it?" "n" >/dev/null; then
+        echo "Overwriting existing project folder..."
+    else
         echo "Aborting..."
         exit 1
     fi
