@@ -156,7 +156,8 @@ get_env_loaded_input() {
                 # Show the loaded value and ask for confirmation
                 printf "\n${GREEN}For your %s you have '%s' in your .env${NC}\n" "$field_name" "$loaded_value" >&2
                 
-                if get_yes_no "Is this correct?" "y" >/dev/null; then
+                response=$(get_yes_no "Is this correct?" "y")
+                if [ "$response" = "y" ]; then
                     echo "$loaded_value"
                     return 0
                 else
@@ -245,7 +246,8 @@ echo -e "${CYAN}• Create a new GitHub repository (public or private)${NC}"
 echo -e "${CYAN}• Leave this template repository untouched${NC}"
 echo ""
 
-if get_yes_no "❓ Do you want to continue?" "y" >/dev/null; then
+response=$(get_yes_no "❓ Do you want to continue?" "y")
+if [ "$response" = "y" ]; then
   echo ""  # Continue with the script
 else
   echo -e "${RED}❌ Cancelled by user.${NC}"
@@ -259,7 +261,7 @@ if [ ! -f "scripts/init_plugin_project.sh" ]; then
 fi
 
 # Load reusable developer settings from .env (skips placeholders)
-load_env_file ".env"
+load_env_file ".env" || true  # Don't exit if .env doesn't exist
 
 # Extract developer name from certificate if not already set
 if [ -n "$APP_CERT" ] && [ -z "$DEVELOPER_NAME" ]; then
@@ -313,7 +315,8 @@ echo ""
 # Check if project folder already exists
 if [ -d "../$PROJECT_FOLDER" ]; then
     echo -e "${RED}Error: Project folder '../$PROJECT_FOLDER' already exists${NC}"
-    if get_yes_no "Do you want to overwrite it?" "n" >/dev/null; then
+    response=$(get_yes_no "Do you want to overwrite it?" "n")
+    if [ "$response" = "y" ]; then
         echo "Overwriting existing project folder..."
     else
         echo "Aborting..."
@@ -344,7 +347,8 @@ if [ -n "$DEFAULT_BUNDLE_PREFIX" ]; then
     echo -e "${CYAN}📦 Bundle ID Suggestion:${NC}"
     echo -e "${GREEN}  Based on your developer name, we suggest: ${SUGGESTED_BUNDLE_ID}${NC}"
     
-    if get_yes_no "Use this bundle ID?" "y" >/dev/null; then
+    response=$(get_yes_no "Use this bundle ID?" "y")
+    if [ "$response" = "y" ]; then
         PROJECT_BUNDLE_ID="$SUGGESTED_BUNDLE_ID"
     else
         PROJECT_BUNDLE_ID=$(get_confirmed_input "Enter your preferred bundle ID (e.g., com.yourcompany.yourplugin): " "$SUGGESTED_BUNDLE_ID")
@@ -471,7 +475,8 @@ git commit -m "Initial commit: $PLUGIN_NAME plugin from JUCE-Plugin-Starter temp
 if [ -n "$GITHUB_USER" ]; then
     echo ""
     echo -e "${YELLOW}GitHub Integration:${NC}"
-    if get_yes_no "Create GitHub repository?" "y" >/dev/null; then
+    response=$(get_yes_no "Create GitHub repository?" "y")
+    if [ "$response" = "y" ]; then
         
         # Ask for repository visibility
         echo -e "${CYAN}💾 What kind of GitHub repository do you want to create?${NC}"
@@ -499,7 +504,8 @@ if [ -n "$GITHUB_USER" ]; then
         fi
 
         echo ""
-        if get_yes_no "✅ Confirm: Create $REPO_VISIBILITY repository?" "y" >/dev/null; then
+        response=$(get_yes_no "✅ Confirm: Create $REPO_VISIBILITY repository?" "y")
+        if [ "$response" = "y" ]; then
             
             # --- Check GitHub CLI is available and authenticated ---
             if ! command -v gh &> /dev/null; then
