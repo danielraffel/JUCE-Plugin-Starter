@@ -269,6 +269,59 @@ if [ -n "$APP_CERT" ] && [ -z "$DEVELOPER_NAME" ]; then
     DEVELOPER_NAME=$(echo "$APP_CERT" | sed -n 's/Developer ID Application: \(.*\) (.*)/\1/p')
 fi
 
+# Function to generate 4-letter code from a name
+generate_4letter_code() {
+    local input="$1"
+    local code=""
+    
+    # Remove special characters and spaces
+    local clean=$(echo "$input" | sed 's/[^a-zA-Z0-9 ]//g')
+    
+    # Try different strategies to get 4 characters
+    if [ ${#clean} -eq 0 ]; then
+        # No valid characters, use default
+        code="XXXX"
+    elif [ ${#clean} -le 4 ]; then
+        # 4 or fewer chars, pad with X if needed
+        code=$(echo "$clean" | tr '[:lower:]' '[:upper:]')
+        while [ ${#code} -lt 4 ]; do
+            code="${code}X"
+        done
+        code=${code:0:4}
+    else
+        # More than 4 chars, try different strategies
+        local words=($clean)
+        if [ ${#words[@]} -ge 2 ]; then
+            # Multiple words: take first 2 chars of first 2 words
+            local first=${words[0]:0:2}
+            local second=${words[1]:0:2}
+            code="${first}${second}"
+        else
+            # Single word: take first char, some middle chars, and last char
+            local word=${words[0]}
+            if [ ${#word} -ge 4 ]; then
+                # Take strategic characters from the word
+                local first=${word:0:1}
+                local second=${word:1:1}
+                local third=${word:$((${#word}/2)):1}
+                local fourth=${word: -1:1}
+                code="${first}${second}${third}${fourth}"
+            else
+                code=${word:0:4}
+            fi
+        fi
+        code=$(echo "$code" | tr '[:lower:]' '[:upper:]')
+    fi
+    
+    # Ensure exactly 4 uppercase letters
+    code=${code:0:4}
+    while [ ${#code} -lt 4 ]; do
+        code="${code}X"
+    done
+    
+    echo "$code"
+}
+
 # Create smart bundle prefix from developer name if available
 if [ -n "$DEVELOPER_NAME" ]; then
     # Convert "Daniel Raffel" to "com.danielraffel"
@@ -303,12 +356,25 @@ fi
 # Plugin manufacturer for copyright
 PLUGIN_MANUFACTURER="$DEVELOPER_NAME"
 
+# Generate 4-letter codes for JUCE
+PLUGIN_CODE=$(generate_4letter_code "$PLUGIN_NAME")
+# Default manufacturer code if no developer name yet
+if [ -n "$DEVELOPER_NAME" ]; then
+    PLUGIN_MANUFACTURER_CODE=$(generate_4letter_code "$DEVELOPER_NAME")
+else
+    PLUGIN_MANUFACTURER_CODE="XXXX"  # Will be updated later if developer name is provided
+fi
+
 printf "\n${CYAN}Generated project details:${NC}\n"
 printf "${GREEN}Class name will be: %s${NC}\n" "$CLASS_NAME"
 printf "${GREEN}Project folder will be: %s${NC}\n" "$PROJECT_FOLDER"
 printf "${GREEN}C++ namespace will be: %s${NC}\n" "$NAMESPACE"
 if [ -n "$PLUGIN_MANUFACTURER" ]; then
     printf "${GREEN}Plugin manufacturer: %s${NC}\n" "$PLUGIN_MANUFACTURER"
+fi
+printf "${GREEN}Plugin code (4-letter): %s${NC}\n" "$PLUGIN_CODE"
+if [ -n "$PLUGIN_MANUFACTURER_CODE" ] && [ "$PLUGIN_MANUFACTURER_CODE" != "XXXX" ]; then
+    printf "${GREEN}Manufacturer code (4-letter): %s${NC}\n" "$PLUGIN_MANUFACTURER_CODE"
 fi
 echo ""
 
@@ -337,6 +403,9 @@ if [ -n "$NEW_DEVELOPER_NAME" ]; then
     BUNDLE_PREFIX=$(echo "$DEVELOPER_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]//g')
     DEFAULT_BUNDLE_PREFIX="com.${BUNDLE_PREFIX}"
     NAMESPACE=$(echo "$DEVELOPER_NAME" | sed 's/[^a-zA-Z0-9]//g' | tr '[:upper:]' '[:lower:]')
+    # Generate manufacturer code from developer name
+    PLUGIN_MANUFACTURER_CODE=$(generate_4letter_code "$DEVELOPER_NAME")
+    printf "${GREEN}Generated manufacturer code: %s${NC}\n" "$PLUGIN_MANUFACTURER_CODE"
 fi
 
 # Smart Bundle ID generation
@@ -413,6 +482,8 @@ find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.cmake" -o -name "*.tx
     -e "s/DEVELOPER_NAME_PLACEHOLDER/$DEVELOPER_NAME/g" \
     -e "s/PLUGIN_MANUFACTURER_PLACEHOLDER/$PLUGIN_MANUFACTURER/g" \
     -e "s/NAMESPACE_PLACEHOLDER/$NAMESPACE/g" \
+    -e "s/PLUGIN_CODE_PLACEHOLDER/$PLUGIN_CODE/g" \
+    -e "s/PLUGIN_MANUFACTURER_CODE_PLACEHOLDER/$PLUGIN_MANUFACTURER_CODE/g" \
     {} \; 2>/dev/null || true
 
 # --- Create Project-Specific .env File ---
@@ -423,6 +494,10 @@ PROJECT_NAME=$PROJECT_FOLDER
 PRODUCT_NAME="$PLUGIN_NAME"
 PROJECT_BUNDLE_ID=$PROJECT_BUNDLE_ID
 DEVELOPER_NAME="$DEVELOPER_NAME"
+
+# JUCE Plugin Codes (4-letter identifiers)
+PLUGIN_CODE=$PLUGIN_CODE
+PLUGIN_MANUFACTURER_CODE=$PLUGIN_MANUFACTURER_CODE
 
 # Directory Path to project folder
 PROJECT_PATH="$(pwd)"
