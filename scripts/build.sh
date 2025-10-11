@@ -477,18 +477,65 @@ create_installer() {
         esac
     done
 
-    # Check if we have standalone app to include
+    # Count applications to determine installation strategy
+    local app_count=0
+    local has_standalone=false
+    local has_diagnostics=false
+    local has_uninstaller=false
+
+    # Check what's being installed
     STANDALONE_PATH="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone/${PROJECT_NAME}.app"
     if [[ -d "$STANDALONE_PATH" ]]; then
-        echo "Including standalone app in installer..."
-        mkdir -p "$PKG_ROOT/Applications"
-        cp -R "$STANDALONE_PATH" "$PKG_ROOT/Applications/"
+        has_standalone=true
+        ((app_count++))
     fi
 
-    # Add uninstaller if template exists
+    # Check for diagnostics (placeholder for now - will be implemented in Phase 3)
+    # DIAGNOSTIC_PATH will be set when diagnostics are built
+    if [[ -n "${DIAGNOSTIC_PATH}" ]] && [[ -d "${DIAGNOSTIC_PATH}" ]]; then
+        has_diagnostics=true
+        ((app_count++))
+    fi
+
+    # Check if uninstaller will be included
     if [[ -f "scripts/uninstall_template.sh" ]]; then
+        has_uninstaller=true
+        ((app_count++))
+    fi
+
+    # Determine installation strategy
+    local use_app_folder=false
+    local app_install_root=""
+
+    if [[ $app_count -gt 1 ]]; then
+        use_app_folder=true
+        app_install_root="$PKG_ROOT/Applications/${PROJECT_NAME}"
+        echo "📁 Multiple apps detected ($app_count) - installing to /Applications/${PROJECT_NAME}/"
+    else
+        use_app_folder=false
+        app_install_root="$PKG_ROOT/Applications"
+        echo "📁 Single app - installing directly to /Applications/"
+    fi
+
+    # Create the appropriate directory structure
+    mkdir -p "$app_install_root"
+
+    # Install standalone app
+    if [[ "$has_standalone" == "true" ]]; then
+        echo "Including standalone app in installer..."
+        cp -R "$STANDALONE_PATH" "$app_install_root/"
+    fi
+
+    # Install diagnostics app (if exists)
+    if [[ "$has_diagnostics" == "true" ]]; then
+        echo "Including diagnostics app in installer..."
+        cp -R "$DIAGNOSTIC_PATH" "$app_install_root/"
+    fi
+
+    # Install uninstaller
+    if [[ "$has_uninstaller" == "true" ]]; then
         echo "Including uninstaller..."
-        local uninstaller_path="$PKG_ROOT/Applications/${PROJECT_NAME} Uninstaller.command"
+        local uninstaller_path="$app_install_root/${PROJECT_NAME} Uninstaller.command"
 
         # Copy and customize the uninstaller template
         sed -e "s/{{PROJECT_NAME}}/$PROJECT_NAME/g" \
