@@ -126,6 +126,27 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${PROJECT_NAME}_Resources
 )
 
+# ==============================================================================
+# Standard macOS Paths (no permission prompts)
+# ==============================================================================
+# This plugin uses Apple-recommended Application Support paths:
+#
+# ~/Library/Application Support/${PROJECT_NAME}/
+#   ├── Samples/    - Sample files
+#   ├── Presets/    - User presets
+#   └── UserData/   - Other user data
+#
+# ~/Library/Logs/${PROJECT_NAME}/
+#   └── *.log       - Log files
+#
+# ~/Library/Caches/${PROJECT_BUNDLE_ID}/
+#   └── *           - Temporary cache files
+#
+# These paths follow Apple's Human Interface Guidelines and do not trigger
+# permission dialogs during installation. Helper functions are provided in
+# PluginProcessor.cpp for accessing these paths.
+# ==============================================================================
+
 add_custom_command(TARGET ${PROJECT_NAME}_AU
     POST_BUILD
     COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_AU>"

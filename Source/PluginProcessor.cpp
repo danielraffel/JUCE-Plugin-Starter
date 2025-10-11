@@ -137,6 +137,76 @@ void CLASS_NAME_PLACEHOLDERAudioProcessor::setStateInformation (const void* data
     juce::ignoreUnused (data, sizeInBytes);
 }
 
+//==============================================================================
+// Path Helper Functions - Use macOS Application Support (no permission prompts)
+//
+// These functions provide standard paths for plugin data following Apple's
+// Human Interface Guidelines. Using Application Support prevents permission
+// dialogs during installation.
+//
+// Example usage:
+//   auto samplesDir = CLASS_NAME_PLACEHOLDERAudioProcessor::getSamplesPath();
+//   if (!samplesDir.exists())
+//       samplesDir.createDirectory();
+//
+
+juce::File CLASS_NAME_PLACEHOLDERAudioProcessor::getApplicationSupportPath()
+{
+    auto appSupport = juce::File::getSpecialLocation(
+        juce::File::userApplicationDataDirectory
+    );
+
+    auto projectFolder = appSupport.getChildFile(JucePlugin_Name);
+
+    // Create if doesn't exist
+    if (!projectFolder.exists())
+        projectFolder.createDirectory();
+
+    return projectFolder;
+}
+
+juce::File CLASS_NAME_PLACEHOLDERAudioProcessor::getSamplesPath()
+{
+    auto samplesDir = getApplicationSupportPath().getChildFile("Samples");
+
+    if (!samplesDir.exists())
+        samplesDir.createDirectory();
+
+    return samplesDir;
+}
+
+juce::File CLASS_NAME_PLACEHOLDERAudioProcessor::getPresetsPath()
+{
+    auto presetsDir = getApplicationSupportPath().getChildFile("Presets");
+
+    if (!presetsDir.exists())
+        presetsDir.createDirectory();
+
+    return presetsDir;
+}
+
+juce::File CLASS_NAME_PLACEHOLDERAudioProcessor::getUserDataPath()
+{
+    auto userDataDir = getApplicationSupportPath().getChildFile("UserData");
+
+    if (!userDataDir.exists())
+        userDataDir.createDirectory();
+
+    return userDataDir;
+}
+
+juce::File CLASS_NAME_PLACEHOLDERAudioProcessor::getLogsPath()
+{
+    // Logs go to ~/Library/Logs/PluginName (standard macOS location)
+    auto home = juce::File::getSpecialLocation(juce::File::userHomeDirectory);
+    auto logsDir = home.getChildFile("Library").getChildFile("Logs").getChildFile(JucePlugin_Name);
+
+    if (!logsDir.exists())
+        logsDir.createDirectory();
+
+    return logsDir;
+}
+
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new CLASS_NAME_PLACEHOLDERAudioProcessor();

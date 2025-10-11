@@ -37,6 +37,14 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    //==============================================================================
+    // Path helpers - macOS Application Support paths (no permission prompts)
+    static juce::File getApplicationSupportPath();
+    static juce::File getSamplesPath();
+    static juce::File getPresetsPath();
+    static juce::File getUserDataPath();
+    static juce::File getLogsPath();
+
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CLASS_NAME_PLACEHOLDERAudioProcessor)
 };
