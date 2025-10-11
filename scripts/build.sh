@@ -53,14 +53,14 @@ GITHUB_REPO="${GITHUB_REPO:-$PROJECT_NAME}"
 VERSION="${VERSION_MAJOR:-0}.${VERSION_MINOR:-0}.${VERSION_PATCH:-1}"
 
 # Parse command line arguments
-TARGET="all"  # all, au, vst3, standalone
-ACTION="local"  # local, test, sign, notarize, publish
+TARGETS=()  # Array to hold multiple targets
+ACTION="local"  # local, test, sign, notarize, publish, pkg, unsigned, uninstall
 
 usage() {
     cat << EOF
-Usage: $0 [TARGET] [ACTION]
+Usage: $0 [TARGET(s)] [ACTION]
 
-TARGETS:
+TARGETS (can specify multiple):
   all         Build all formats (default)
   au          Build Audio Unit only
   vst3        Build VST3 only
@@ -71,28 +71,42 @@ ACTIONS:
   test        Build and run PluginVal tests
   sign        Build and code sign
   notarize    Build, sign, and notarize
+  pkg         Build, sign, notarize, and package (no GitHub release)
   publish     Build, sign, notarize, and publish to GitHub
+  unsigned    Build and create unsigned installer package (fast testing)
+  uninstall   Run uninstaller in non-interactive mode (complete uninstall, no backup)
 
 Examples:
-  $0                    # Build all formats locally
-  $0 au                 # Build AU only
-  $0 all sign          # Build and sign all formats
-  $0 vst3 test         # Build VST3 and test with PluginVal
-  $0 all publish       # Build, sign, notarize and publish to GitHub
+  $0                        # Build all formats locally
+  $0 au                     # Build AU only
+  $0 vst3                   # Build VST3 only
+  $0 standalone             # Build Standalone only
+  $0 au vst3                # Build both AU and VST3
+  $0 au standalone          # Build both AU and Standalone
+  $0 all sign               # Build and sign all formats
+  $0 vst3 test              # Build VST3 and test with PluginVal
+  $0 au vst3 test           # Build AU and VST3, then test both
+  $0 all publish            # Build, sign, notarize and publish to GitHub
+  $0 pkg                    # Build, sign, notarize PKG (no GitHub release)
+  $0 unsigned               # Build unsigned installer (fast testing)
+  $0 uninstall              # Uninstall all plugin components
+  $0 uninstall && $0 unsigned  # Uninstall then rebuild (fast dev workflow)
 
 Configuration is read from .env file:
   PROJECT_NAME, COMPANY_NAME, APPLE_ID, etc.
 EOF
 }
 
-# Process arguments
-if [[ $# -gt 0 ]]; then
+# Process arguments - now supports multiple targets
+while [[ $# -gt 0 ]]; do
     case "$1" in
         all|au|vst3|standalone)
-            TARGET="$1"
+            TARGETS+=("$1")
+            shift
             ;;
-        local|test|sign|notarize|publish)
+        local|test|sign|notarize|publish|unsigned|pkg|uninstall)
             ACTION="$1"
+            shift
             ;;
         -h|--help|help)
             usage
@@ -104,43 +118,96 @@ if [[ $# -gt 0 ]]; then
             exit 1
             ;;
     esac
+done
+
+# If no targets specified, default to "all"
+if [ ${#TARGETS[@]} -eq 0 ]; then
+    TARGETS=("all")
 fi
 
-if [[ $# -gt 1 ]]; then
-    case "$2" in
-        local|test|sign|notarize|publish)
-            ACTION="$2"
+# Determine which formats to build based on targets
+BUILD_FORMATS=""
+
+for TARGET in "${TARGETS[@]}"; do
+    case "$TARGET" in
+        all)
+            BUILD_FORMATS="AU VST3 Standalone"
             ;;
-        *)
-            echo -e "${RED}Unknown action: $2${NC}"
-            usage
-            exit 1
+        au)
+            if [[ ! $BUILD_FORMATS =~ "AU" ]]; then
+                BUILD_FORMATS="$BUILD_FORMATS AU"
+            fi
+            ;;
+        vst3)
+            if [[ ! $BUILD_FORMATS =~ "VST3" ]]; then
+                BUILD_FORMATS="$BUILD_FORMATS VST3"
+            fi
+            ;;
+        standalone)
+            if [[ ! $BUILD_FORMATS =~ "Standalone" ]]; then
+                BUILD_FORMATS="$BUILD_FORMATS Standalone"
+            fi
             ;;
     esac
-fi
+done
 
-# Determine which formats to build based on target
-case "$TARGET" in
-    all)
-        BUILD_FORMATS="AU VST3 Standalone"
-        ;;
-    au)
-        BUILD_FORMATS="AU"
-        ;;
-    vst3)
-        BUILD_FORMATS="VST3"
-        ;;
-    standalone)
-        BUILD_FORMATS="Standalone"
-        ;;
-esac
+# Trim leading/trailing spaces
+BUILD_FORMATS=$(echo "$BUILD_FORMATS" | xargs)
 
 echo -e "${GREEN}Building ${PROJECT_NAME}${NC}"
-echo "Target: $TARGET"
+echo "Targets: ${TARGETS[*]}"
 echo "Action: $ACTION"
-echo "Formats: $BUILD_FORMATS"
+if [[ -n "$BUILD_FORMATS" ]]; then
+    echo "Formats: $BUILD_FORMATS"
+fi
 echo "Build Type: $CMAKE_BUILD_TYPE"
 echo ""
+
+# Function to run uninstaller (non-interactive mode for development)
+run_uninstaller() {
+    # Look for uninstaller in common locations
+    local uninstaller_path=""
+
+    # Check in /Applications folder (installed location)
+    if [[ -f "/Applications/${PROJECT_NAME} Uninstaller.command" ]]; then
+        uninstaller_path="/Applications/${PROJECT_NAME} Uninstaller.command"
+    elif [[ -f "/Applications/${PROJECT_NAME}/${PROJECT_NAME} Uninstaller.command" ]]; then
+        uninstaller_path="/Applications/${PROJECT_NAME}/${PROJECT_NAME} Uninstaller.command"
+    fi
+
+    if [[ -z "$uninstaller_path" ]]; then
+        echo -e "${RED}Error: Uninstaller not found${NC}"
+        echo ""
+        echo "Expected locations:"
+        echo "  /Applications/${PROJECT_NAME} Uninstaller.command"
+        echo "  /Applications/${PROJECT_NAME}/${PROJECT_NAME} Uninstaller.command"
+        echo ""
+        echo "The uninstaller is installed when you run the PKG installer."
+        echo "Try running: $0 unsigned"
+        echo "Then install the PKG to get the uninstaller."
+        exit 1
+    fi
+
+    echo -e "${GREEN}Running uninstaller (non-interactive mode)...${NC}"
+    echo "Uninstaller: $uninstaller_path"
+    echo ""
+
+    # Run uninstaller in non-interactive mode (complete uninstall, no backup)
+    if sudo "$uninstaller_path" --non-interactive --mode=uninstall; then
+        echo ""
+        echo -e "${GREEN}✅ Uninstall complete${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ Uninstall failed${NC}"
+        return 1
+    fi
+}
+
+# If action is uninstall, run it and exit
+if [[ "$ACTION" == "uninstall" ]]; then
+    run_uninstaller
+    exit $?
+fi
 
 # Function to bump version
 bump_version() {
@@ -155,13 +222,13 @@ bump_version() {
 # Function to configure CMake
 configure_cmake() {
     echo -e "${GREEN}Configuring CMake...${NC}"
-    
+
     # Set formats for CMake
     CMAKE_FORMATS=""
     for format in $BUILD_FORMATS; do
         CMAKE_FORMATS="$CMAKE_FORMATS -D${format}=ON"
     done
-    
+
     cmake -B "$BUILD_DIR" \
         -G Xcode \
         -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
@@ -175,7 +242,7 @@ configure_cmake() {
 # Function to build with Xcode
 build_xcode() {
     echo -e "${GREEN}Building with Xcode...${NC}"
-    
+
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
@@ -206,21 +273,21 @@ build_xcode() {
 # Function to launch standalone app
 launch_standalone() {
     local app_path="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone/${PROJECT_NAME}.app"
-    
+
     if [[ ! -d "$app_path" ]]; then
         echo -e "${YELLOW}Warning: Standalone app not found at $app_path${NC}"
         return 1
     fi
-    
+
     echo -e "${GREEN}Launching standalone app...${NC}"
-    
+
     # Check if app is already running and kill it
     if pgrep -x "$PROJECT_NAME" > /dev/null; then
         echo "Killing existing $PROJECT_NAME instance..."
         pkill -x "$PROJECT_NAME" || true
         sleep 1  # Give it time to exit
     fi
-    
+
     # Launch the app in background
     open "$app_path"
     echo "Launched: $app_path"
@@ -229,16 +296,16 @@ launch_standalone() {
 # Function to run tests with PluginVal
 run_tests() {
     echo -e "${GREEN}Running PluginVal tests...${NC}"
-    
+
     local has_pluginval=true
     if ! command -v pluginval &> /dev/null; then
         echo -e "${YELLOW}Warning: PluginVal not installed${NC}"
         echo "Install with: brew install --cask pluginval"
         has_pluginval=false
     fi
-    
+
     local tested_something=false
-    
+
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
@@ -264,7 +331,7 @@ run_tests() {
                 ;;
         esac
     done
-    
+
     if [[ "$tested_something" == "false" ]]; then
         echo -e "${YELLOW}No plugins were tested${NC}"
     fi
@@ -273,12 +340,12 @@ run_tests() {
 # Function to sign plugins
 sign_plugins() {
     echo -e "${GREEN}Signing plugins...${NC}"
-    
+
     if [[ -z "$APP_CERT" ]]; then
         echo -e "${RED}Error: APP_CERT not set in .env${NC}"
         return 1
     fi
-    
+
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
@@ -318,15 +385,15 @@ sign_plugins() {
 # Function to notarize plugins
 notarize_plugins() {
     echo -e "${GREEN}Notarizing plugins...${NC}"
-    
+
     # Support both APP_SPECIFIC_PASSWORD and APP_PASSWORD for backward compatibility
     local NOTARY_PASSWORD="${APP_SPECIFIC_PASSWORD:-$APP_PASSWORD}"
-    
+
     if [[ -z "$APPLE_ID" ]] || [[ -z "$NOTARY_PASSWORD" ]] || [[ -z "$TEAM_ID" ]]; then
         echo -e "${RED}Error: APPLE_ID, APP_SPECIFIC_PASSWORD (or APP_PASSWORD), or TEAM_ID not set in .env${NC}"
         return 1
     fi
-    
+
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
@@ -335,13 +402,13 @@ notarize_plugins() {
                     echo "Notarizing AU..."
                     ZIP_PATH="/tmp/${PROJECT_NAME}_AU.zip"
                     ditto -c -k --keepParent "$PLUGIN_PATH" "$ZIP_PATH"
-                    
+
                     xcrun notarytool submit "$ZIP_PATH" \
                         --apple-id "$APPLE_ID" \
                         --password "$NOTARY_PASSWORD" \
                         --team-id "$TEAM_ID" \
                         --wait
-                    
+
                     xcrun stapler staple "$PLUGIN_PATH"
                     rm "$ZIP_PATH"
                 fi
@@ -352,13 +419,13 @@ notarize_plugins() {
                     echo "Notarizing VST3..."
                     ZIP_PATH="/tmp/${PROJECT_NAME}_VST3.zip"
                     ditto -c -k --keepParent "$PLUGIN_PATH" "$ZIP_PATH"
-                    
+
                     xcrun notarytool submit "$ZIP_PATH" \
                         --apple-id "$APPLE_ID" \
                         --password "$NOTARY_PASSWORD" \
                         --team-id "$TEAM_ID" \
                         --wait
-                    
+
                     xcrun stapler staple "$PLUGIN_PATH"
                     rm "$ZIP_PATH"
                 fi
@@ -367,23 +434,29 @@ notarize_plugins() {
     done
 }
 
-# Function to create installer package
+# Function to create installer package (both signed and unsigned)
 create_installer() {
-    echo -e "${GREEN}Creating installer package...${NC}"
-    
-    if [[ -z "$INSTALLER_CERT" ]]; then
-        echo -e "${RED}Error: INSTALLER_CERT not set in .env${NC}"
-        return 1
+    local sign_package="${1:-true}"  # Default to signing
+
+    if [[ "$sign_package" == "true" ]]; then
+        echo -e "${GREEN}Creating signed installer package...${NC}"
+
+        if [[ -z "$INSTALLER_CERT" ]]; then
+            echo -e "${RED}Error: INSTALLER_CERT not set in .env${NC}"
+            return 1
+        fi
+    else
+        echo -e "${GREEN}Creating unsigned installer package...${NC}"
     fi
-    
+
     # Get version from .env
     VERSION="${VERSION_MAJOR:-1}.${VERSION_MINOR:-0}.${VERSION_PATCH:-0}"
-    
+
     # Create temporary directory for package
     PKG_ROOT="/tmp/${PROJECT_NAME}_installer"
     rm -rf "$PKG_ROOT"
     mkdir -p "$PKG_ROOT"
-    
+
     # Copy plugins to package
     for format in $BUILD_FORMATS; do
         case "$format" in
@@ -403,7 +476,7 @@ create_installer() {
                 ;;
         esac
     done
-    
+
     # Check if we have standalone app to include
     STANDALONE_PATH="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone/${PROJECT_NAME}.app"
     if [[ -d "$STANDALONE_PATH" ]]; then
@@ -411,70 +484,104 @@ create_installer() {
         mkdir -p "$PKG_ROOT/Applications"
         cp -R "$STANDALONE_PATH" "$PKG_ROOT/Applications/"
     fi
-    
+
+    # Add uninstaller if template exists
+    if [[ -f "scripts/uninstall_template.sh" ]]; then
+        echo "Including uninstaller..."
+        local uninstaller_path="$PKG_ROOT/Applications/${PROJECT_NAME} Uninstaller.command"
+
+        # Copy and customize the uninstaller template
+        sed -e "s/{{PROJECT_NAME}}/$PROJECT_NAME/g" \
+            -e "s/{{PROJECT_BUNDLE_ID}}/$PROJECT_BUNDLE_ID/g" \
+            -e "s/{{GITHUB_USER}}/${GITHUB_USER:-owner}/g" \
+            -e "s/{{GITHUB_REPO}}/${GITHUB_REPO}/g" \
+            "scripts/uninstall_template.sh" > "$uninstaller_path"
+
+        chmod +x "$uninstaller_path"
+    fi
+
     # Build the package
-    PKG_PATH="$HOME/Desktop/${PROJECT_NAME}_${VERSION}.pkg"
-    
-    pkgbuild --root "$PKG_ROOT" \
-        --identifier "$PROJECT_BUNDLE_ID" \
-        --version "$VERSION" \
-        --sign "$INSTALLER_CERT" \
-        "$PKG_PATH"
-    
-    # Notarize the installer
-    echo "Notarizing installer..."
-    xcrun notarytool submit "$PKG_PATH" \
-        --apple-id "$APPLE_ID" \
-        --password "${APP_SPECIFIC_PASSWORD:-$APP_PASSWORD}" \
-        --team-id "$TEAM_ID" \
-        --wait
-    
-    xcrun stapler staple "$PKG_PATH"
-    
+    if [[ "$sign_package" == "true" ]]; then
+        PKG_PATH="$HOME/Desktop/${PROJECT_NAME}_${VERSION}.pkg"
+
+        pkgbuild --root "$PKG_ROOT" \
+            --identifier "$PROJECT_BUNDLE_ID" \
+            --version "$VERSION" \
+            --sign "$INSTALLER_CERT" \
+            "$PKG_PATH"
+
+        # Notarize the installer
+        echo "Notarizing installer..."
+        xcrun notarytool submit "$PKG_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "${APP_SPECIFIC_PASSWORD:-$APP_PASSWORD}" \
+            --team-id "$TEAM_ID" \
+            --wait
+
+        xcrun stapler staple "$PKG_PATH"
+    else
+        # Unsigned package for fast testing
+        PKG_PATH="$HOME/Desktop/${PROJECT_NAME}_${VERSION}_unsigned.pkg"
+
+        pkgbuild --root "$PKG_ROOT" \
+            --identifier "$PROJECT_BUNDLE_ID" \
+            --version "$VERSION" \
+            "$PKG_PATH"
+    fi
+
     # Create DMG
-    DMG_PATH="$HOME/Desktop/${PROJECT_NAME}_${VERSION}.dmg"
+    if [[ "$sign_package" == "true" ]]; then
+        DMG_PATH="$HOME/Desktop/${PROJECT_NAME}_${VERSION}.dmg"
+    else
+        DMG_PATH="$HOME/Desktop/${PROJECT_NAME}_${VERSION}_unsigned.dmg"
+    fi
+
     echo "Creating DMG..."
-    
+
     DMG_ROOT="/tmp/${PROJECT_NAME}_dmg"
     rm -rf "$DMG_ROOT"
     mkdir -p "$DMG_ROOT"
     cp "$PKG_PATH" "$DMG_ROOT/"
-    
+
     hdiutil create -volname "${PROJECT_NAME} ${VERSION}" \
         -srcfolder "$DMG_ROOT" \
         -ov -format UDZO \
         "$DMG_PATH"
-    
-    # Sign the DMG
-    codesign --force --sign "$APP_CERT" "$DMG_PATH"
-    
-    # Create ZIP of the DMG for easier distribution
-    ZIP_PATH="$HOME/Desktop/${PROJECT_NAME}_${VERSION}.zip"
-    cd "$HOME/Desktop"
-    zip -9 "$(basename "$ZIP_PATH")" "$(basename "$DMG_PATH")"
-    
+
+    # Sign the DMG if signing
+    if [[ "$sign_package" == "true" ]]; then
+        codesign --force --sign "$APP_CERT" "$DMG_PATH"
+
+        # Create ZIP of the DMG for easier distribution
+        ZIP_PATH="$HOME/Desktop/${PROJECT_NAME}_${VERSION}.zip"
+        cd "$HOME/Desktop"
+        zip -9 "$(basename "$ZIP_PATH")" "$(basename "$DMG_PATH")"
+    fi
+
     # Clean up
     rm -rf "$PKG_ROOT" "$DMG_ROOT"
-    
+
     echo -e "${GREEN}Installer created:${NC}"
     echo "  PKG: $PKG_PATH"
     echo "  DMG: $DMG_PATH"
-    echo "  ZIP: $ZIP_PATH"
+    if [[ "$sign_package" == "true" ]]; then
+        echo "  ZIP: $ZIP_PATH"
+    fi
 }
 
 # Function to generate release notes
 generate_release_notes() {
     echo -e "${GREEN}Generating release notes for version $VERSION...${NC}"
-    
+
     local release_notes=""
-    
+
     # Use the Python script if it exists
     if [[ -f "${ROOT_DIR}/scripts/generate_release_notes.py" ]]; then
         # Try AI-enhanced release notes if API keys are available
         if [[ -n "$OPENROUTER_KEY_PRIVATE" ]] || [[ -n "$OPENAI_API_KEY" ]]; then
             echo "🤖 Attempting AI-enhanced release notes..."
             release_notes=$(python3 "${ROOT_DIR}/scripts/generate_release_notes.py" --version "$VERSION" --format markdown --ai 2>/dev/null)
-            
+
             if [[ -n "$release_notes" ]]; then
                 echo "✅ AI-enhanced release notes generated"
             else
@@ -482,14 +589,14 @@ generate_release_notes() {
                 release_notes=""
             fi
         fi
-        
+
         # Fallback to standard generation if AI failed
         if [[ -z "$release_notes" ]]; then
             echo "📝 Generating standard release notes..."
             release_notes=$(python3 "${ROOT_DIR}/scripts/generate_release_notes.py" --version "$VERSION" --format markdown 2>/dev/null)
         fi
     fi
-    
+
     # Ultimate fallback to git-based release notes
     if [[ -z "$release_notes" ]]; then
         echo "📝 Generating git-based release notes..."
@@ -500,7 +607,7 @@ generate_release_notes() {
         else
             commit_range="HEAD~5..HEAD"
         fi
-        
+
         local commits=$(git log --pretty=format:"- %s" --no-merges "$commit_range" 2>/dev/null || echo "- Initial release")
         release_notes="## What's Changed
 
@@ -508,62 +615,62 @@ $commits
 
 **Full Changelog**: https://github.com/${GITHUB_USER:-owner}/${GITHUB_REPO}/commits/v$VERSION"
     fi
-    
+
     echo "$release_notes"
 }
 
 # Function to create GitHub release
 create_github_release() {
     echo -e "${GREEN}Creating GitHub release...${NC}"
-    
+
     # Check if GitHub CLI is authenticated
     if ! command -v gh &> /dev/null; then
         echo -e "${RED}Error: GitHub CLI (gh) not installed${NC}"
         echo "Install with: brew install gh"
         return 1
     fi
-    
+
     if ! gh auth status &>/dev/null; then
         echo -e "${RED}Error: GitHub CLI not authenticated${NC}"
         echo "Run: gh auth login"
         return 1
     fi
-    
+
     local release_tag="v$VERSION"
     local release_title="$PROJECT_NAME $VERSION"
     local release_notes=$(generate_release_notes)
-    
+
     # Find artifacts to upload
     local artifacts=()
     local desktop="$HOME/Desktop"
-    
+
     # Look for PKG file
     local pkg_file=$(find "$desktop" -name "${PROJECT_NAME}*.pkg" -not -name "*component*" -not -name "*vst3*" -not -name "*standalone*" -not -name "*resources*" | head -1)
     if [[ -n "$pkg_file" ]] && [[ -f "$pkg_file" ]]; then
         artifacts+=("$pkg_file")
         echo "Found PKG: $(basename "$pkg_file")"
     fi
-    
+
     # Look for DMG file
     local dmg_file=$(find "$desktop" -name "${PROJECT_NAME}*.dmg" | head -1)
     if [[ -n "$dmg_file" ]] && [[ -f "$dmg_file" ]]; then
         artifacts+=("$dmg_file")
         echo "Found DMG: $(basename "$dmg_file")"
     fi
-    
+
     # Look for ZIP file
     local zip_file=$(find "$desktop" -name "${PROJECT_NAME}*.zip" | head -1)
     if [[ -n "$zip_file" ]] && [[ -f "$zip_file" ]]; then
         artifacts+=("$zip_file")
         echo "Found ZIP: $(basename "$zip_file")"
     fi
-    
+
     if [[ ${#artifacts[@]} -eq 0 ]]; then
         echo -e "${YELLOW}Warning: No artifacts found on Desktop${NC}"
         echo "Expected files: ${PROJECT_NAME}*.pkg, ${PROJECT_NAME}*.dmg, ${PROJECT_NAME}*.zip"
         return 1
     fi
-    
+
     # Create the release
     echo "Creating release $release_tag..."
     gh release create "$release_tag" \
@@ -571,7 +678,7 @@ create_github_release() {
         --title "$release_title" \
         --notes "$release_notes" \
         "${artifacts[@]}"
-    
+
     if [[ $? -eq 0 ]]; then
         echo -e "${GREEN}✅ Successfully created GitHub release${NC}"
         echo "   Release URL: https://github.com/${GITHUB_USER:-owner}/${GITHUB_REPO}/releases/tag/$release_tag"
@@ -586,11 +693,11 @@ create_github_release() {
 main() {
     # Always bump version (even for local builds to ensure proper versioning)
     bump_version
-    
+
     # Configure and build
     configure_cmake
     build_xcode
-    
+
     # Post-build actions
     case "$ACTION" in
         local)
@@ -609,16 +716,26 @@ main() {
             sign_plugins
             notarize_plugins
             ;;
+        unsigned)
+            # Create unsigned package for fast testing
+            create_installer false
+            ;;
+        pkg)
+            # Build, sign, notarize, and package (no GitHub release)
+            sign_plugins
+            notarize_plugins
+            create_installer true
+            ;;
         publish)
             sign_plugins
             notarize_plugins
-            create_installer
+            create_installer true
             create_github_release
             ;;
     esac
-    
+
     echo -e "${GREEN}Build complete!${NC}"
-    
+
     # Show installed locations
     echo ""
     echo "Plugins installed to:"
