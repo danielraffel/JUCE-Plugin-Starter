@@ -434,6 +434,155 @@ notarize_plugins() {
     done
 }
 
+# Function to generate DiagnosticKit .env from main project settings
+generate_diagnostic_env() {
+    local diagnostic_dir="$PROJECT_ROOT/Tools/DiagnosticKit"
+    local diagnostic_env="${diagnostic_dir}/.env"
+
+    echo "📝 Generating DiagnosticKit configuration..."
+
+    # Check if DiagnosticKit directory exists
+    if [[ ! -d "$diagnostic_dir" ]]; then
+        echo -e "${YELLOW}Warning: DiagnosticKit directory not found${NC}"
+        return 1
+    fi
+
+    # Copy template if .env.example exists
+    if [[ -f "${diagnostic_dir}/.env.example" ]]; then
+        cp "${diagnostic_dir}/.env.example" "$diagnostic_env"
+    else
+        echo -e "${RED}Error: .env.example not found in DiagnosticKit directory${NC}"
+        return 1
+    fi
+
+    # Replace all placeholders
+    sed -i '' \
+        -e "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" \
+        -e "s|{{PROJECT_BUNDLE_ID}}|${PROJECT_BUNDLE_ID}|g" \
+        -e "s|{{VERSION_MAJOR}}|${VERSION_MAJOR:-1}|g" \
+        -e "s|{{VERSION_MINOR}}|${VERSION_MINOR:-0}|g" \
+        -e "s|{{VERSION_PATCH}}|${VERSION_PATCH:-0}|g" \
+        -e "s|{{DIAGNOSTIC_GITHUB_REPO}}|${DIAGNOSTIC_GITHUB_REPO:-}|g" \
+        -e "s|{{DIAGNOSTIC_GITHUB_PAT}}|${DIAGNOSTIC_GITHUB_PAT:-}|g" \
+        -e "s|{{DIAGNOSTIC_SUPPORT_EMAIL}}|${DIAGNOSTIC_SUPPORT_EMAIL:-${APPLE_ID:-}}|g" \
+        -e "s|{{PROJECT_WEBSITE}}|${PROJECT_WEBSITE:-}|g" \
+        -e "s|{{PLUGIN_CODE}}|${PLUGIN_CODE:-}|g" \
+        -e "s|{{PLUGIN_MANUFACTURER_CODE}}|${PLUGIN_MANUFACTURER_CODE:-}|g" \
+        "$diagnostic_env"
+
+    echo "✅ Generated DiagnosticKit .env"
+}
+
+# Function to check if DiagnosticKit setup is complete
+check_diagnostic_setup() {
+    # Only check if diagnostics enabled
+    if [[ "${ENABLE_DIAGNOSTICS:-false}" != "true" ]]; then
+        return 0
+    fi
+
+    # Only check for packaging actions
+    if [[ "$ACTION" != "publish" ]] && [[ "$ACTION" != "unsigned" ]] && \
+       [[ "$ACTION" != "sign" ]] && [[ "$ACTION" != "notarize" ]] && \
+       [[ "$ACTION" != "pkg" ]]; then
+        return 0
+    fi
+
+    echo -e "${GREEN}Checking DiagnosticKit setup...${NC}"
+
+    if [[ -x "scripts/setup_diagnostic_repo.sh" ]]; then
+        if scripts/setup_diagnostic_repo.sh --check-only &>/dev/null; then
+            echo "✅ DiagnosticKit fully configured"
+            return 0
+        else
+            echo ""
+            echo -e "${YELLOW}⚠️  DiagnosticKit Setup Required${NC}"
+            echo ""
+            echo "DiagnosticKit needs setup before packaging."
+            echo ""
+            echo "Options:"
+            echo "  1) Run setup now (recommended)"
+            echo "  2) Continue anyway (DiagnosticKit will be skipped)"
+            echo "  3) Disable DiagnosticKit (set ENABLE_DIAGNOSTICS=false in .env)"
+            echo ""
+            read -p "Choose (1-3): " choice
+
+            case "$choice" in
+                1)
+                    scripts/setup_diagnostic_repo.sh
+                    ;;
+                2)
+                    echo "Continuing without DiagnosticKit setup..."
+                    ENABLE_DIAGNOSTICS="false"  # Temporarily disable for this build
+                    ;;
+                3)
+                    echo "Please set ENABLE_DIAGNOSTICS=false in .env and try again"
+                    exit 1
+                    ;;
+                *)
+                    echo "Invalid choice"
+                    exit 1
+                    ;;
+            esac
+        fi
+    else
+        echo -e "${YELLOW}Warning: setup_diagnostic_repo.sh not found${NC}"
+        return 1
+    fi
+}
+
+# Function to build DiagnosticKit app
+build_diagnostics() {
+    if [[ "${ENABLE_DIAGNOSTICS:-false}" != "true" ]]; then
+        return 0
+    fi
+
+    echo -e "${GREEN}Building DiagnosticKit...${NC}"
+
+    local DIAGNOSTIC_DIR="$PROJECT_ROOT/Tools/DiagnosticKit"
+
+    if [[ ! -d "$DIAGNOSTIC_DIR" ]]; then
+        echo -e "${YELLOW}Warning: DiagnosticKit not found at $DIAGNOSTIC_DIR${NC}"
+        return 0
+    fi
+
+    # Generate .env for DiagnosticKit
+    if ! generate_diagnostic_env; then
+        echo -e "${YELLOW}Warning: Could not generate DiagnosticKit .env${NC}"
+        return 1
+    fi
+
+    # Build using build script
+    cd "$DIAGNOSTIC_DIR"
+    if [[ -x "Scripts/build_app.sh" ]]; then
+        # Determine build config
+        local diag_build_config="release"
+        if [[ "$CMAKE_BUILD_TYPE" == "Debug" ]]; then
+            diag_build_config="debug"
+        fi
+
+        # Build and capture the app path
+        DIAGNOSTIC_PATH=$(./Scripts/build_app.sh "$diag_build_config" 2>&1 | tail -1)
+
+        if [[ -d "$DIAGNOSTIC_PATH" ]]; then
+            echo -e "${GREEN}✅ DiagnosticKit built successfully${NC}"
+            echo "Path: $DIAGNOSTIC_PATH"
+            cd "$PROJECT_ROOT"
+
+            # Export for use in create_installer
+            export DIAGNOSTIC_PATH
+            return 0
+        else
+            echo -e "${RED}Error: DiagnosticKit build failed${NC}"
+            cd "$PROJECT_ROOT"
+            return 1
+        fi
+    else
+        echo -e "${RED}Error: Build script not found at $DIAGNOSTIC_DIR/Scripts/build_app.sh${NC}"
+        cd "$PROJECT_ROOT"
+        return 1
+    fi
+}
+
 # Function to create installer package (both signed and unsigned)
 create_installer() {
     local sign_package="${1:-true}"  # Default to signing
@@ -820,9 +969,15 @@ main() {
     # Always bump version (even for local builds to ensure proper versioning)
     bump_version
 
+    # Check DiagnosticKit setup early (before building anything)
+    check_diagnostic_setup
+
     # Configure and build
     configure_cmake
     build_xcode
+
+    # Build DiagnosticKit if enabled (after main plugins are built)
+    build_diagnostics
 
     # Post-build actions
     case "$ACTION" in
