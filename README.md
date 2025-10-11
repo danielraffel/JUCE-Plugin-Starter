@@ -106,6 +106,11 @@ cd JUCE-Plugin-Starter
   - [⚙️ Distribution-Specific Environment Variables](#️-distribution-specific-environment-variables)
   - [🎛️ What Gets Packaged](#️-what-gets-packaged)
   - [🚀 Run the Distribution Script](#-run-the-distribution-script)
+- [🤖 AI-Assisted Development Prompts](#-ai-assisted-development-prompts)
+  - [What's Included](#whats-included)
+  - [How to Use](#how-to-use)
+  - [Why Use Prompts?](#why-use-prompts)
+  - [Contributing Prompts](#contributing-prompts)
 - [📚 Resources](#-resources)
 
 ---
@@ -473,6 +478,10 @@ JUCE-Plugin-Starter/
 ├── CLAUDE.md                      ← Project details for Claude Code
 ├── CMakeLists.txt                 ← Main build config for your JUCE project
 ├── README.md                      ← You're reading it
+├── prompts/                       ← AI assistant prompts for common features
+│   ├── README.md                  ← Guide for using prompts
+│   ├── audio-midi-settings-prompt.md
+│   └── lfo-modulation-prompt.md
 ├── scripts/                       ← Automation / helper scripts
 │   ├── about/                     ← Documentation
 │   │   └── build_system.md        ← Comprehensive build system documentation
@@ -946,6 +955,40 @@ This command will:
 > 📂 Output files (`.zip`, `.pkg`, `.dmg`) will be saved to your Desktop for easy sharing.
 
 ---
+
+## 🤖 AI-Assisted Development Prompts
+
+The `prompts/` folder contains ready-to-use prompts for common plugin features that you can use with AI coding assistants like Claude Code, Cursor, GitHub Copilot, or ChatGPT.
+
+### What's Included
+
+These prompts are designed to help you quickly implement common plugin features:
+
+- **Audio/MIDI Settings** (`audio-midi-settings-prompt.md`) - Add comprehensive audio device and MIDI routing settings to your plugin
+- **LFO & Modulation System** (`lfo-modulation-prompt.md`) - Implement a flexible LFO system with multiple waveforms and modulation targets
+
+### How to Use
+
+1. **Choose a feature** - Browse the `prompts/` folder for the feature you want to add
+2. **Copy the prompt** - Open the `.md` file and copy its contents
+3. **Provide to your AI assistant** - Paste the prompt into Claude Code, Cursor, or your preferred AI tool
+4. **Customize as needed** - The AI will implement the feature, which you can then customize for your specific needs
+
+### Why Use Prompts?
+
+- **Consistency** - Tested prompts that work well with AI assistants
+- **Time-saving** - Skip explaining common features from scratch
+- **Best practices** - Prompts include JUCE best practices and patterns
+- **Learning** - See how features are implemented in your codebase
+
+### Contributing Prompts
+
+As you build features with AI assistance, consider contributing successful prompts back to this collection. This helps the community build plugins faster and more consistently.
+
+> 💡 **Note**: These prompts are starting points. Always review AI-generated code for your specific use case and test thoroughly.
+
+---
+
 ## 📚 Resources
 
 * [JUCE Documentation](https://docs.juce.com/)

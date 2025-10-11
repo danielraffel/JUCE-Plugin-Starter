@@ -239,58 +239,106 @@ configure_cmake() {
         .
 }
 
+# Function to discover available schemes for a format
+get_schemes_for_format() {
+    local format="$1"
+    local project_path="$BUILD_DIR/${PROJECT_NAME}.xcodeproj"
+
+    # Get list of schemes from Xcode project
+    local all_schemes=$(xcodebuild -project "$project_path" -list 2>/dev/null | \
+        sed -n '/Schemes:/,/^$/p' | \
+        tail -n +2 | \
+        sed 's/^[[:space:]]*//' | \
+        grep -v '^$')
+
+    # Filter schemes by format suffix
+    case "$format" in
+        AU)
+            echo "$all_schemes" | grep "_AU$"
+            ;;
+        VST3)
+            echo "$all_schemes" | grep "_VST3$"
+            ;;
+        Standalone)
+            echo "$all_schemes" | grep "_Standalone$"
+            ;;
+    esac
+}
+
 # Function to build with Xcode
 build_xcode() {
     echo -e "${GREEN}Building with Xcode...${NC}"
 
     for format in $BUILD_FORMATS; do
-        case "$format" in
-            AU)
-                echo "Building Audio Unit..."
-                xcodebuild -project "$BUILD_DIR/${PROJECT_NAME}.xcodeproj" \
-                    -scheme "${PROJECT_NAME}_AU" \
-                    -configuration "$CMAKE_BUILD_TYPE" \
-                    build
-                ;;
-            VST3)
-                echo "Building VST3..."
-                xcodebuild -project "$BUILD_DIR/${PROJECT_NAME}.xcodeproj" \
-                    -scheme "${PROJECT_NAME}_VST3" \
-                    -configuration "$CMAKE_BUILD_TYPE" \
-                    build
-                ;;
-            Standalone)
-                echo "Building Standalone..."
-                xcodebuild -project "$BUILD_DIR/${PROJECT_NAME}.xcodeproj" \
-                    -scheme "${PROJECT_NAME}_Standalone" \
-                    -configuration "$CMAKE_BUILD_TYPE" \
-                    build
-                ;;
-        esac
+        # Discover schemes for this format
+        local schemes=$(get_schemes_for_format "$format")
+
+        if [[ -z "$schemes" ]]; then
+            echo -e "${YELLOW}Warning: No ${format} schemes found${NC}"
+            continue
+        fi
+
+        # Build each scheme
+        while IFS= read -r scheme; do
+            [[ -z "$scheme" ]] && continue
+
+            case "$format" in
+                AU)
+                    echo "Building Audio Unit: $scheme"
+                    ;;
+                VST3)
+                    echo "Building VST3: $scheme"
+                    ;;
+                Standalone)
+                    echo "Building Standalone: $scheme"
+                    ;;
+            esac
+
+            xcodebuild -project "$BUILD_DIR/${PROJECT_NAME}.xcodeproj" \
+                -scheme "$scheme" \
+                -configuration "$CMAKE_BUILD_TYPE" \
+                build
+        done <<< "$schemes"
     done
 }
 
 # Function to launch standalone app
 launch_standalone() {
-    local app_path="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone/${PROJECT_NAME}.app"
+    local standalone_dir="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone"
 
-    if [[ ! -d "$app_path" ]]; then
-        echo -e "${YELLOW}Warning: Standalone app not found at $app_path${NC}"
+    if [[ ! -d "$standalone_dir" ]]; then
+        echo -e "${YELLOW}Warning: Standalone directory not found${NC}"
         return 1
     fi
 
-    echo -e "${GREEN}Launching standalone app...${NC}"
+    # Find all .app files in standalone directory
+    local apps=()
+    while IFS= read -r -d '' app; do
+        apps+=("$app")
+    done < <(find "$standalone_dir" -maxdepth 1 -name "*.app" -print0)
 
-    # Check if app is already running and kill it
-    if pgrep -x "$PROJECT_NAME" > /dev/null; then
-        echo "Killing existing $PROJECT_NAME instance..."
-        pkill -x "$PROJECT_NAME" || true
-        sleep 1  # Give it time to exit
+    if [[ ${#apps[@]} -eq 0 ]]; then
+        echo -e "${YELLOW}Warning: No standalone apps found${NC}"
+        return 1
     fi
 
-    # Launch the app in background
-    open "$app_path"
-    echo "Launched: $app_path"
+    echo -e "${GREEN}Launching standalone app(s)...${NC}"
+
+    # Launch each app
+    for app_path in "${apps[@]}"; do
+        local app_name=$(basename "$app_path" .app)
+
+        # Check if app is already running and kill it
+        if pgrep -x "$app_name" > /dev/null; then
+            echo "Killing existing $app_name instance..."
+            pkill -x "$app_name" || true
+            sleep 1  # Give it time to exit
+        fi
+
+        # Launch the app in background
+        open "$app_path"
+        echo "Launched: $app_path"
+    done
 }
 
 # Function to run tests with PluginVal
@@ -309,19 +357,29 @@ run_tests() {
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
-                PLUGIN_PATH="$HOME/Library/Audio/Plug-Ins/Components/${PROJECT_NAME}.component"
-                if [[ -d "$PLUGIN_PATH" ]] && [[ "$has_pluginval" == "true" ]]; then
-                    echo "Testing AU: $PLUGIN_PATH"
-                    pluginval --validate-in-process --validate "$PLUGIN_PATH" || true
-                    tested_something=true
+                # Find all AU plugins in Components directory
+                local au_dir="$HOME/Library/Audio/Plug-Ins/Components"
+                if [[ -d "$au_dir" ]]; then
+                    while IFS= read -r -d '' plugin; do
+                        if [[ "$has_pluginval" == "true" ]]; then
+                            echo "Testing AU: $plugin"
+                            pluginval --validate-in-process --validate "$plugin" || true
+                            tested_something=true
+                        fi
+                    done < <(find "$au_dir" -maxdepth 1 -name "*.component" -print0 2>/dev/null)
                 fi
                 ;;
             VST3)
-                PLUGIN_PATH="$HOME/Library/Audio/Plug-Ins/VST3/${PROJECT_NAME}.vst3"
-                if [[ -d "$PLUGIN_PATH" ]] && [[ "$has_pluginval" == "true" ]]; then
-                    echo "Testing VST3: $PLUGIN_PATH"
-                    pluginval --validate-in-process --validate "$PLUGIN_PATH" || true
-                    tested_something=true
+                # Find all VST3 plugins in VST3 directory
+                local vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
+                if [[ -d "$vst3_dir" ]]; then
+                    while IFS= read -r -d '' plugin; do
+                        if [[ "$has_pluginval" == "true" ]]; then
+                            echo "Testing VST3: $plugin"
+                            pluginval --validate-in-process --validate "$plugin" || true
+                            tested_something=true
+                        fi
+                    done < <(find "$vst3_dir" -maxdepth 1 -name "*.vst3" -print0 2>/dev/null)
                 fi
                 ;;
             Standalone)
@@ -349,33 +407,42 @@ sign_plugins() {
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
-                PLUGIN_PATH="$HOME/Library/Audio/Plug-Ins/Components/${PROJECT_NAME}.component"
-                if [[ -d "$PLUGIN_PATH" ]]; then
-                    echo "Signing AU: $PLUGIN_PATH"
-                    codesign --force --deep --strict --timestamp \
-                        --sign "$APP_CERT" \
-                        --options runtime \
-                        "$PLUGIN_PATH"
+                # Find all AU plugins in Components directory
+                local au_dir="$HOME/Library/Audio/Plug-Ins/Components"
+                if [[ -d "$au_dir" ]]; then
+                    while IFS= read -r -d '' plugin; do
+                        echo "Signing AU: $plugin"
+                        codesign --force --deep --strict --timestamp \
+                            --sign "$APP_CERT" \
+                            --options runtime \
+                            "$plugin"
+                    done < <(find "$au_dir" -maxdepth 1 -name "*.component" -print0 2>/dev/null)
                 fi
                 ;;
             VST3)
-                PLUGIN_PATH="$HOME/Library/Audio/Plug-Ins/VST3/${PROJECT_NAME}.vst3"
-                if [[ -d "$PLUGIN_PATH" ]]; then
-                    echo "Signing VST3: $PLUGIN_PATH"
-                    codesign --force --deep --strict --timestamp \
-                        --sign "$APP_CERT" \
-                        --options runtime \
-                        "$PLUGIN_PATH"
+                # Find all VST3 plugins in VST3 directory
+                local vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
+                if [[ -d "$vst3_dir" ]]; then
+                    while IFS= read -r -d '' plugin; do
+                        echo "Signing VST3: $plugin"
+                        codesign --force --deep --strict --timestamp \
+                            --sign "$APP_CERT" \
+                            --options runtime \
+                            "$plugin"
+                    done < <(find "$vst3_dir" -maxdepth 1 -name "*.vst3" -print0 2>/dev/null)
                 fi
                 ;;
             Standalone)
-                APP_PATH="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone/${PROJECT_NAME}.app"
-                if [[ -d "$APP_PATH" ]]; then
-                    echo "Signing Standalone: $APP_PATH"
-                    codesign --force --deep --strict --timestamp \
-                        --sign "$APP_CERT" \
-                        --options runtime \
-                        "$APP_PATH"
+                # Find all standalone apps in build artefacts
+                local standalone_dir="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone"
+                if [[ -d "$standalone_dir" ]]; then
+                    while IFS= read -r -d '' app; do
+                        echo "Signing Standalone: $app"
+                        codesign --force --deep --strict --timestamp \
+                            --sign "$APP_CERT" \
+                            --options runtime \
+                            "$app"
+                    done < <(find "$standalone_dir" -maxdepth 1 -name "*.app" -print0 2>/dev/null)
                 fi
                 ;;
         esac
@@ -397,37 +464,45 @@ notarize_plugins() {
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
-                PLUGIN_PATH="$HOME/Library/Audio/Plug-Ins/Components/${PROJECT_NAME}.component"
-                if [[ -d "$PLUGIN_PATH" ]]; then
-                    echo "Notarizing AU..."
-                    ZIP_PATH="/tmp/${PROJECT_NAME}_AU.zip"
-                    ditto -c -k --keepParent "$PLUGIN_PATH" "$ZIP_PATH"
+                # Find all AU plugins in Components directory
+                local au_dir="$HOME/Library/Audio/Plug-Ins/Components"
+                if [[ -d "$au_dir" ]]; then
+                    while IFS= read -r -d '' plugin; do
+                        local plugin_name=$(basename "$plugin" .component)
+                        echo "Notarizing AU: $plugin_name..."
+                        local zip_path="/tmp/${plugin_name}_AU.zip"
+                        ditto -c -k --keepParent "$plugin" "$zip_path"
 
-                    xcrun notarytool submit "$ZIP_PATH" \
-                        --apple-id "$APPLE_ID" \
-                        --password "$NOTARY_PASSWORD" \
-                        --team-id "$TEAM_ID" \
-                        --wait
+                        xcrun notarytool submit "$zip_path" \
+                            --apple-id "$APPLE_ID" \
+                            --password "$NOTARY_PASSWORD" \
+                            --team-id "$TEAM_ID" \
+                            --wait
 
-                    xcrun stapler staple "$PLUGIN_PATH"
-                    rm "$ZIP_PATH"
+                        xcrun stapler staple "$plugin"
+                        rm "$zip_path"
+                    done < <(find "$au_dir" -maxdepth 1 -name "*.component" -print0 2>/dev/null)
                 fi
                 ;;
             VST3)
-                PLUGIN_PATH="$HOME/Library/Audio/Plug-Ins/VST3/${PROJECT_NAME}.vst3"
-                if [[ -d "$PLUGIN_PATH" ]]; then
-                    echo "Notarizing VST3..."
-                    ZIP_PATH="/tmp/${PROJECT_NAME}_VST3.zip"
-                    ditto -c -k --keepParent "$PLUGIN_PATH" "$ZIP_PATH"
+                # Find all VST3 plugins in VST3 directory
+                local vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
+                if [[ -d "$vst3_dir" ]]; then
+                    while IFS= read -r -d '' plugin; do
+                        local plugin_name=$(basename "$plugin" .vst3)
+                        echo "Notarizing VST3: $plugin_name..."
+                        local zip_path="/tmp/${plugin_name}_VST3.zip"
+                        ditto -c -k --keepParent "$plugin" "$zip_path"
 
-                    xcrun notarytool submit "$ZIP_PATH" \
-                        --apple-id "$APPLE_ID" \
-                        --password "$NOTARY_PASSWORD" \
-                        --team-id "$TEAM_ID" \
-                        --wait
+                        xcrun notarytool submit "$zip_path" \
+                            --apple-id "$APPLE_ID" \
+                            --password "$NOTARY_PASSWORD" \
+                            --team-id "$TEAM_ID" \
+                            --wait
 
-                    xcrun stapler staple "$PLUGIN_PATH"
-                    rm "$ZIP_PATH"
+                        xcrun stapler staple "$plugin"
+                        rm "$zip_path"
+                    done < <(find "$vst3_dir" -maxdepth 1 -name "*.vst3" -print0 2>/dev/null)
                 fi
                 ;;
         esac
@@ -1028,19 +1103,34 @@ main() {
 
     echo -e "${GREEN}Build complete!${NC}"
 
-    # Show installed locations
+    # Show installed locations (discover actual plugins)
     echo ""
-    echo "Plugins installed to:"
+    echo "Plugins installed:"
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
-                echo "  AU: ~/Library/Audio/Plug-Ins/Components/${PROJECT_NAME}.component"
+                local au_dir="$HOME/Library/Audio/Plug-Ins/Components"
+                if [[ -d "$au_dir" ]]; then
+                    while IFS= read -r -d '' plugin; do
+                        echo "  AU: $plugin"
+                    done < <(find "$au_dir" -maxdepth 1 -name "*.component" -print0 2>/dev/null)
+                fi
                 ;;
             VST3)
-                echo "  VST3: ~/Library/Audio/Plug-Ins/VST3/${PROJECT_NAME}.vst3"
+                local vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
+                if [[ -d "$vst3_dir" ]]; then
+                    while IFS= read -r -d '' plugin; do
+                        echo "  VST3: $plugin"
+                    done < <(find "$vst3_dir" -maxdepth 1 -name "*.vst3" -print0 2>/dev/null)
+                fi
                 ;;
             Standalone)
-                echo "  App: $BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone/${PROJECT_NAME}.app"
+                local standalone_dir="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone"
+                if [[ -d "$standalone_dir" ]]; then
+                    while IFS= read -r -d '' app; do
+                        echo "  App: $app"
+                    done < <(find "$standalone_dir" -maxdepth 1 -name "*.app" -print0 2>/dev/null)
+                fi
                 ;;
         esac
     done
