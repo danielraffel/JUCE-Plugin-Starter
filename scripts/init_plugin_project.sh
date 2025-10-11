@@ -426,6 +426,28 @@ else
     PROJECT_BUNDLE_ID=$(get_confirmed_input "Bundle ID (e.g., com.yourcompany.yourplugin): " "com.yourname.${PROJECT_FOLDER}")
 fi
 
+# DiagnosticKit opt-in (optional)
+echo ""
+echo -e "${YELLOW}Optional: DiagnosticKit${NC}"
+echo "DiagnosticKit helps your users submit diagnostic reports when they encounter issues."
+echo -e "${CYAN}Features:${NC}"
+echo "  • One-click diagnostic collection"
+echo "  • Automatic GitHub issue creation"
+echo "  • System info, crash logs, plugin status"
+echo ""
+echo -e "${YELLOW}Note: DiagnosticKit is marked WIP and requires additional setup after project creation.${NC}"
+echo -e "${CYAN}You'll need to run: ./scripts/setup_diagnostic_repo.sh${NC}"
+echo ""
+ENABLE_DIAGNOSTICS="false"
+response=$(get_yes_no "Enable DiagnosticKit?" "n")
+if [ "$response" = "y" ]; then
+    ENABLE_DIAGNOSTICS="true"
+    echo -e "${GREEN}✓ DiagnosticKit will be included in your project${NC}"
+    echo -e "${CYAN}ℹ️  Remember to run setup_diagnostic_repo.sh after project creation${NC}"
+else
+    echo -e "${CYAN}DiagnosticKit will not be included. You can add it later if needed.${NC}"
+fi
+
 # GitHub repository (optional)
 echo ""
 echo -e "${YELLOW}Optional: GitHub Integration${NC}"
@@ -518,6 +540,9 @@ APP_SPECIFIC_PASSWORD=$APP_SPECIFIC_PASSWORD
 # GitHub Settings
 GITHUB_USER=$GITHUB_USER
 GITHUB_REPO=$PROJECT_FOLDER
+
+# DiagnosticKit Settings
+ENABLE_DIAGNOSTICS=$ENABLE_DIAGNOSTICS
 
 # Build Configuration
 CMAKE_BUILD_TYPE=Debug
