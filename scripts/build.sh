@@ -56,6 +56,7 @@ VERSION="${VERSION_MAJOR:-0}.${VERSION_MINOR:-0}.${VERSION_PATCH:-1}"
 TARGETS=()  # Array to hold multiple targets
 ACTION="local"  # local, test, sign, notarize, publish, pkg, unsigned, uninstall
 REGENERATE_PAGE=false  # Flag to force regeneration of GitHub Pages
+BUILT_PLUGINS=()  # Track plugins built in this session
 
 usage() {
     cat << EOF
@@ -297,6 +298,11 @@ build_xcode() {
         while IFS= read -r scheme; do
             [[ -z "$scheme" ]] && continue
 
+            # Extract plugin name from scheme (remove format suffix)
+            local plugin_name="${scheme%_AU}"
+            plugin_name="${plugin_name%_VST3}"
+            plugin_name="${plugin_name%_Standalone}"
+
             case "$format" in
                 AU)
                     echo "Building Audio Unit: $scheme"
@@ -313,6 +319,9 @@ build_xcode() {
                 -scheme "$scheme" \
                 -configuration "$CMAKE_BUILD_TYPE" \
                 build
+
+            # Record what was built
+            BUILT_PLUGINS+=("$format:$plugin_name")
         done <<< "$schemes"
     done
 }
@@ -1209,37 +1218,68 @@ main() {
 
     echo -e "${GREEN}Build complete!${NC}"
 
-    # Show installed locations (discover actual plugins)
-    echo ""
-    echo "Plugins installed:"
-    for format in $BUILD_FORMATS; do
-        case "$format" in
-            AU)
-                local au_dir="$HOME/Library/Audio/Plug-Ins/Components"
-                if [[ -d "$au_dir" ]]; then
-                    while IFS= read -r -d '' plugin; do
-                        echo "  AU: $plugin"
-                    done < <(find "$au_dir" -maxdepth 1 -name "*.component" -print0 2>/dev/null)
-                fi
-                ;;
-            VST3)
-                local vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
-                if [[ -d "$vst3_dir" ]]; then
-                    while IFS= read -r -d '' plugin; do
-                        echo "  VST3: $plugin"
-                    done < <(find "$vst3_dir" -maxdepth 1 -name "*.vst3" -print0 2>/dev/null)
-                fi
-                ;;
-            Standalone)
-                local standalone_dir="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone"
-                if [[ -d "$standalone_dir" ]]; then
-                    while IFS= read -r -d '' app; do
-                        echo "  App: $app"
-                    done < <(find "$standalone_dir" -maxdepth 1 -name "*.app" -print0 2>/dev/null)
-                fi
-                ;;
-        esac
-    done
+    # Show what was built in this session
+    if [[ ${#BUILT_PLUGINS[@]} -gt 0 ]]; then
+        echo ""
+        echo "Plugins built in this session:"
+
+        # Remove duplicates and sort
+        local unique_plugins=($(printf '%s\n' "${BUILT_PLUGINS[@]}" | sort -u))
+
+        # Process each built plugin
+        for entry in "${unique_plugins[@]}"; do
+            # Parse format and plugin name from "FORMAT:PluginName"
+            local format="${entry%%:*}"
+            local plugin_name="${entry#*:}"
+
+            case "$format" in
+                AU)
+                    # Search for component files matching the plugin name (handles spaces in filenames)
+                    local au_dir="$HOME/Library/Audio/Plug-Ins/Components"
+                    if [[ -d "$au_dir" ]]; then
+                        # Find files that match the plugin name pattern
+                        while IFS= read -r -d '' plugin_path; do
+                            local basename=$(basename "$plugin_path" .component)
+                            # Check if basename matches plugin_name (with or without spaces/punctuation)
+                            local normalized_basename=$(echo "$basename" | tr -d ' -')
+                            local normalized_plugin=$(echo "$plugin_name" | tr -d ' -')
+                            if [[ "$normalized_basename" == "$normalized_plugin" ]]; then
+                                echo "  AU: $plugin_path"
+                            fi
+                        done < <(find "$au_dir" -maxdepth 1 -name "*.component" -print0 2>/dev/null)
+                    fi
+                    ;;
+                VST3)
+                    # Search for VST3 files matching the plugin name
+                    local vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
+                    if [[ -d "$vst3_dir" ]]; then
+                        while IFS= read -r -d '' plugin_path; do
+                            local basename=$(basename "$plugin_path" .vst3)
+                            local normalized_basename=$(echo "$basename" | tr -d ' -')
+                            local normalized_plugin=$(echo "$plugin_name" | tr -d ' -')
+                            if [[ "$normalized_basename" == "$normalized_plugin" ]]; then
+                                echo "  VST3: $plugin_path"
+                            fi
+                        done < <(find "$vst3_dir" -maxdepth 1 -name "*.vst3" -print0 2>/dev/null)
+                    fi
+                    ;;
+                Standalone)
+                    # Search for app files in build directory
+                    local standalone_dir="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone"
+                    if [[ -d "$standalone_dir" ]]; then
+                        while IFS= read -r -d '' app_path; do
+                            local basename=$(basename "$app_path" .app)
+                            local normalized_basename=$(echo "$basename" | tr -d ' -')
+                            local normalized_plugin=$(echo "$plugin_name" | tr -d ' -')
+                            if [[ "$normalized_basename" == "$normalized_plugin" ]]; then
+                                echo "  App: $app_path"
+                            fi
+                        done < <(find "$standalone_dir" -maxdepth 1 -name "*.app" -print0 2>/dev/null)
+                    fi
+                    ;;
+            esac
+        done
+    fi
 }
 
 # Run main function
