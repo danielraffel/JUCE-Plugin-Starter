@@ -666,6 +666,51 @@ $commits
     echo "$release_notes"
 }
 
+# Function to show release URLs in consistent order
+show_release_urls() {
+    if [[ -z "$RELEASE_TAG" ]]; then
+        return 0
+    fi
+
+    local release_repo="${GITHUB_USER:-owner}/${GITHUB_REPO}"
+    local desktop="$HOME/Desktop"
+
+    echo ""
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}🎉 Release Complete!${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo "📦 GitHub Release: https://github.com/${release_repo}/releases/tag/$RELEASE_TAG"
+    echo ""
+    echo "Download links (copy/paste ready):"
+    echo ""
+
+    # PKG (first - primary download)
+    local pkg_file=$(find "$desktop" -name "${PROJECT_NAME}*.pkg" -not -name "*component*" -not -name "*vst3*" -not -name "*standalone*" -not -name "*resources*" | head -1)
+    if [[ -n "$pkg_file" ]] && [[ -f "$pkg_file" ]]; then
+        local pkg_name=$(basename "$pkg_file")
+        echo "  📄 PKG Installer:  https://github.com/${release_repo}/releases/download/$RELEASE_TAG/${pkg_name}"
+    fi
+
+    # DMG (second)
+    local dmg_file=$(find "$desktop" -name "${PROJECT_NAME}*.dmg" | head -1)
+    if [[ -n "$dmg_file" ]] && [[ -f "$dmg_file" ]]; then
+        local dmg_name=$(basename "$dmg_file")
+        echo "  💿 DMG Disk Image: https://github.com/${release_repo}/releases/download/$RELEASE_TAG/${dmg_name}"
+    fi
+
+    # ZIP (third)
+    local zip_file=$(find "$desktop" -name "${PROJECT_NAME}*.zip" | head -1)
+    if [[ -n "$zip_file" ]] && [[ -f "$zip_file" ]]; then
+        local zip_name=$(basename "$zip_file")
+        echo "  🗜️  ZIP Archive:    https://github.com/${release_repo}/releases/download/$RELEASE_TAG/${zip_name}"
+    fi
+
+    echo ""
+    echo "Copy any URL above to share with users! 🚀"
+    echo ""
+}
+
 # Function to create GitHub release
 create_github_release() {
     echo -e "${GREEN}Creating GitHub release...${NC}"
@@ -683,7 +728,8 @@ create_github_release() {
         return 1
     fi
 
-    local release_tag="v$VERSION"
+    # Export for show_release_urls
+    RELEASE_TAG="v$VERSION"
     local release_title="$PROJECT_NAME $VERSION"
     local release_notes=$(generate_release_notes)
 
@@ -719,8 +765,8 @@ create_github_release() {
     fi
 
     # Create the release
-    echo "Creating release $release_tag..."
-    gh release create "$release_tag" \
+    echo "Creating release $RELEASE_TAG..."
+    gh release create "$RELEASE_TAG" \
         --repo "${GITHUB_USER:-owner}/${GITHUB_REPO}" \
         --title "$release_title" \
         --notes "$release_notes" \
@@ -728,10 +774,10 @@ create_github_release() {
 
     if [[ $? -eq 0 ]]; then
         echo -e "${GREEN}✅ Successfully created GitHub release${NC}"
-        echo "   Release URL: https://github.com/${GITHUB_USER:-owner}/${GITHUB_REPO}/releases/tag/$release_tag"
         return 0
     else
         echo -e "${RED}❌ Failed to create GitHub release${NC}"
+        RELEASE_TAG=""  # Clear on failure
         return 1
     fi
 }
@@ -778,6 +824,7 @@ main() {
             notarize_plugins
             create_installer true
             create_github_release
+            show_release_urls
             ;;
     esac
 
