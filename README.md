@@ -518,17 +518,57 @@ This template now includes a unified build system (`scripts/build.sh`) that prov
 
 # Build specific format
 ./scripts/build.sh au          # Audio Unit only
-./scripts/build.sh vst3        # VST3 only  
+./scripts/build.sh vst3        # VST3 only
 ./scripts/build.sh standalone  # Standalone app only
+
+# Build multiple formats in one command
+./scripts/build.sh au vst3              # Build both AU and VST3
+./scripts/build.sh au standalone        # Build AU and Standalone
+./scripts/build.sh au vst3 test         # Build AU and VST3, then test both
 
 # Build with testing
 ./scripts/build.sh all test    # Build and run PluginVal tests
 
+# Fast development workflow
+./scripts/build.sh uninstall            # Uninstall all plugin components
+./scripts/build.sh unsigned             # Build unsigned installer (fast testing)
+./scripts/build.sh uninstall && ./scripts/build.sh unsigned  # Quick rebuild cycle
+
 # Production builds
 ./scripts/build.sh all sign     # Build and codesign
 ./scripts/build.sh all notarize # Build, sign, and notarize
+./scripts/build.sh all pkg      # Build, sign, notarize PKG (no GitHub release)
 ./scripts/build.sh all publish  # Full release with installer and GitHub publishing
 ```
+
+### New Build Actions
+
+**`uninstall`** - Quickly remove all plugin components for clean reinstallation:
+```bash
+./scripts/build.sh uninstall
+```
+- Removes plugins (AU, VST3, Standalone, Diagnostics)
+- Clears AU cache
+- Non-interactive mode for dev workflows
+- Perfect for clean rebuilds
+
+**`unsigned`** - Create unsigned installer for fast testing:
+```bash
+./scripts/build.sh unsigned
+```
+- Skips code signing (~2-3 minutes saved)
+- Skips notarization (~5-10 minutes saved)
+- Great for testing installer structure
+- **For testing only** - not for distribution
+
+**`pkg`** - Build production package without GitHub release:
+```bash
+./scripts/build.sh all pkg
+```
+- Full signing and notarization
+- Creates distributable PKG installer
+- No GitHub release created
+- Perfect for manual distribution or beta testing
 
 ### Automatic Version Management
 
@@ -550,6 +590,193 @@ python3 scripts/bump_version.py major  # 0.1.0 → 1.0.0
 ### Complete Documentation
 
 For comprehensive build system documentation, see [`scripts/about/build_system.md`](scripts/about/build_system.md).
+
+---
+
+## 📁 Smart /Applications Organization
+
+The build system automatically organizes installed applications to keep your /Applications folder clean:
+
+### Single App Installation
+If you only build the **standalone app**, it installs directly:
+```
+/Applications/
+└── YourPlugin.app
+```
+
+### Multiple Apps Installation
+If you build **2 or more components** (e.g., standalone + diagnostics + uninstaller), they're organized in a folder:
+```
+/Applications/
+└── YourPlugin/
+    ├── YourPlugin.app
+    ├── YourPlugin Diagnostics.app
+    └── YourPlugin Uninstaller.command
+```
+
+### How It Works
+- The installer automatically counts apps during PKG creation
+- **1 app** → Direct installation
+- **2+ apps** → Folder installation
+- The uninstaller auto-detects which method was used
+- No manual configuration needed
+
+This keeps your /Applications folder clean while making multi-component plugins easy to find and manage.
+
+---
+
+## 🌐 Auto-Download Landing Page
+
+When you publish a release with `./scripts/build.sh all publish`, the build system automatically:
+
+1. **Generates an index.html landing page** from `templates/index.html.template`
+2. **Publishes it to GitHub Pages** (automatically enabled via GitHub API)
+3. **Creates a shareable URL** that always points to the latest release
+
+### Features
+- Auto-downloads PKG installer when page loads
+- Shows manual download links for PKG, DMG, and ZIP
+- Displays file sizes
+- Fetches latest release via GitHub API
+- Includes Open Graph and Twitter Card meta tags for rich social sharing
+- Responsive, Apple-style design
+
+### Your Landing Page URL
+```
+https://<your-github-username>.github.io/<your-plugin-repo>/
+```
+
+### Social Sharing
+Add a 1200x630px image named `YourPlugin.png` to your repo root for rich previews in:
+- iMessage
+- Slack
+- Discord
+- Twitter/X
+- LinkedIn
+
+### Template Customization
+Edit `templates/index.html.template` to customize:
+- {{PROJECT_NAME}} - Plugin name
+- {{PLUGIN_DESCRIPTION}} - Brief description
+- {{GITHUB_USER}} - Your GitHub username
+- {{GITHUB_REPO}} - Repository name
+
+The template is automatically processed during `publish` and committed to your `gh-pages` branch.
+
+---
+
+## 🩺 DiagnosticKit Integration (Optional)
+
+DiagnosticKit is an optional macOS app that helps your users submit diagnostic reports when they encounter issues.
+
+### Features
+- **One-click diagnostic collection** - System info, plugin status, crash logs
+- **GitHub issue creation** - Submits reports to a private repository
+- **No Terminal needed** - Simple GUI for non-technical users
+- **Privacy-conscious** - Only collects troubleshooting data
+- **Project-agnostic** - Template system works with any plugin
+
+### Setup
+
+#### 1. Enable During Project Creation
+When running `./scripts/init_plugin_project.sh`, answer "yes" to:
+```
+Would you like to include DiagnosticKit in this project? (y/n)
+```
+
+#### 2. Configure GitHub Repository
+The setup script will create a private repository for diagnostic reports:
+```bash
+./scripts/setup_diagnostic_repo.sh
+```
+
+This script will:
+- Verify GitHub CLI is installed and authenticated
+- Create a private `<your-plugin>-diagnostics` repository
+- Guide you through creating a GitHub Personal Access Token (PAT)
+- Configure the PAT in your `.env` file
+
+#### 3. Create GitHub Personal Access Token
+The script will guide you, but here's what you need:
+1. Go to https://github.com/settings/tokens?type=beta
+2. Click "Generate new token"
+3. Configure:
+   - **Token name**: `<YourPlugin> Diagnostics`
+   - **Expiration**: 1 year (or custom)
+   - **Repository access**: Only select repositories
+   - **Selected repositories**: `<your-plugin>-diagnostics`
+4. **Permissions**:
+   - **Issues**: Read and Write (REQUIRED)
+   - **Metadata**: Read (auto-selected)
+5. Generate and copy the token
+
+#### 4. Build Your Plugin
+DiagnosticKit is automatically built when `ENABLE_DIAGNOSTICS=true` in your `.env`:
+```bash
+./scripts/build.sh all
+```
+
+The diagnostics app will be included in your installers.
+
+### What Users See
+When users run the diagnostics app, they can:
+1. Optionally describe their issue
+2. Click "Collect & Submit Diagnostic"
+3. Review the GitHub issue URL
+4. Open the issue in their browser
+
+The diagnostic report includes:
+- macOS version and hardware
+- Plugin installation status (AU, VST3, Standalone)
+- Recent crash logs (if any)
+- Audio Unit validation results
+- User's description of the issue
+
+### Privacy
+DiagnosticKit collects only troubleshooting data:
+- ✅ System version and hardware model
+- ✅ Plugin file locations and dates
+- ✅ Crash logs (from ~/Library/Logs/DiagnosticReports)
+- ✅ Audio device list
+- ❌ No personal files or data
+- ❌ No browsing history or passwords
+
+### File Locations
+```
+Tools/DiagnosticKit/
+├── .env.example                    # Configuration template
+├── Package.swift                   # Swift Package Manager config
+├── DiagnosticKit.entitlements      # macOS sandbox permissions
+├── Scripts/
+│   └── build_app.sh               # Build script
+└── Sources/
+    ├── DiagnosticApp.swift        # Main entry point
+    ├── Config/
+    │   └── AppConfig.swift        # Configuration loader
+    ├── Services/
+    │   ├── DiagnosticCollector.swift   # Data collection
+    │   └── GitHubUploader.swift        # GitHub API
+    └── Views/
+        └── MainView.swift         # SwiftUI interface
+```
+
+### Troubleshooting
+
+**DiagnosticKit not building?**
+```bash
+# Verify setup is complete
+./scripts/setup_diagnostic_repo.sh --check-only
+
+# Rebuild from scratch
+rm -rf Tools/DiagnosticKit/build
+./scripts/build.sh all
+```
+
+**Want to disable DiagnosticKit?**
+Set in your `.env`:
+```bash
+ENABLE_DIAGNOSTICS=false
+```
 
 ---
 
