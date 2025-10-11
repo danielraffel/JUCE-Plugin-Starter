@@ -46,9 +46,10 @@ get_confirmed_input() {
         # Show what was entered and confirm (with newline for clarity)
         printf "\n${GREEN}You entered: '%s'${NC}\n" "$result" >&2
         read -p "Is this correct? (Y/n): " confirm
-        
+
         # Default to yes if just Enter pressed
         if [[ -z "$confirm" || "$confirm" =~ ^[Yy]$ ]]; then
+            echo ""  # Add blank line for visual separation
             break
         else
             echo -e "\nLet's try again..." >&2
@@ -342,8 +343,9 @@ while true; do
     fi
 done
 
-# Generate class name, project folder, namespace, and manufacturer info
+# Generate class name, project name, project folder, namespace, and manufacturer info
 CLASS_NAME=$(echo "$PLUGIN_NAME" | sed 's/[^a-zA-Z0-9]//g')
+PROJECT_NAME=$CLASS_NAME  # Same as CLASS_NAME (preserves case)
 PROJECT_FOLDER=$(echo "$PLUGIN_NAME" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
 
 # Create C++ namespace from developer name (safe for C++)
@@ -463,13 +465,23 @@ APPLE_ID=$(get_env_loaded_input "Apple ID" "$APPLE_ID" "Apple ID (e.g., johnny.a
 
 if [ -n "$APPLE_ID" ]; then
     # Team ID
-    TEAM_ID=$(get_env_loaded_input "Team ID" "$TEAM_ID" "Team ID (e.g., 96RC8Q31L9): " "TEAM_ID")
-    
-    # App Certificate 
-    APP_CERT=$(get_env_loaded_input "Application certificate" "$APP_CERT" "Developer ID Application certificate name: " "APP_CERT")
-    
+    TEAM_ID=$(get_env_loaded_input "Team ID" "$TEAM_ID" "Team ID (e.g., A1B2C3D4E5): " "TEAM_ID")
+
+    # App Certificate
+    echo ""
+    echo "─────────────────────────────────────────────"
+    echo "Example input:"
+    echo "  Developer ID Application: Daniel Raffel (A1B2C3D4E5)"
+    echo "─────────────────────────────────────────────"
+    APP_CERT=$(get_env_loaded_input "Application certificate" "$APP_CERT" "Enter your Developer ID Application certificate name: " "APP_CERT")
+
     # Installer Certificate
-    INSTALLER_CERT=$(get_env_loaded_input "Installer certificate" "$INSTALLER_CERT" "Developer ID Installer certificate name: " "INSTALLER_CERT")
+    echo ""
+    echo "─────────────────────────────────────────────"
+    echo "Example input:"
+    echo "  Developer ID Installer: Daniel Raffel (A1B2C3D4E5)"
+    echo "─────────────────────────────────────────────"
+    INSTALLER_CERT=$(get_env_loaded_input "Installer certificate" "$INSTALLER_CERT" "Enter your Developer ID Installer certificate name: " "INSTALLER_CERT")
     
     # App-Specific Password
     echo -e "\n${CYAN}App-Specific Password for notarization:${NC}" >&2
@@ -512,7 +524,7 @@ find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.cmake" -o -name "*.tx
 echo "Creating configuration file..."
 cat > .env << EOF
 # Project Configuration
-PROJECT_NAME=$PROJECT_FOLDER
+PROJECT_NAME=$PROJECT_NAME
 PRODUCT_NAME="$PLUGIN_NAME"
 PROJECT_BUNDLE_ID=$PROJECT_BUNDLE_ID
 DEVELOPER_NAME="$DEVELOPER_NAME"
@@ -656,8 +668,16 @@ echo "1. Explore the Source/ directory and customize your plugin code"
 echo "2. Run './scripts/generate_and_open_xcode.sh' to build and open in Xcode"
 echo "3. Test your plugin in a DAW or standalone"
 echo "4. Commit changes: git add . && git commit -m \"Your changes\""
+
+if [ "$ENABLE_DIAGNOSTICS" = "true" ]; then
+    echo -e "${YELLOW}5. Set up DiagnosticKit: ./scripts/setup_diagnostic_repo.sh${NC}"
+    NEXT_STEP=6
+else
+    NEXT_STEP=5
+fi
+
 if [ -n "$GITHUB_USER" ]; then
-    echo "5. Push updates: git push"
+    echo "$NEXT_STEP. Push updates: git push"
 fi
 echo ""
 echo -e "${GREEN}Happy plugin development! 🎵${NC}"
