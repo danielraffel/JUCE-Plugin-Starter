@@ -2268,63 +2268,916 @@ echo "  • Facebook shares"
 
 ## Phase 8: Documentation Updates
 
-### 5.1 Main README.md
+### 8.1 README.md: Table of Contents Update
+
+**Priority**: HIGH
+**Complexity**: LOW
+
+**Current Location**: Lines 62-99 in README.md
+
+**Changes Needed**:
+
+Add new sections to the TOC:
+```markdown
+- [🔨 Enhanced Build System](#-enhanced-build-system)
+  - [Quick Build Commands](#quick-build-commands)
+  - [Build Actions](#build-actions)
+  - [Multiple Target Support](#multiple-target-support)
+  - [Automatic Version Management](#automatic-version-management)
+  - [Development Workflow](#development-workflow)
+  - [Additional Tools](#additional-tools)
+- [📍 Where Files Are Installed](#where-files-are-installed)
+  - [Plugin Installation Paths](#plugin-installation-paths)
+  - [User Data & Settings](#user-data--settings)
+  - [Smart /Applications Organization](#smart-applications-organization)
+- [🧪 Optional: DiagnosticKit](#-optional-diagnostickit)
+  - [What is DiagnosticKit?](#what-is-diagnostickit)
+  - [Setup Guide](#setup-guide)
+  - [Privacy & Security](#privacy--security)
+- [🌐 Auto-Download Landing Page](#-auto-download-landing-page)
+  - [What Gets Created](#what-gets-created)
+  - [How It Works](#how-it-works)
+  - [Customization](#customization)
+```
+
+---
+
+### 8.2 README.md: Enhanced Build System Section Update
+
+**Priority**: HIGH
+**Complexity**: MEDIUM
+
+**Current Location**: Lines 509-554 in README.md
+
+**Changes Needed**:
+
+1. **Expand "Quick Build Commands" subsection**:
+
+   **BEFORE** (current):
+   ```markdown
+   # Quick local build (all formats)
+   ./scripts/build.sh
+
+   # Build specific format
+   ./scripts/build.sh au          # Audio Unit only
+   ./scripts/build.sh vst3        # VST3 only
+   ./scripts/build.sh standalone  # Standalone app only
+   ```
+
+   **AFTER** (new):
+   ```markdown
+   # Quick local build (all formats)
+   ./scripts/build.sh
+
+   # Build specific format
+   ./scripts/build.sh au          # Audio Unit only
+   ./scripts/build.sh vst3        # VST3 only
+   ./scripts/build.sh standalone  # Standalone app only
+
+   # Build multiple formats at once
+   ./scripts/build.sh au vst3                    # AU and VST3
+   ./scripts/build.sh au vst3 standalone         # All three formats
+   ./scripts/build.sh standalone diagnostics     # Standalone + Diagnostics
+   ```
+
+2. **Add new "Build Actions" subsection** (after Quick Build Commands):
+   ```markdown
+   ### Build Actions
+
+   The build system supports multiple actions for different development stages:
+
+   | Action | Description | Use Case |
+   |--------|-------------|----------|
+   | `local` | Build locally (default) | Day-to-day development |
+   | `test` | Build and run PluginVal | Validation before release |
+   | `unsigned` | Create unsigned PKG installer | Fast testing without signing |
+   | `pkg` | Build, sign, and notarize PKG | Create distributable without GitHub |
+   | `publish` | Full release with GitHub | Public release with auto-download page |
+   | `uninstall` | Remove all installed components | Clean uninstall for fresh testing |
+
+   **Examples**:
+   ```bash
+   # Quick development cycle
+   ./scripts/build.sh standalone local
+
+   # Fast installer for testing (no signing)
+   ./scripts/build.sh all unsigned
+
+   # Production build without GitHub
+   ./scripts/build.sh all pkg
+
+   # Full release with GitHub + landing page
+   ./scripts/build.sh all publish
+
+   # Clean slate
+   ./scripts/build.sh uninstall
+   ```
+   ```
+
+3. **Add new "Multiple Target Support" subsection**:
+   ```markdown
+   ### Multiple Target Support
+
+   Build multiple plugin formats in a single command:
+
+   ```bash
+   # Build specific combinations
+   ./scripts/build.sh au vst3           # Just AU and VST3
+   ./scripts/build.sh standalone test   # Standalone + PluginVal test
+   ./scripts/build.sh all publish       # Everything + GitHub release
+   ```
+
+   **Available Targets**:
+   - `au` - Audio Unit plugin
+   - `vst3` - VST3 plugin
+   - `aax` - AAX plugin (Pro Tools) [if configured]
+   - `standalone` - Standalone application
+   - `diagnostics` - DiagnosticKit app (if enabled)
+   - `all` - All configured formats
+   ```
+
+4. **Add new "Development Workflow" subsection**:
+   ```markdown
+   ### Development Workflow
+
+   **Recommended iteration cycle**:
+
+   ```bash
+   # 1. Build and test locally
+   ./scripts/build.sh standalone local
+
+   # 2. Make changes, quick rebuild
+   ./scripts/build.sh standalone local
+
+   # 3. Test with unsigned installer
+   ./scripts/build.sh all unsigned
+
+   # 4. Validate with PluginVal
+   ./scripts/build.sh all test
+
+   # 5. Clean slate for final test
+   ./scripts/build.sh uninstall
+   ./scripts/build.sh all pkg
+
+   # 6. Full release
+   ./scripts/build.sh all publish
+   ```
+
+   **Quick uninstall and rebuild**:
+   ```bash
+   # One-liner for fresh install
+   ./scripts/build.sh uninstall && ./scripts/build.sh all unsigned
+   ```
+   ```
+
+---
+
+### 8.3 README.md: Installation Paths Section - Major Update
+
+**Priority**: HIGH
+**Complexity**: MEDIUM
+
+**Current Location**: Section "📍 Where Files Are Generated (Plugins + App)" around line 241
+
+**Changes Needed**:
+
+**Replace entire section** with comprehensive new content:
+
+```markdown
+## 📍 Where Files Are Installed
+
+### Plugin Installation Paths
+
+When you build your plugin, files are installed to standard macOS plugin locations:
+
+**Audio Plugins**:
+```bash
+~/Library/Audio/Plug-Ins/Components/YourPlugin.component  # Audio Unit
+~/Library/Audio/Plug-Ins/VST3/YourPlugin.vst3            # VST3
+~/Library/Application Support/Avid/Audio/Plug-Ins/YourPlugin.aaxplugin  # AAX (if configured)
+```
+
+**Applications**:
+
+The installer intelligently organizes apps in `/Applications/`:
+
+- **Single app** (standalone only): Installs directly to `/Applications/YourPlugin.app`
+- **Multiple apps** (2 or more): Creates organized folder `/Applications/YourPlugin/`
+  - `YourPlugin.app` - Main standalone application
+  - `YourPlugin Diagnostics.app` - Diagnostic tool (if enabled)
+  - `YourPlugin Uninstaller.command` - Uninstaller script
+
+**Why the difference?**
+- Single apps install directly for simplicity
+- Multiple apps use a folder to avoid cluttering /Applications
+
+### User Data & Settings
+
+**All user data is stored in Application Support** (no permission prompts needed):
+
+```bash
+~/Library/Application Support/YourPlugin/
+├── Settings/           # User preferences and configuration
+├── Samples/           # Audio samples (if included)
+├── Presets/           # User and factory presets
+└── Cache/             # Temporary cache files
+
+~/Library/Logs/YourPlugin/          # Crash logs and diagnostics
+~/Library/Caches/com.company.YourPlugin/  # System caches
+```
+
+**Why Application Support?**
+- ✅ No permission prompts (Monterey+ compatible)
+- ✅ Proper sandboxing support
+- ✅ Standard macOS location for app data
+- ✅ Automatically backed up by Time Machine
+- ✅ Easy to find for troubleshooting
+
+> 💡 **Old projects** that used `~/Documents/YourPlugin/` should migrate to Application Support to avoid permission dialogs on modern macOS.
+
+### Smart /Applications Organization
+
+The build system automatically detects how many applications will be installed and organizes them appropriately:
+
+**Detection Logic**:
+```bash
+# Counts applications:
+# - Standalone app
+# - Diagnostics app (if enabled)
+# - Uninstaller.command (if included)
+
+If count == 1:  Install to /Applications/YourPlugin.app
+If count >= 2:  Install to /Applications/YourPlugin/ folder
+```
+
+**Uninstaller Awareness**:
+
+The uninstaller automatically detects the installation type:
+
+```bash
+# Checks for folder-based install
+if [ -d "/Applications/${PROJECT_NAME}" ]; then
+    # Remove entire folder
+    rm -rf "/Applications/${PROJECT_NAME}"
+else
+    # Remove standalone app only
+    rm -rf "/Applications/${PROJECT_NAME}.app"
+fi
+```
+
+**Example Scenarios**:
+
+| Configuration | Installs To | Contains |
+|--------------|-------------|----------|
+| Standalone only | `/Applications/YourPlugin.app` | Just the app |
+| Standalone + Diagnostics | `/Applications/YourPlugin/` | YourPlugin.app<br>YourPlugin Diagnostics.app |
+| Standalone + Diagnostics + Uninstaller | `/Applications/YourPlugin/` | YourPlugin.app<br>YourPlugin Diagnostics.app<br>YourPlugin Uninstaller.command |
+| Standalone + Uninstaller | `/Applications/YourPlugin/` | YourPlugin.app<br>YourPlugin Uninstaller.command |
+```
+
+---
+
+### 8.4 README.md: Add DiagnosticKit Section (New)
+
+**Priority**: HIGH
+**Complexity**: MEDIUM
+
+**Insert Location**: After "Where Files Are Installed" section
+
+**New Section to Add**:
+
+```markdown
+## 🧪 Optional: DiagnosticKit
+
+### What is DiagnosticKit?
+
+DiagnosticKit is an optional macOS application that makes it easy for your users to submit diagnostic reports when they encounter issues with your plugin.
+
+**User Benefits**:
+- 🖱️ **One-click diagnostics** - No Terminal commands needed
+- 📊 **Comprehensive reports** - System info, plugin status, crash logs
+- 🔒 **Privacy-first** - Users see exactly what's being sent
+- 🐙 **Direct to GitHub** - Reports submitted as private GitHub issues
+
+**Developer Benefits**:
+- 📥 **Organized reports** - All diagnostics in one private GitHub repo
+- 🔍 **Better debugging** - Consistent format with all needed info
+- ⏱️ **Faster support** - No back-and-forth for system details
+- 🤖 **AI-ready** - Claude Code can read and analyze diagnostic issues
+
+### Setup Guide
+
+**1. Enable during project creation** (or add later to `.env`):
+```bash
+ENABLE_DIAGNOSTICS=true
+DIAGNOSTIC_GITHUB_REPO="youruser/yourproject-diagnostics"
+```
+
+**2. Run the setup script**:
+```bash
+./scripts/setup_diagnostic_repo.sh
+```
+
+This interactive script will:
+- ✅ Create a private GitHub repository for diagnostics
+- ✅ Guide you through creating a Personal Access Token (PAT)
+- ✅ Configure the PAT with minimal write-only permissions
+- ✅ Test the configuration
+- ✅ Build the DiagnosticKit app
+
+**3. Build with diagnostics**:
+```bash
+# Build diagnostics only
+./scripts/build.sh diagnostics
+
+# Build everything including diagnostics
+./scripts/build.sh all
+
+# Include in signed installer
+./scripts/build.sh all publish
+```
+
+**4. What gets created**:
+- `YourPlugin Diagnostics.app` in build folder
+- Automatically included in signed PKG installer
+- Installed to `/Applications/YourPlugin/` folder (with other apps)
+
+### How It Works
+
+**For Users**:
+1. Open "YourPlugin Diagnostics.app"
+2. Click "Collect Diagnostics"
+3. Review what will be sent (full transparency)
+4. Add optional description
+5. Click "Submit Report"
+6. Get confirmation with issue number
+
+**For Developers**:
+1. Reports appear as GitHub issues in your private repo
+2. Each issue contains:
+   - System information (macOS version, architecture)
+   - Plugin installation status
+   - Crash logs (if any)
+   - Audio Unit validation results
+   - User's description
+3. Use Claude Code to analyze issues directly from GitHub
+
+### Privacy & Security
+
+**What's Collected**:
+- ✅ macOS version and architecture
+- ✅ Plugin installation paths and versions
+- ✅ Crash logs from `~/Library/Logs/`
+- ✅ Audio Unit validation results
+- ✅ User's optional description
+
+**What's NOT Collected**:
+- ❌ Personal files or documents
+- ❌ Passwords or credentials
+- ❌ Browsing history
+- ❌ Email or contacts
+- ❌ Other application data
+
+**Token Security**:
+- Personal Access Token (PAT) stored in `.env` (git-ignored)
+- Write-only access to issues (can't read other reports)
+- Scoped to single diagnostic repository only
+- Can be revoked anytime at github.com/settings/tokens
+
+### Detailed Setup Instructions
+
+See comprehensive guide: [`Tools/DiagnosticKit/SETUP.md`](Tools/DiagnosticKit/SETUP.md)
+
+**Troubleshooting**:
+- **PAT not working?** Verify permissions at github.com/settings/tokens
+- **App won't launch?** Check code signing: `codesign -vvv "path/to/app"`
+- **Issues not appearing?** Test PAT: `curl -H "Authorization: token YOUR_PAT" https://api.github.com/repos/OWNER/REPO`
+```
+
+---
+
+### 8.5 README.md: Add Auto-Download Landing Page Section (New)
+
+**Priority**: HIGH
+**Complexity**: LOW
+
+**Insert Location**: After DiagnosticKit section
+
+**New Section to Add**:
+
+```markdown
+## 🌐 Auto-Download Landing Page
+
+When you publish a release with `./scripts/build.sh all publish`, the build system automatically creates a professional landing page with auto-download functionality.
+
+### What Gets Created
+
+**1. GitHub Pages Site** (auto-enabled):
+- URL: `https://yourusername.github.io/yourplugin/`
+- Automatically serves latest PKG installer
+- No manual Pages configuration needed
+
+**2. Landing Page Features**:
+- 🚀 **Auto-download** - Automatically starts PKG download on page load
+- 📱 **Responsive design** - Works on all devices
+- 🎨 **Professional layout** - Clean, modern interface
+- 🔗 **Social sharing** - Open Graph meta tags for link previews
+- 📊 **GitHub integration** - Fetches latest release info via API
+- ⬇️ **Multiple formats** - Links to PKG, DMG, and ZIP
+
+**3. Meta Tags for Social Sharing**:
+```html
+<!-- Auto-generated with your plugin details -->
+<meta property="og:title" content="Download YourPlugin">
+<meta property="og:description" content="Latest version of YourPlugin for macOS">
+<meta property="og:image" content="URL to your plugin icon/screenshot">
+<meta property="og:url" content="https://yourusername.github.io/yourplugin/">
+```
+
+### How It Works
+
+**During `publish` build**:
+
+1. **Creates `index.html`** from template with your project details
+2. **Enables GitHub Pages** automatically via GitHub API
+3. **Publishes to main branch** so it's immediately live
+4. **Displays download URL** at end of build for easy sharing
+
+**Output Example**:
+```bash
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 Release Complete!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 GitHub Release: https://github.com/user/plugin/releases/tag/v1.0.5
+🌐 Auto-Download:   https://user.github.io/plugin/
+📄 PKG Installer:   https://github.com/user/plugin/releases/download/v1.0.5/YourPlugin.pkg
+💿 DMG Disk Image:  https://github.com/user/plugin/releases/download/v1.0.5/YourPlugin.dmg
+🗜️  ZIP Archive:    https://github.com/user/plugin/releases/download/v1.0.5/YourPlugin.zip
+
+Copy any URL above to share with users! 🚀
+```
+
+### Customization
+
+**Template Location**: `templates/index.html.template`
+
+**Customizable Elements**:
+```html
+<!-- Placeholders replaced during build -->
+{{PROJECT_NAME}}          → Your plugin name
+{{PROJECT_DESCRIPTION}}   → Brief description
+{{GITHUB_USER}}           → Your GitHub username
+{{GITHUB_REPO}}           → Repository name
+{{PROJECT_ICON_URL}}      → Plugin icon URL (optional)
+```
+
+**Custom Styling**:
+```bash
+# Edit template before publishing
+vim templates/index.html.template
+
+# Your changes will be used in next publish
+./scripts/build.sh all publish
+```
+
+**Manual Pages Enable** (if auto-enable fails):
+```bash
+# Via GitHub CLI
+gh api --method POST \
+  -H "Accept: application/vnd.github+json" \
+  "repos/USER/REPO/pages" \
+  -f source[branch]=main \
+  -f source[path]=/
+
+# Or via web UI
+# 1. Go to repo Settings → Pages
+# 2. Source: main branch
+# 3. Click Save
+```
+
+### User Experience
+
+**When users click your shared link**:
+
+1. **Landing page loads** with plugin info
+2. **PKG download starts automatically** (via JavaScript)
+3. **Manual download links** available as backup
+4. **Release notes** shown from latest GitHub release
+5. **Social media preview** when link shared on Twitter/Slack/etc
+
+**Perfect for**:
+- 🔗 Sharing in forum posts
+- 📧 Email newsletters
+- 🐦 Social media posts
+- 📱 Website integration
+- 🤝 Beta tester distribution
+```
+
+---
+
+### 8.6 README.md: Update "How to Distribute Your Plugin" Section
 
 **Priority**: MEDIUM
 **Complexity**: LOW
 
-Add sections:
+**Current Location**: Lines 618-712 in README.md (approximately)
 
-1. **New Build Actions**
+**Changes Needed**:
+
+1. **Update the "Run the Distribution Script" subsection**:
+
+   **BEFORE** (current):
    ```markdown
-   ### Build Actions
+   ### 🚀 Run the Distribution Script
 
-   - `local` - Build locally (default)
-   - `test` - Build and run PluginVal
-   - `unsigned` - Create unsigned installer (fast testing)
-   - `pkg` - Build, sign, notarize (no GitHub release)
-   - `publish` - Full release with GitHub
-   - `uninstall` - Remove all installed components
-   ```
-
-2. **Multiple Targets**
-   ```markdown
-   ### Build Multiple Formats
+   From your project root:
 
    ```bash
-   ./scripts/build.sh au vst3           # Build AU and VST3
-   ./scripts/build.sh standalone test   # Build and test standalone
+   ./scripts/build.sh all publish
    ```
 
-3. **DiagnosticKit**
+   This command will:
+
+   - ✅ Build all plugin formats
+   - ✅ Sign and notarize your plugins
+   - ✅ Create a signed `.pkg` installer and notarize it
+   - ✅ Bundle it into a distributable `.dmg`
+   - ✅ Create a GitHub release with all artifacts
+   ```
+
+   **AFTER** (updated):
    ```markdown
-   ### Optional: DiagnosticKit
+   ### 🚀 Run the Distribution Script
 
-   DiagnosticKit provides a user-friendly diagnostic app for your plugin users.
+   From your project root:
 
-   **Setup**:
-   1. Enable during project creation or add later
-   2. Run: `./scripts/setup_diagnostic_repo.sh`
-   3. Follow guided setup
-
-   **See**: `Tools/DiagnosticKit/README.md`
+   ```bash
+   ./scripts/build.sh all publish
    ```
 
-4. **Installation Paths**
+   This command will:
+
+   - ✅ Build all plugin formats (AU, VST3, Standalone, Diagnostics)
+   - ✅ Sign and notarize your plugins
+   - ✅ Create a signed `.pkg` installer and notarize it
+   - ✅ Bundle it into a distributable `.dmg`
+   - ✅ Create a GitHub release with all artifacts
+   - ✅ Enable GitHub Pages with auto-download landing page
+   - ✅ Display shareable URLs in consistent order
+
+   **Output URLs (easy to copy/paste)**:
+   ```bash
+   📦 GitHub Release: https://github.com/user/plugin/releases/tag/v1.0.5
+   🌐 Auto-Download:   https://user.github.io/plugin/
+   📄 PKG Installer:   https://github.com/user/plugin/releases/download/v1.0.5/YourPlugin.pkg
+   💿 DMG Disk Image:  https://github.com/user/plugin/releases/download/v1.0.5/YourPlugin.dmg
+   🗜️  ZIP Archive:    https://github.com/user/plugin/releases/download/v1.0.5/YourPlugin.zip
+   ```
+
+   > 💡 URLs are always displayed in the same order for easy copy/paste to release announcements, social media, or documentation.
+   ```
+
+2. **Add new "Other Build Actions" subsection** (after main distribution instructions):
+
    ```markdown
-   ### Where Files Are Installed
+   ### 🛠️ Other Build Actions
 
-   **Plugins**:
-   - AU: `~/Library/Audio/Plug-Ins/Components/`
-   - VST3: `~/Library/Audio/Plug-Ins/VST3/`
-   - Standalone: `/Applications/`
-
-   **User Data**:
-   - Settings: `~/Library/Application Support/YourPlugin/`
-   - Samples: `~/Library/Application Support/YourPlugin/Samples/`
-   - Presets: `~/Library/Application Support/YourPlugin/Presets/`
-   - Logs: `~/Library/Logs/YourPlugin/`
+   **Quick unsigned installer** (for testing without certificates):
+   ```bash
+   ./scripts/build.sh all unsigned
+   # Creates unsigned PKG on Desktop
+   # Install with: sudo installer -pkg ~/Desktop/YourPlugin.pkg -target /
    ```
+
+   **Signed PKG without GitHub** (local distribution):
+   ```bash
+   ./scripts/build.sh all pkg
+   # Creates signed, notarized PKG
+   # No GitHub release created
+   # Files saved to Desktop
+   ```
+
+   **Uninstall everything** (clean slate):
+   ```bash
+   ./scripts/build.sh uninstall
+   # Removes all installed components:
+   # - Audio plugins (AU, VST3)
+   # - Applications
+   # - User data (with confirmation)
+   # - Receipts and caches
+   ```
+   ```
+
+---
+
+### 8.7 README.md: Update Quick Start Section
+
+**Priority**: MEDIUM
+**Complexity**: LOW
+
+**Current Location**: Lines 72-97 (Step 3. Build Your Plugin)
+
+**Changes Needed**:
+
+**Update Step 3** to mention new build options:
+
+**BEFORE** (current):
+```markdown
+### 3. Build Your Plugin
+
+**Change to your new project directory first:**
+```bash
+cd ../your-plugin-name  # Use the actual folder name created in step 2
+```
+
+Then build using one of these methods:
+
+**🤖 AI Tools (Recommended):**
+If using Claude Code, it automatically knows how to build and test your plugin.
+
+**🔨 Quick Build & Test:**
+```bash
+./scripts/build.sh standalone local  # Build and launch standalone app
+```
+
+**🎯 Xcode Development:**
+```bash
+./scripts/generate_and_open_xcode.sh  # Generate and open Xcode project
+```
+```
+
+**AFTER** (updated):
+```markdown
+### 3. Build Your Plugin
+
+**Change to your new project directory first:**
+```bash
+cd ../your-plugin-name  # Use the actual folder name created in step 2
+```
+
+Then build using one of these methods:
+
+**🤖 AI Tools (Recommended):**
+If using Claude Code, it automatically knows how to build and test your plugin.
+
+**🔨 Quick Build & Test:**
+```bash
+# Build and launch standalone app
+./scripts/build.sh standalone local
+
+# Build all formats
+./scripts/build.sh all
+
+# Build multiple specific formats
+./scripts/build.sh au vst3
+
+# Fast unsigned installer (no code signing)
+./scripts/build.sh all unsigned
+```
+
+**🎯 Xcode Development:**
+```bash
+./scripts/generate_and_open_xcode.sh  # Generate and open Xcode project
+```
+
+**🧹 Clean Uninstall:**
+```bash
+./scripts/build.sh uninstall  # Remove all installed components
+```
+
+> 💡 See [Enhanced Build System](#-enhanced-build-system) for complete build command reference.
+```
+
+---
+
+### 8.8 README.md: Update Project File Structure Section
+
+**Priority**: LOW
+**Complexity**: LOW
+
+**Current Location**: Lines 465-508 (Project File Structure)
+
+**Changes Needed**:
+
+**Update the file tree** to include new files:
+
+**BEFORE** (current structure):
+```
+JUCE-Plugin-Starter/
+├── scripts/
+│   ├── about/
+│   │   └── build_system.md
+│   ├── build.sh
+│   ├── bump_version.py
+│   ├── dependencies.sh
+│   ├── diagnose_plugin.sh
+│   ├── generate_and_open_xcode.sh
+│   ├── generate_release_notes.py
+│   ├── init_plugin_project.sh
+│   ├── post_build.sh
+│   └── validate_plugin.sh
+```
+
+**AFTER** (updated structure):
+```
+JUCE-Plugin-Starter/
+├── scripts/
+│   ├── about/
+│   │   └── build_system.md
+│   ├── build.sh                   ← Enhanced with uninstall, unsigned, pkg actions
+│   ├── bump_version.py
+│   ├── dependencies.sh
+│   ├── diagnose_plugin.sh
+│   ├── generate_and_open_xcode.sh
+│   ├── generate_release_notes.py
+│   ├── init_plugin_project.sh     ← Now includes diagnostics opt-in
+│   ├── post_build.sh
+│   ├── setup_diagnostic_repo.sh   ← NEW: DiagnosticKit setup wizard
+│   ├── validate_plugin.sh
+│   └── uninstall_template.sh      ← NEW: Project-agnostic uninstaller template
+├── templates/
+│   ├── index.html.template        ← NEW: Auto-download landing page template
+│   └── DiagnosticKit.entitlements ← NEW: Entitlements for diagnostics app
+├── Tools/                          ← NEW: Optional DiagnosticKit
+│   └── DiagnosticKit/
+│       ├── README.md
+│       ├── SETUP.md
+│       ├── .env.example
+│       └── Source/
+```
+
+---
+
+### 8.9 README.md: Add Troubleshooting Section (New)
+
+**Priority**: MEDIUM
+**Complexity**: LOW
+
+**Insert Location**: Before "📚 Resources" section (at end)
+
+**New Section to Add**:
+
+```markdown
+## 🔧 Troubleshooting
+
+### Build Issues
+
+**CMake fails to generate**:
+```bash
+# Clean build directory
+rm -rf build/
+
+# Regenerate from scratch
+./scripts/generate_and_open_xcode.sh
+```
+
+**"Unsigned" build fails**:
+```bash
+# Ensure PKG build tools are installed
+brew install pkgbuild
+
+# Check for signing certificate (should fail gracefully)
+security find-identity -v -p codesigning
+```
+
+**Version not incrementing**:
+```bash
+# Manually bump version
+python3 scripts/bump_version.py patch  # or minor/major
+
+# Check .env file
+cat .env | grep PROJECT_VERSION
+```
+
+### Installation Issues
+
+**Plugin not appearing in DAW**:
+```bash
+# Verify installation paths
+ls -la ~/Library/Audio/Plug-Ins/Components/*.component
+ls -la ~/Library/Audio/Plug-Ins/VST3/*.vst3
+
+# Re-scan plugins in your DAW
+# Logic Pro: Preferences → Plug-in Manager → Reset & Rescan
+# Reaper: Preferences → Plug-ins → VST → Re-scan
+```
+
+**Permission denied during install**:
+```bash
+# Install PKG with sudo
+sudo installer -pkg ~/Desktop/YourPlugin.pkg -target /
+
+# Or use unsigned build (development only)
+./scripts/build.sh all unsigned
+```
+
+**Uninstaller fails**:
+```bash
+# Run with admin privileges
+sudo "/Applications/YourPlugin Uninstaller.command"
+
+# Or manual cleanup
+./scripts/build.sh uninstall
+```
+
+### DiagnosticKit Issues
+
+**App won't launch**:
+```bash
+# Check code signing
+codesign -vvv "Tools/DiagnosticKit/build/YourPlugin Diagnostics.app"
+
+# Remove quarantine flag
+xattr -d com.apple.quarantine "Tools/DiagnosticKit/build/YourPlugin Diagnostics.app"
+
+# Rebuild with signing
+./scripts/build.sh diagnostics
+```
+
+**PAT not working**:
+```bash
+# Test your token
+curl -H "Authorization: token YOUR_PAT" \
+     https://api.github.com/repos/OWNER/REPO
+
+# Verify permissions at GitHub
+open https://github.com/settings/tokens
+
+# Re-run setup
+./scripts/setup_diagnostic_repo.sh
+```
+
+**Issues not appearing on GitHub**:
+1. Verify PAT has "Issues: Write" permission
+2. Check repository access in token settings
+3. Ensure PAT is not expired
+4. Test with: `./scripts/setup_diagnostic_repo.sh --test-connection`
+
+### GitHub Pages Issues
+
+**Landing page not loading**:
+```bash
+# Check if Pages is enabled
+gh api repos/USER/REPO/pages
+
+# Manually enable Pages
+gh api --method POST \
+  -H "Accept: application/vnd.github+json" \
+  "repos/USER/REPO/pages" \
+  -f source[branch]=main
+
+# Verify index.html exists
+git ls-files | grep index.html
+```
+
+**Auto-download not working**:
+- Check browser console for JavaScript errors
+- Verify release exists: `gh release list`
+- Ensure PKG file is attached to latest release
+- Test manual download link
+
+### macOS Sequoia+ Issues
+
+**Notarization fails**:
+```bash
+# Check notarization log
+xcrun notarytool log --apple-id YOUR_ID --password YOUR_PASS --team-id YOUR_TEAM SUBMISSION_ID
+
+# Common fixes:
+# 1. Update code signing certificate
+# 2. Add hardened runtime entitlements
+# 3. Update Xcode Command Line Tools
+```
+
+**Permission prompts for Application Support**:
+```bash
+# Verify paths in .env
+cat .env | grep -E "(SAMPLES_DIR|PRESETS_DIR|SETTINGS_DIR)"
+
+# Should all be under ~/Library/Application Support/
+# NOT ~/Documents/ or ~/Downloads/
+```
+
+### Getting Help
+
+If you're still stuck:
+
+1. **Check existing issues**: [GitHub Issues](https://github.com/danielraffel/JUCE-Plugin-Starter/issues)
+2. **Enable debug mode**:
+   ```bash
+   DEBUG=1 ./scripts/build.sh all
+   ```
+3. **Collect diagnostics** (if DiagnosticKit enabled):
+   ```bash
+   ./scripts/build.sh diagnostics
+   open "Tools/DiagnosticKit/build/YourPlugin Diagnostics.app"
+   ```
+4. **Ask Claude Code** (if using):
+   - Share error output
+   - Describe expected vs actual behavior
+   - Mention macOS version and Xcode version
+```
 
 ### 5.2 DiagnosticKit Documentation
 
