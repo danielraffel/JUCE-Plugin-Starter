@@ -666,6 +666,38 @@ $commits
     echo "$release_notes"
 }
 
+# Function to enable GitHub Pages
+enable_github_pages() {
+    local repo="${GITHUB_USER:-owner}/${GITHUB_REPO}"
+
+    echo ""
+    echo -e "${GREEN}Enabling GitHub Pages...${NC}"
+
+    # Check if Pages is already enabled
+    if gh api "repos/${repo}/pages" &>/dev/null; then
+        echo "✅ GitHub Pages already enabled"
+        echo "   URL: https://${GITHUB_USER:-owner}.github.io/${GITHUB_REPO}/"
+        return 0
+    fi
+
+    # Enable Pages on main branch
+    if gh api \
+        --method POST \
+        -H "Accept: application/vnd.github+json" \
+        "repos/${repo}/pages" \
+        -f source[branch]=main \
+        -f source[path]=/ \
+        2>/dev/null; then
+        echo "✅ GitHub Pages enabled"
+        echo "   URL: https://${GITHUB_USER:-owner}.github.io/${GITHUB_REPO}/"
+        return 0
+    else
+        echo -e "${YELLOW}⚠️  Could not enable GitHub Pages automatically${NC}"
+        echo "Enable manually: Settings → Pages → Deploy from main branch"
+        return 1
+    fi
+}
+
 # Function to show release URLs in consistent order
 show_release_urls() {
     if [[ -z "$RELEASE_TAG" ]]; then
@@ -681,6 +713,7 @@ show_release_urls() {
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     echo "📦 GitHub Release: https://github.com/${release_repo}/releases/tag/$RELEASE_TAG"
+    echo "🌐 Auto-Download:   https://${GITHUB_USER:-owner}.github.io/${GITHUB_REPO}/"
     echo ""
     echo "Download links (copy/paste ready):"
     echo ""
@@ -824,6 +857,7 @@ main() {
             notarize_plugins
             create_installer true
             create_github_release
+            enable_github_pages
             show_release_urls
             ;;
     esac
