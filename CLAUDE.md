@@ -125,9 +125,12 @@ The `scripts/build.sh` script provides:
 - Automatic version bumping
 - Project-agnostic configuration (reads from .env)
 - Multi-format support (AU, VST3, Standalone)
+- **Multi-plugin support** (automatically discovers and builds all plugins in project)
 - Integrated testing with PluginVal
 - Code signing and notarization
 - Installer creation for distribution
+
+> **Note**: The build system automatically handles both single-plugin and multi-plugin projects. If your project has multiple plugins (e.g., PluginFX_AU and PluginKS_AU), all will be discovered and built automatically—no configuration needed.
 
 ## Project Structure
 
