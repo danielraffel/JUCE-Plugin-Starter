@@ -501,8 +501,8 @@ check_diagnostic_setup() {
             echo ""
             echo "Options:"
             echo "  1) Run setup now (recommended)"
-            echo "  2) Continue anyway (DiagnosticKit will be skipped)"
-            echo "  3) Disable DiagnosticKit (set ENABLE_DIAGNOSTICS=false in .env)"
+            echo "  2) Skip for this build only (will ask again next time)"
+            echo "  3) Disable DiagnosticKit permanently (won't ask again)"
             echo ""
             read -p "Choose (1-3): " choice
 
@@ -511,12 +511,21 @@ check_diagnostic_setup() {
                     scripts/setup_diagnostic_repo.sh
                     ;;
                 2)
-                    echo "Continuing without DiagnosticKit setup..."
+                    echo "Skipping DiagnosticKit for this build only..."
                     ENABLE_DIAGNOSTICS="false"  # Temporarily disable for this build
                     ;;
                 3)
-                    echo "Please set ENABLE_DIAGNOSTICS=false in .env and try again"
-                    exit 1
+                    echo "Disabling DiagnosticKit permanently..."
+                    # Update .env file
+                    if [[ -f .env ]]; then
+                        sed -i '' 's/^ENABLE_DIAGNOSTICS=.*/ENABLE_DIAGNOSTICS=false/' .env
+                        echo "✅ Updated .env: ENABLE_DIAGNOSTICS=false"
+                        echo "   (You can re-enable it later by editing .env)"
+                        ENABLE_DIAGNOSTICS="false"  # Also disable for current run
+                    else
+                        echo -e "${RED}Error: .env file not found${NC}"
+                        exit 1
+                    fi
                     ;;
                 *)
                     echo "Invalid choice"
