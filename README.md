@@ -636,24 +636,55 @@ This keeps your /Applications folder clean while making multi-component plugins 
 
 ## 🌐 Auto-Download Landing Page
 
-When you publish a release with `./scripts/build.sh all publish`, the build system automatically:
+When you publish your first release with `./scripts/build.sh publish` (or `./scripts/build.sh all publish`), the build system automatically:
 
 1. **Generates an index.html landing page** from `templates/index.html.template`
 2. **Publishes it to GitHub Pages** (automatically enabled via GitHub API)
-3. **Creates a shareable URL** that always points to the latest release
+3. **Creates a shareable URL** that always fetches the latest release
+
+### How It Works
+
+**First Publish**:
+```bash
+./scripts/build.sh publish
+```
+- Generates `index.html` from template
+- Commits to your main branch
+- Enables GitHub Pages
+- Page goes live at `https://<your-github-username>.github.io/<your-plugin-repo>/`
+
+**Subsequent Publishes**:
+```bash
+./scripts/build.sh publish
+```
+- Detects existing `index.html`
+- Skips regeneration (saves time)
+- Page automatically fetches latest release via JavaScript API
+
+**The page is smart**: It uses JavaScript to query GitHub's API for the latest release, so it always shows the current version without needing updates!
 
 ### Features
-- Auto-downloads PKG installer when page loads
-- Shows manual download links for PKG, DMG, and ZIP
-- Displays file sizes
-- Fetches latest release via GitHub API
-- Includes Open Graph and Twitter Card meta tags for rich social sharing
-- Responsive, Apple-style design
+- 🚀 Auto-downloads PKG installer when page loads
+- 📦 Shows manual download links for PKG, DMG, and ZIP
+- 📊 Displays file sizes dynamically
+- 🔄 Fetches latest release via GitHub API (no page updates needed!)
+- 🎨 Includes Open Graph and Twitter Card meta tags for rich social sharing
+- 📱 Responsive, Apple-style design
 
 ### Your Landing Page URL
 ```
 https://<your-github-username>.github.io/<your-plugin-repo>/
 ```
+
+### Updating the Page Design
+
+If you need to update the page design or fix issues:
+
+```bash
+./scripts/build.sh publish --regenerate-page
+```
+
+This forces regeneration of `index.html` from the template.
 
 ### Social Sharing
 Add a 1200x630px image named `YourPlugin.png` to your repo root for rich previews in:
@@ -665,12 +696,12 @@ Add a 1200x630px image named `YourPlugin.png` to your repo root for rich preview
 
 ### Template Customization
 Edit `templates/index.html.template` to customize:
-- {{PROJECT_NAME}} - Plugin name
-- {{PLUGIN_DESCRIPTION}} - Brief description
-- {{GITHUB_USER}} - Your GitHub username
-- {{GITHUB_REPO}} - Repository name
+- `{{PROJECT_NAME}}` - Plugin name
+- `{{PLUGIN_DESCRIPTION}}` - Brief description (set `PLUGIN_DESCRIPTION` in `.env`)
+- `{{GITHUB_USER}}` - Your GitHub username
+- `{{GITHUB_REPO}}` - Repository name
 
-The template is automatically processed during `publish` and committed to your `gh-pages` branch.
+The template is automatically processed during the first `publish` and committed to your main branch.
 
 ---
 

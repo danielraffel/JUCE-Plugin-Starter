@@ -55,10 +55,11 @@ VERSION="${VERSION_MAJOR:-0}.${VERSION_MINOR:-0}.${VERSION_PATCH:-1}"
 # Parse command line arguments
 TARGETS=()  # Array to hold multiple targets
 ACTION="local"  # local, test, sign, notarize, publish, pkg, unsigned, uninstall
+REGENERATE_PAGE=false  # Flag to force regeneration of GitHub Pages
 
 usage() {
     cat << EOF
-Usage: $0 [TARGET(s)] [ACTION]
+Usage: $0 [TARGET(s)] [ACTION] [OPTIONS]
 
 TARGETS (can specify multiple):
   all         Build all formats (default)
@@ -72,9 +73,12 @@ ACTIONS:
   sign        Build and code sign
   notarize    Build, sign, and notarize
   pkg         Build, sign, notarize, and package (no GitHub release)
-  publish     Build, sign, notarize, and publish to GitHub
+  publish     Build, sign, notarize, and publish to GitHub with auto-download page
   unsigned    Build and create unsigned installer package (fast testing)
   uninstall   Run uninstaller in non-interactive mode (complete uninstall, no backup)
+
+OPTIONS:
+  --regenerate-page    Force regeneration of GitHub Pages index.html (use with publish)
 
 Examples:
   $0                        # Build all formats locally
@@ -87,10 +91,17 @@ Examples:
   $0 vst3 test              # Build VST3 and test with PluginVal
   $0 au vst3 test           # Build AU and VST3, then test both
   $0 all publish            # Build, sign, notarize and publish to GitHub
+  $0 publish                # Same as above (builds all formats by default)
+  $0 publish --regenerate-page  # Publish and force regenerate landing page
   $0 pkg                    # Build, sign, notarize PKG (no GitHub release)
   $0 unsigned               # Build unsigned installer (fast testing)
   $0 uninstall              # Uninstall all plugin components
   $0 uninstall && $0 unsigned  # Uninstall then rebuild (fast dev workflow)
+
+GitHub Pages:
+  When using 'publish', an auto-download landing page is created (first time only).
+  The page uses JavaScript to always fetch the latest release automatically.
+  Use --regenerate-page to update the page design or fix issues.
 
 Configuration is read from .env file:
   PROJECT_NAME, COMPANY_NAME, APPLE_ID, etc.
@@ -106,6 +117,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         local|test|sign|notarize|publish|unsigned|pkg|uninstall)
             ACTION="$1"
+            shift
+            ;;
+        --regenerate-page)
+            REGENERATE_PAGE=true
             shift
             ;;
         -h|--help|help)
@@ -931,6 +946,96 @@ enable_github_pages() {
     fi
 }
 
+# Function to generate and publish GitHub Pages landing page
+generate_and_publish_landing_page() {
+    local repo="${GITHUB_USER:-owner}/${GITHUB_REPO}"
+
+    echo ""
+    echo -e "${GREEN}Setting up GitHub Pages landing page...${NC}"
+
+    # Check if templates directory exists
+    if [[ ! -f "templates/index.html.template" ]]; then
+        echo -e "${YELLOW}⚠️  Warning: templates/index.html.template not found${NC}"
+        echo "   Skipping landing page generation"
+        return 1
+    fi
+
+    # Check if index.html already exists in repo (unless regenerating)
+    if [[ "$REGENERATE_PAGE" != "true" ]]; then
+        if gh api "repos/${repo}/contents/index.html" &>/dev/null; then
+            echo "✅ Landing page already exists"
+            echo "   URL: https://${GITHUB_USER:-owner}.github.io/${GITHUB_REPO}/"
+            echo "   (Use --regenerate-page to update)"
+            return 0
+        fi
+    else
+        echo "🔄 Regenerating landing page..."
+    fi
+
+    # Get plugin description from .env or use default
+    local plugin_desc="${PLUGIN_DESCRIPTION:-Download the latest version of ${PROJECT_NAME}}"
+
+    # Generate index.html from template
+    local temp_index="/tmp/${PROJECT_NAME}_index.html"
+    sed -e "s/{{PROJECT_NAME}}/${PROJECT_NAME}/g" \
+        -e "s/{{PLUGIN_DESCRIPTION}}/${plugin_desc}/g" \
+        -e "s/{{GITHUB_USER}}/${GITHUB_USER:-owner}/g" \
+        -e "s/{{GITHUB_REPO}}/${GITHUB_REPO}/g" \
+        "templates/index.html.template" > "$temp_index"
+
+    echo "📝 Generated landing page from template"
+
+    # Create a temporary directory for git operations
+    local temp_dir="/tmp/${PROJECT_NAME}_pages_$$"
+    rm -rf "$temp_dir"
+    mkdir -p "$temp_dir"
+
+    # Clone the repo
+    if ! git clone "https://github.com/${repo}.git" "$temp_dir" &>/dev/null; then
+        echo -e "${RED}❌ Failed to clone repository${NC}"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    cd "$temp_dir" || return 1
+
+    # Copy the generated index.html
+    cp "$temp_index" index.html
+
+    # Check if there are any changes
+    if git diff --quiet index.html 2>/dev/null && [[ -f index.html ]]; then
+        echo "✅ Landing page is already up to date"
+        cd "$PROJECT_ROOT"
+        rm -rf "$temp_dir"
+        return 0
+    fi
+
+    # Commit and push
+    git add index.html
+
+    if [[ "$REGENERATE_PAGE" == "true" ]]; then
+        git commit -m "Update auto-download landing page" || true
+    else
+        git commit -m "Add auto-download landing page
+
+This page automatically fetches and downloads the latest release.
+Generated from templates/index.html.template." || true
+    fi
+
+    if git push origin main &>/dev/null; then
+        echo "✅ Landing page published"
+        echo "   URL: https://${GITHUB_USER:-owner}.github.io/${GITHUB_REPO}/"
+        echo "   (May take a few minutes to become available)"
+    else
+        echo -e "${YELLOW}⚠️  Could not push to repository${NC}"
+        echo "   You may need to manually commit and push index.html"
+    fi
+
+    # Return to project root and cleanup
+    cd "$PROJECT_ROOT"
+    rm -rf "$temp_dir" "$temp_index"
+}
+
 # Function to show release URLs in consistent order
 show_release_urls() {
     if [[ -z "$RELEASE_TAG" ]]; then
@@ -1097,6 +1202,7 @@ main() {
             create_installer true
             create_github_release
             enable_github_pages
+            generate_and_publish_landing_page
             show_release_urls
             ;;
     esac
