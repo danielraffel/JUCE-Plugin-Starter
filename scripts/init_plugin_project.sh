@@ -49,7 +49,7 @@ get_confirmed_input() {
 
         # Default to yes if just Enter pressed
         if [[ -z "$confirm" || "$confirm" =~ ^[Yy]$ ]]; then
-            echo ""  # Add blank line for visual separation
+            echo "" >&2  # Add blank line for visual separation (stderr to avoid capture)
             break
         else
             echo -e "\nLet's try again..." >&2
@@ -76,7 +76,7 @@ get_yes_no() {
             return 0
         else
             echo "n"
-            return 1
+            return 0
         fi
     fi
     
@@ -102,7 +102,7 @@ get_yes_no() {
             return 0
         elif [[ "$response" =~ ^[Nn]$ ]]; then
             echo "n"
-            return 1
+            return 0
         else
             printf "${RED}Please answer 'y' for yes or 'n' for no${NC}\n" >&2
         fi
@@ -437,7 +437,7 @@ echo "  • One-click diagnostic collection"
 echo "  • Automatic GitHub issue creation"
 echo "  • System info, crash logs, plugin status"
 echo ""
-echo -e "${YELLOW}Note: DiagnosticKit is marked WIP and requires additional setup after project creation.${NC}"
+echo -e "${YELLOW}Note: DiagnosticKit requires additional setup after project creation.${NC}"
 echo -e "${CYAN}You'll need to run: ./scripts/setup_diagnostic_repo.sh${NC}"
 echo ""
 ENABLE_DIAGNOSTICS="false"
