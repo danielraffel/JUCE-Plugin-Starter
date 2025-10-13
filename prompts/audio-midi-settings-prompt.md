@@ -535,6 +535,64 @@ A successful implementation will have:
 
 ---
 
+## Implementation Notes
+
+### MIDI Auto-Enabler Integration Challenge
+
+**Issue:** JUCE's `StandalonePluginHolder` class is not accessible from standard AudioProcessor or AudioProcessorEditor code during compilation. This prevents initializing the MidiDeviceAutoEnabler from these classes.
+
+**Root Cause:**
+- `StandalonePluginHolder` is defined in `juce_audio_plugin_client` module
+- This class is only available in standalone builds, not in plugin (AU/VST3) builds
+- Conditional compilation (`#if JUCE_STANDALONE_APPLICATION`) doesn't help because the header isn't included
+
+**Solutions:**
+
+**Option 1: Custom Standalone Wrapper (Recommended)**
+Create a custom standalone application wrapper that initializes the MIDI auto-enabler:
+
+```cpp
+// In your custom standalone main.cpp
+class CustomStandaloneFilterWindow : public juce::DocumentWindow
+{
+public:
+    CustomStandaloneFilterWindow()
+    {
+        // After creating your plugin instance
+        if (auto* holder = StandalonePluginHolder::getInstance())
+        {
+            midiAutoEnabler = std::make_unique<MidiDeviceAutoEnabler>(
+                holder->deviceManager
+            );
+        }
+    }
+
+private:
+    std::unique_ptr<MidiDeviceAutoEnabler> midiAutoEnabler;
+};
+```
+
+**Option 2: Separate Standalone Target**
+Use CMake to create a separate standalone target with its own main.cpp that has access to the device manager.
+
+**Option 3: Runtime Initialization**
+Initialize from a settings window or menu command where you have direct access to the AudioDeviceManager:
+
+```cpp
+// In your settings window
+void AudioMidiWindow::showWindow(juce::AudioDeviceManager& deviceManager)
+{
+    // Initialize MIDI auto-enabler when settings window opens
+    static std::unique_ptr<MidiDeviceAutoEnabler> midiAutoEnabler;
+    if (!midiAutoEnabler)
+        midiAutoEnabler = std::make_unique<MidiDeviceAutoEnabler>(deviceManager);
+}
+```
+
+**Important:** The MidiDeviceAutoEnabler class itself is fully functional and tested. The integration challenge only affects *where* it can be initialized, not *how* it works.
+
+---
+
 **Last Updated:** 2025-10-11
 **Version:** 1.0
 **Status:** Production-ready template

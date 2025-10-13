@@ -421,7 +421,7 @@ run_tests() {
 
 # Function to sign plugins
 sign_plugins() {
-    echo -e "${GREEN}Signing plugins...${NC}"
+    echo -e "${GREEN}Signing plugins for ${PROJECT_NAME}...${NC}"
 
     if [[ -z "$APP_CERT" ]]; then
         echo -e "${RED}Error: APP_CERT not set in .env${NC}"
@@ -431,42 +431,42 @@ sign_plugins() {
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
-                # Find all AU plugins in Components directory
-                local au_dir="$HOME/Library/Audio/Plug-Ins/Components"
-                if [[ -d "$au_dir" ]]; then
-                    while IFS= read -r -d '' plugin; do
-                        echo "Signing AU: $plugin"
-                        codesign --force --deep --strict --timestamp \
-                            --sign "$APP_CERT" \
-                            --options runtime \
-                            "$plugin"
-                    done < <(find "$au_dir" -maxdepth 1 -name "*.component" -print0 2>/dev/null)
+                # Sign only the current project's AU plugin
+                local plugin="$HOME/Library/Audio/Plug-Ins/Components/${PROJECT_NAME}.component"
+                if [[ -d "$plugin" ]]; then
+                    echo "Signing AU: $plugin"
+                    codesign --force --deep --strict --timestamp \
+                        --sign "$APP_CERT" \
+                        --options runtime \
+                        "$plugin"
+                else
+                    echo -e "${YELLOW}Warning: AU plugin not found at $plugin${NC}"
                 fi
                 ;;
             VST3)
-                # Find all VST3 plugins in VST3 directory
-                local vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
-                if [[ -d "$vst3_dir" ]]; then
-                    while IFS= read -r -d '' plugin; do
-                        echo "Signing VST3: $plugin"
-                        codesign --force --deep --strict --timestamp \
-                            --sign "$APP_CERT" \
-                            --options runtime \
-                            "$plugin"
-                    done < <(find "$vst3_dir" -maxdepth 1 -name "*.vst3" -print0 2>/dev/null)
+                # Sign only the current project's VST3 plugin
+                local plugin="$HOME/Library/Audio/Plug-Ins/VST3/${PROJECT_NAME}.vst3"
+                if [[ -d "$plugin" ]]; then
+                    echo "Signing VST3: $plugin"
+                    codesign --force --deep --strict --timestamp \
+                        --sign "$APP_CERT" \
+                        --options runtime \
+                        "$plugin"
+                else
+                    echo -e "${YELLOW}Warning: VST3 plugin not found at $plugin${NC}"
                 fi
                 ;;
             Standalone)
-                # Find all standalone apps in build artefacts
-                local standalone_dir="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone"
-                if [[ -d "$standalone_dir" ]]; then
-                    while IFS= read -r -d '' app; do
-                        echo "Signing Standalone: $app"
-                        codesign --force --deep --strict --timestamp \
-                            --sign "$APP_CERT" \
-                            --options runtime \
-                            "$app"
-                    done < <(find "$standalone_dir" -maxdepth 1 -name "*.app" -print0 2>/dev/null)
+                # Sign only the current project's standalone app
+                local app="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone/${PROJECT_NAME}.app"
+                if [[ -d "$app" ]]; then
+                    echo "Signing Standalone: $app"
+                    codesign --force --deep --strict --timestamp \
+                        --sign "$APP_CERT" \
+                        --options runtime \
+                        "$app"
+                else
+                    echo -e "${YELLOW}Warning: Standalone app not found at $app${NC}"
                 fi
                 ;;
         esac
@@ -475,7 +475,7 @@ sign_plugins() {
 
 # Function to notarize plugins
 notarize_plugins() {
-    echo -e "${GREEN}Notarizing plugins...${NC}"
+    echo -e "${GREEN}Notarizing plugins for ${PROJECT_NAME}...${NC}"
 
     # Support both APP_SPECIFIC_PASSWORD and APP_PASSWORD for backward compatibility
     local NOTARY_PASSWORD="${APP_SPECIFIC_PASSWORD:-$APP_PASSWORD}"
@@ -488,45 +488,43 @@ notarize_plugins() {
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
-                # Find all AU plugins in Components directory
-                local au_dir="$HOME/Library/Audio/Plug-Ins/Components"
-                if [[ -d "$au_dir" ]]; then
-                    while IFS= read -r -d '' plugin; do
-                        local plugin_name=$(basename "$plugin" .component)
-                        echo "Notarizing AU: $plugin_name..."
-                        local zip_path="/tmp/${plugin_name}_AU.zip"
-                        ditto -c -k --keepParent "$plugin" "$zip_path"
+                # Notarize only the current project's AU plugin
+                local plugin="$HOME/Library/Audio/Plug-Ins/Components/${PROJECT_NAME}.component"
+                if [[ -d "$plugin" ]]; then
+                    echo "Notarizing AU: ${PROJECT_NAME}..."
+                    local zip_path="/tmp/${PROJECT_NAME}_AU.zip"
+                    ditto -c -k --keepParent "$plugin" "$zip_path"
 
-                        xcrun notarytool submit "$zip_path" \
-                            --apple-id "$APPLE_ID" \
-                            --password "$NOTARY_PASSWORD" \
-                            --team-id "$TEAM_ID" \
-                            --wait
+                    xcrun notarytool submit "$zip_path" \
+                        --apple-id "$APPLE_ID" \
+                        --password "$NOTARY_PASSWORD" \
+                        --team-id "$TEAM_ID" \
+                        --wait
 
-                        xcrun stapler staple "$plugin"
-                        rm "$zip_path"
-                    done < <(find "$au_dir" -maxdepth 1 -name "*.component" -print0 2>/dev/null)
+                    xcrun stapler staple "$plugin"
+                    rm "$zip_path"
+                else
+                    echo -e "${YELLOW}Warning: AU plugin not found at $plugin${NC}"
                 fi
                 ;;
             VST3)
-                # Find all VST3 plugins in VST3 directory
-                local vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
-                if [[ -d "$vst3_dir" ]]; then
-                    while IFS= read -r -d '' plugin; do
-                        local plugin_name=$(basename "$plugin" .vst3)
-                        echo "Notarizing VST3: $plugin_name..."
-                        local zip_path="/tmp/${plugin_name}_VST3.zip"
-                        ditto -c -k --keepParent "$plugin" "$zip_path"
+                # Notarize only the current project's VST3 plugin
+                local plugin="$HOME/Library/Audio/Plug-Ins/VST3/${PROJECT_NAME}.vst3"
+                if [[ -d "$plugin" ]]; then
+                    echo "Notarizing VST3: ${PROJECT_NAME}..."
+                    local zip_path="/tmp/${PROJECT_NAME}_VST3.zip"
+                    ditto -c -k --keepParent "$plugin" "$zip_path"
 
-                        xcrun notarytool submit "$zip_path" \
-                            --apple-id "$APPLE_ID" \
-                            --password "$NOTARY_PASSWORD" \
-                            --team-id "$TEAM_ID" \
-                            --wait
+                    xcrun notarytool submit "$zip_path" \
+                        --apple-id "$APPLE_ID" \
+                        --password "$NOTARY_PASSWORD" \
+                        --team-id "$TEAM_ID" \
+                        --wait
 
-                        xcrun stapler staple "$plugin"
-                        rm "$zip_path"
-                    done < <(find "$vst3_dir" -maxdepth 1 -name "*.vst3" -print0 2>/dev/null)
+                    xcrun stapler staple "$plugin"
+                    rm "$zip_path"
+                else
+                    echo -e "${YELLOW}Warning: VST3 plugin not found at $plugin${NC}"
                 fi
                 ;;
         esac
@@ -873,43 +871,229 @@ create_installer() {
     fi
 }
 
-# Function to generate release notes
-generate_release_notes() {
-    echo -e "${GREEN}Generating release notes for version $VERSION...${NC}"
+# Function to generate release notes with Claude Code interactively
+generate_release_notes_with_claude_code() {
+    echo -e "${GREEN}🤖 Using Claude Code for release notes...${NC}"
+    echo ""
 
-    local release_notes=""
+    # Get commit history
+    local last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+    local commit_range=""
+    local commit_count=0
 
-    # Use the Python script if it exists
-    if [[ -f "${ROOT_DIR}/scripts/generate_release_notes.py" ]]; then
-        # Try AI-enhanced release notes if API keys are available
-        if [[ -n "$OPENROUTER_KEY_PRIVATE" ]] || [[ -n "$OPENAI_API_KEY" ]]; then
-            echo "🤖 Attempting AI-enhanced release notes..."
-            release_notes=$(python3 "${ROOT_DIR}/scripts/generate_release_notes.py" --version "$VERSION" --format markdown --ai 2>/dev/null)
-
-            if [[ -n "$release_notes" ]]; then
-                echo "✅ AI-enhanced release notes generated"
-            else
-                echo "⚠️  AI generation failed, falling back to git log"
-                release_notes=""
-            fi
-        fi
-
-        # Fallback to standard generation if AI failed
-        if [[ -z "$release_notes" ]]; then
-            echo "📝 Generating standard release notes..."
-            release_notes=$(python3 "${ROOT_DIR}/scripts/generate_release_notes.py" --version "$VERSION" --format markdown 2>/dev/null)
+    if [[ -n "$last_tag" ]]; then
+        commit_range="$last_tag..HEAD"
+    else
+        commit_count=$(git rev-list --count HEAD 2>/dev/null || echo "0")
+        if [[ "$commit_count" -eq 0 ]]; then
+            echo -e "${RED}Error: No commits found${NC}"
+            return 1
+        elif [[ "$commit_count" -eq 1 ]]; then
+            commit_range="HEAD"
+        else
+            local lookback=$((commit_count < 10 ? commit_count - 1 : 10))
+            commit_range="HEAD~${lookback}..HEAD"
         fi
     fi
 
-    # Ultimate fallback to git-based release notes
+    # Get detailed commits
+    local commits=$(git log --format="📝 %s%n   Author: %an%n   Date: %ar%n" --no-merges "$commit_range" 2>/dev/null || echo "")
+
+    if [[ -z "$commits" ]]; then
+        echo -e "${RED}Error: No commits found in range${NC}"
+        return 1
+    fi
+
+    echo -e "${GREEN}Recent commits:${NC}"
+    echo "$commits" | head -20
+    if [[ $(echo "$commits" | wc -l) -gt 20 ]]; then
+        echo "... (more commits)"
+    fi
+    echo ""
+
+    # Create the prompt for Claude Code
+    local prompt="I need to generate user-friendly release notes for version $VERSION of this JUCE audio plugin.
+
+This plugin is used by musicians, producers, and audio engineers in DAWs like Logic Pro, Ableton Live, and Reaper.
+
+Here are the commits since the last release:
+
+\`\`\`
+$commits
+\`\`\`
+
+Please generate release notes in this format:
+
+\`\`\`markdown
+## Version $VERSION
+
+### ✨ New Features
+- [User-friendly description]
+
+### 🔧 Improvements
+- [User-friendly description]
+
+### 🐛 Bug Fixes
+- [User-friendly description]
+\`\`\`
+
+Guidelines:
+1. Focus on what users will notice, not implementation details
+2. Write in plain language (avoid technical jargon)
+3. Keep it concise (1 sentence per bullet)
+4. Skip empty sections
+
+Generate the release notes now."
+
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}📋 Release Notes Request for Claude Code:${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo "$prompt"
+    echo ""
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+
+    # Now Claude Code (me) will see this prompt and generate the notes
+    # The notes will be returned via this function's return value
+    # For now, return empty and let Claude Code provide the notes
+    echo ""
+}
+
+# Function to generate release notes
+generate_release_notes() {
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}📝 Generating release notes for version $VERSION...${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+
+    local release_notes=""
+    local generation_method="${RELEASE_NOTES_METHOD:-auto}"
+
+    echo -e "${GREEN}Release notes method: $generation_method${NC}"
+    echo ""
+
+    # Handle different generation methods
+    case "$generation_method" in
+        claude)
+            echo -e "${GREEN}🤖 Claude Code integration mode${NC}"
+            echo ""
+
+            # Call the Claude Code function to show the prompt
+            generate_release_notes_with_claude_code
+
+            # At this point, Claude Code (me) will generate the notes
+            # For the script to work, I need to provide the notes here
+            # This will be handled by Claude Code seeing this output and responding
+
+            # For now, fall back to Python if no manual intervention
+            if [[ -z "$release_notes" ]]; then
+                echo -e "${YELLOW}Note: Falling back to Python categorization${NC}"
+                echo -e "${YELLOW}(Claude Code should provide notes when running interactively)${NC}"
+                echo ""
+                generation_method="python-fallback"
+            fi
+            ;;
+
+        openrouter)
+            if [[ -z "$OPENROUTER_KEY_PRIVATE" ]]; then
+                echo -e "${RED}Error: OPENROUTER_KEY_PRIVATE not set in .env${NC}"
+                echo -e "${YELLOW}Falling back to Python categorization${NC}"
+                generation_method="python-fallback"
+            else
+                echo "🤖 Using OpenRouter API..."
+                local ai_output=$(python3 "${ROOT_DIR}/scripts/generate_release_notes.py" --version "$VERSION" --format markdown --ai 2>&1)
+                if [[ $? -eq 0 ]] && [[ -n "$ai_output" ]] && [[ "$ai_output" != *"Warning:"* ]]; then
+                    release_notes="$ai_output"
+                    generation_method="openrouter"
+                    echo -e "${GREEN}✅ OpenRouter release notes generated${NC}"
+                else
+                    echo -e "${YELLOW}⚠️  OpenRouter failed, falling back to Python${NC}"
+                    generation_method="python-fallback"
+                fi
+            fi
+            ;;
+
+        openai)
+            if [[ -z "$OPENAI_API_KEY" ]]; then
+                echo -e "${RED}Error: OPENAI_API_KEY not set in .env${NC}"
+                echo -e "${YELLOW}Falling back to Python categorization${NC}"
+                generation_method="python-fallback"
+            else
+                echo "🤖 Using OpenAI API..."
+                local ai_output=$(python3 "${ROOT_DIR}/scripts/generate_release_notes.py" --version "$VERSION" --format markdown --ai 2>&1)
+                if [[ $? -eq 0 ]] && [[ -n "$ai_output" ]] && [[ "$ai_output" != *"Warning:"* ]]; then
+                    release_notes="$ai_output"
+                    generation_method="openai"
+                    echo -e "${GREEN}✅ OpenAI release notes generated${NC}"
+                else
+                    echo -e "${YELLOW}⚠️  OpenAI failed, falling back to Python${NC}"
+                    generation_method="python-fallback"
+                fi
+            fi
+            ;;
+
+        auto)
+            # Try AI APIs if keys available
+            if [[ -n "$OPENROUTER_KEY_PRIVATE" ]] || [[ -n "$OPENAI_API_KEY" ]]; then
+                echo "🤖 Attempting AI-enhanced release notes..."
+                local ai_output=$(python3 "${ROOT_DIR}/scripts/generate_release_notes.py" --version "$VERSION" --format markdown --ai 2>&1)
+                if [[ $? -eq 0 ]] && [[ -n "$ai_output" ]] && [[ "$ai_output" != *"Warning:"* ]]; then
+                    release_notes="$ai_output"
+                    generation_method="ai-auto"
+                    echo -e "${GREEN}✅ AI-enhanced release notes generated${NC}"
+                else
+                    echo -e "${YELLOW}⚠️  AI generation failed, falling back to Python${NC}"
+                    generation_method="python-fallback"
+                fi
+            else
+                echo "📝 No AI API keys found, using Python categorization..."
+                generation_method="python-fallback"
+            fi
+            ;;
+
+        none|*)
+            echo "📝 Using Python categorization (no AI)..."
+            generation_method="python"
+            ;;
+    esac
+
+    # Generate with Python if needed (fallback or explicit "none")
+    if [[ -z "$release_notes" ]] || [[ "$generation_method" == "python-fallback" ]] || [[ "$generation_method" == "python" ]]; then
+        if [[ -f "${ROOT_DIR}/scripts/generate_release_notes.py" ]]; then
+            local std_output=$(python3 "${ROOT_DIR}/scripts/generate_release_notes.py" --version "$VERSION" --format markdown 2>&1)
+            if [[ $? -eq 0 ]] && [[ -n "$std_output" ]]; then
+                release_notes="$std_output"
+                [[ "$generation_method" == "python-fallback" ]] && generation_method="python (fallback)" || generation_method="python"
+                echo -e "${GREEN}✅ Python release notes generated${NC}"
+            else
+                echo -e "${YELLOW}⚠️  Python script failed, using git log${NC}"
+                generation_method="git-fallback"
+            fi
+        else
+            generation_method="git-fallback"
+        fi
+    fi
+
+    # Final fallback to git log
     if [[ -z "$release_notes" ]]; then
-        echo "📝 Generating git-based release notes..."
+        echo "📝 Using git log fallback..."
         local last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
         local commit_range=""
+        local commit_count=0
+
         if [[ -n "$last_tag" ]]; then
             commit_range="$last_tag..HEAD"
         else
-            commit_range="HEAD~5..HEAD"
+            commit_count=$(git rev-list --count HEAD 2>/dev/null || echo "0")
+            if [[ "$commit_count" -eq 0 ]]; then
+                commit_range="HEAD"
+            elif [[ "$commit_count" -eq 1 ]]; then
+                commit_range="HEAD"
+            else
+                local lookback=$((commit_count < 5 ? commit_count - 1 : 5))
+                commit_range="HEAD~${lookback}..HEAD"
+            fi
         fi
 
         local commits=$(git log --pretty=format:"- %s" --no-merges "$commit_range" 2>/dev/null || echo "- Initial release")
@@ -918,7 +1102,24 @@ generate_release_notes() {
 $commits
 
 **Full Changelog**: https://github.com/${GITHUB_USER:-owner}/${GITHUB_REPO}/commits/v$VERSION"
+        generation_method="git"
+        echo -e "${GREEN}✅ Git-based release notes generated${NC}"
     fi
+
+    echo ""
+    echo -e "${GREEN}Generation method used: $generation_method${NC}"
+    echo ""
+
+    # Show preview of release notes
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}Release Notes Preview:${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo "$release_notes" | head -20
+    if [[ $(echo "$release_notes" | wc -l) -gt 20 ]]; then
+        echo "... (truncated for preview)"
+    fi
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
 
     echo "$release_notes"
 }

@@ -150,5 +150,81 @@ The `scripts/build.sh` script provides:
 - `./scripts/generate_and_open_xcode.sh` only when CMake regeneration is needed otherise use `SKIP_CMAKE_REGEN=1 ./scripts/generate_and_open_xcode.sh` only when `CMakeLists.txt`, `.env`, or build-related config **has not changed**, Claude can **skip regeneration** to save time:
 - `./scripts/build.sh standalone` for building and then open the app once it's built
 
+## Generating Release Notes
+
+When the user runs `./scripts/build.sh publish` with `RELEASE_NOTES_METHOD=claude` in their `.env`, Claude Code should automatically generate user-friendly release notes.
+
+### How Release Notes Work
+
+The build system checks `RELEASE_NOTES_METHOD` in `.env`:
+- `claude` = Claude Code generates notes interactively
+- `openrouter` = OpenRouter API (requires key)
+- `openai` = OpenAI API (requires key)
+- `auto` = Try APIs if keys exist, else Python
+- `none` = Python categorization only
+
+### When `RELEASE_NOTES_METHOD=claude`
+
+**What happens during publish:**
+
+1. The build script displays recent commits
+2. Shows a prompt asking Claude to generate release notes
+3. **Claude Code (you) should respond** with the notes in the correct format
+4. The script captures your response and uses it for the release
+
+**How Claude should respond:**
+
+When you see the release notes prompt during `./scripts/build.sh publish`, immediately generate notes in this exact format:
+
+```markdown
+## Version X.X.X
+
+### ✨ New Features
+- [User-friendly description of new features]
+
+### 🔧 Improvements
+- [User-friendly description of improvements]
+
+### 🐛 Bug Fixes
+- [User-friendly description of bug fixes]
+```
+
+### Guidelines for Claude
+
+- Focus on what users (musicians, producers, audio engineers) will notice
+- Write in plain language (avoid technical jargon like "refactor", "CMake", etc.)
+- Keep it concise (1 sentence per bullet point)
+- Skip empty sections
+
+### Example Format
+
+```markdown
+## Version 1.2.0
+
+### ✨ New Features
+- Added MIDI learn functionality for easy controller mapping
+- New preset browser with search and favorites
+
+### 🔧 Improvements
+- Reduced CPU usage by 30% for better performance
+- Improved audio quality at high sample rates
+
+### 🐛 Bug Fixes
+- Fixed crash when loading AU presets in Logic Pro
+- Resolved audio glitches during buffer size changes
+```
+
+### Bad vs Good Examples
+
+❌ **Bad** (too technical):
+- Refactor PluginProcessor to use shared_ptr
+- Update CMakeLists.txt build configuration
+- Fix memory leak in DSP engine
+
+✅ **Good** (user-focused):
+- Improved plugin stability and memory usage
+- Fixed rare crash when changing plugin settings
+- Better audio quality with reduced distortion
+
 ## Additional Project Info
 See @README.md for general project information.

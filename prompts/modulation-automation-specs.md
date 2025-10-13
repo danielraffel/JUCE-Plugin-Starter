@@ -1,12 +1,11 @@
 # Bucketpluck Modulation Matrix & Automation Specifications
 
 **Status:** Planned (for post-Phase 11 refinement)
-**Reference Projects:** braidy, Griddy
 **Created:** 2025-10-11
 
 ## Overview
 
-This document spec ifies the implementation of a proper modulation routing system and parameter automation with visual feedback, based on proven patterns from braidy and Griddy.
+This document specifies the implementation of a proper modulation routing system and parameter automation with visual feedback, following industry-standard patterns used in professional audio plugins.
 
 ---
 
@@ -31,7 +30,7 @@ This document spec ifies the implementation of a proper modulation routing syste
 
 ### 2.1 Routing System
 
-**Pattern from braidy/Griddy:**
+**Recommended Architecture:**
 
 ```cpp
 class ModulationMatrix {
@@ -102,7 +101,7 @@ float modulatedDelayTime = modulationMatrix.applyModulation(
 
 ### 3.1 Requirements
 
-Based on braidy/Griddy, we need:
+For professional parameter automation with visual feedback, we need:
 
 1. **Automation playback**: Parameter values from DAW automation are reflected in audio
 2. **Visual feedback**: Knobs visually rotate/move when automated or modulated
@@ -153,7 +152,7 @@ private:
 
 ### 3.3 Timer-Based Updates
 
-**Pattern from braidy:**
+**Recommended Implementation:**
 
 ```cpp
 class PluginEditor : public juce::AudioProcessorEditor,
@@ -195,7 +194,7 @@ private:
 ### Phase 1: Modulation Matrix Core (1-2 days)
 
 1. **Create ModulationMatrix class** in delay_core/
-   - Port structure from braidy/Griddy
+   - Implement the routing architecture described in section 2.1
    - Define all Destination enum values for Bucketpluck parameters
    - Implement setRouting(), getModulation(), applyModulation()
 
@@ -558,15 +557,6 @@ Could add:
 ---
 
 ## 11. References
-
-### Study Materials
-- **braidy**: `/Users/danielraffel/Code/braidy`
-  - ModulationMatrix.h - Routing architecture
-  - LFO.h - LFO implementation
-  - MODULATION_QUICKSTART.md - User guide
-
-- **Griddy**: `/Users/danielraffel/Code/Griddy`
-  - ModulationMatrix.h - Similar routing pattern
 
 ### JUCE Documentation
 - AudioProcessorValueTreeState - Parameter management

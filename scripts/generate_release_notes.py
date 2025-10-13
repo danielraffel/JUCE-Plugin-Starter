@@ -22,24 +22,55 @@ def get_git_history(since_tag=None):
             )
             if result.returncode == 0:
                 since_tag = result.stdout.strip()
-        
-        # Get commits since tag (or last 10 if no tags)
+
+        # Get commits since tag (or all commits if no tags)
         if since_tag:
             commit_range = f"{since_tag}..HEAD"
         else:
-            commit_range = "HEAD~10..HEAD"
-        
+            # For repos without tags, get all commits (safer than HEAD~10)
+            # First, try to get commit count
+            count_result = subprocess.run(
+                ['git', 'rev-list', '--count', 'HEAD'],
+                capture_output=True, text=True, check=False
+            )
+
+            if count_result.returncode == 0:
+                commit_count = int(count_result.stdout.strip())
+                if commit_count == 0:
+                    print("Warning: No commits found in repository", file=sys.stderr)
+                    return "Initial release"
+                elif commit_count == 1:
+                    # For single commit, just use HEAD
+                    commit_range = "HEAD"
+                else:
+                    # Get last 10 commits, or all if fewer than 10
+                    lookback = min(10, commit_count - 1)
+                    commit_range = f"HEAD~{lookback}..HEAD"
+            else:
+                # Fallback: just try to get recent commits
+                commit_range = "HEAD"
+
+        # Get the commits
         result = subprocess.run(
             ['git', 'log', '--oneline', '--no-merges', commit_range],
-            capture_output=True, text=True, check=True
+            capture_output=True, text=True, check=False
         )
-        
+
+        if result.returncode != 0:
+            print(f"Warning: git log failed: {result.stderr}", file=sys.stderr)
+            return "Initial release"
+
         commits = result.stdout.strip()
         if not commits:
-            commits = "Initial release"
-        
+            print("Warning: No commits found in range", file=sys.stderr)
+            return "Initial release"
+
         return commits
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        print(f"Error getting git history: {e}", file=sys.stderr)
+        return "Initial release"
+    except Exception as e:
+        print(f"Unexpected error: {e}", file=sys.stderr)
         return "Initial release"
 
 def categorize_commits(commits):
@@ -222,23 +253,46 @@ def generate_standard_release_notes(commits, version, format='markdown'):
 
 def main():
     import argparse
-    
-    parser = argparse.ArgumentParser(description='Generate release notes')
+
+    parser = argparse.ArgumentParser(description='Generate release notes from git history')
     parser.add_argument('--version', help='Version number for the release', default='1.0.0')
     parser.add_argument('--since', help='Generate notes since this tag', default=None)
     parser.add_argument('--format', choices=['markdown', 'sparkle'], default='markdown',
                         help='Output format (markdown or sparkle HTML)')
     parser.add_argument('--ai', action='store_true', help='Use AI to enhance release notes')
-    
+    parser.add_argument('--debug', action='store_true', help='Show debug information')
+
     args = parser.parse_args()
-    
+
+    if args.debug:
+        print("🔍 Debug mode enabled", file=sys.stderr)
+        print(f"   Version: {args.version}", file=sys.stderr)
+        print(f"   Since tag: {args.since or '(none - will use last tag or recent commits)'}", file=sys.stderr)
+        print(f"   Format: {args.format}", file=sys.stderr)
+        print(f"   AI enhancement: {'enabled' if args.ai else 'disabled'}", file=sys.stderr)
+        print("", file=sys.stderr)
+
     # Get git history
+    if args.debug:
+        print("📝 Getting git history...", file=sys.stderr)
+
     commits = get_git_history(args.since)
-    
+
+    if args.debug:
+        commit_lines = len(commits.split('\n')) if commits != "Initial release" else 0
+        print(f"   Found {commit_lines} commits", file=sys.stderr)
+        print("", file=sys.stderr)
+
     # Try AI-enhanced notes if requested
     if args.ai:
+        if args.debug:
+            print("🤖 Attempting AI-enhanced release notes...", file=sys.stderr)
+
         ai_notes = generate_ai_release_notes(commits, args.version)
         if ai_notes:
+            if args.debug:
+                print("✅ AI generation successful", file=sys.stderr)
+
             # Convert to requested format if needed
             if args.format == 'sparkle' and not ai_notes.startswith('<'):
                 # Convert markdown to HTML
@@ -248,9 +302,21 @@ def main():
                 ai_notes = re.sub(r'(<li>.*</li>)', r'<ul>\n\1\n</ul>', ai_notes, flags=re.DOTALL)
             print(ai_notes)
             return
-    
+        else:
+            if args.debug:
+                print("⚠️  AI generation failed, falling back to standard", file=sys.stderr)
+                print("", file=sys.stderr)
+
     # Generate standard notes
+    if args.debug:
+        print("📝 Generating standard release notes...", file=sys.stderr)
+
     notes = generate_standard_release_notes(commits, args.version, args.format)
+
+    if args.debug:
+        print("✅ Release notes generated", file=sys.stderr)
+        print("", file=sys.stderr)
+
     print(notes)
 
 if __name__ == "__main__":
