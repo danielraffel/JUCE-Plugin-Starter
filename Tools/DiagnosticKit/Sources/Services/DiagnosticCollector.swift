@@ -188,28 +188,38 @@ class DiagnosticCollector {
         do {
             try process.run()
 
-            // Wait with timeout
-            let deadline = DispatchTime.now() + .seconds(config.diagnosticTimeout)
-            let group = DispatchGroup()
-            group.enter()
+            // Wait with timeout (thread-safe single-resume via lock)
+            let timeoutSeconds = config.diagnosticTimeout
+            let output: String? = await withCheckedContinuation { continuation in
+                var hasResumed = false
+                let lock = NSLock()
 
-            DispatchQueue.global().async {
-                process.waitUntilExit()
-                group.leave()
+                func resumeOnce(with value: String?) {
+                    lock.lock()
+                    defer { lock.unlock() }
+                    guard !hasResumed else { return }
+                    hasResumed = true
+                    continuation.resume(returning: value)
+                }
+
+                DispatchQueue.global().async {
+                    process.waitUntilExit()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    resumeOnce(with: String(data: data, encoding: .utf8))
+                }
+
+                DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(timeoutSeconds)) {
+                    if process.isRunning { process.terminate() }
+                    resumeOnce(with: nil)
+                }
             }
 
-            _ = group.wait(timeout: deadline)
-
-            if process.isRunning {
-                process.terminate()
-                validation += "_AU Validation timed out after \(config.diagnosticTimeout) seconds_\n"
+            if let output = output {
+                validation += "```\n"
+                validation += String(output.suffix(1500)) // Last 1500 chars
+                validation += "\n```\n"
             } else {
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                if let output = String(data: data, encoding: .utf8) {
-                    validation += "```\n"
-                    validation += String(output.suffix(1500)) // Last 1500 chars
-                    validation += "\n```\n"
-                }
+                validation += "_AU Validation timed out after \(timeoutSeconds) seconds_\n"
             }
         } catch {
             validation += "_Could not run auval: \(error.localizedDescription)_\n"

@@ -520,6 +520,13 @@ find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.cmake" -o -name "*.tx
     -e "s/PLUGIN_MANUFACTURER_CODE_PLACEHOLDER/$PLUGIN_MANUFACTURER_CODE/g" \
     {} \; 2>/dev/null || true
 
+# --- Derive DiagnosticKit repo name ---
+if [ "$ENABLE_DIAGNOSTICS" = "true" ] && [ -n "$GITHUB_USER" ]; then
+    DIAGNOSTIC_GITHUB_REPO="${GITHUB_USER}/${PROJECT_FOLDER}-diagnostics"
+else
+    DIAGNOSTIC_GITHUB_REPO=""
+fi
+
 # --- Create Project-Specific .env File ---
 echo "Creating configuration file..."
 cat > .env << EOF
@@ -555,6 +562,9 @@ GITHUB_REPO=$PROJECT_FOLDER
 
 # DiagnosticKit Settings
 ENABLE_DIAGNOSTICS=$ENABLE_DIAGNOSTICS
+DIAGNOSTIC_GITHUB_REPO=${DIAGNOSTIC_GITHUB_REPO:-}
+DIAGNOSTIC_GITHUB_PAT=
+DIAGNOSTIC_SUPPORT_EMAIL=${APPLE_ID:-}
 
 # Build Configuration
 CMAKE_BUILD_TYPE=Debug

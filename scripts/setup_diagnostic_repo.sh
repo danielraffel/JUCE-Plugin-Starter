@@ -22,6 +22,10 @@ if [[ -f ".env" ]]; then
     set -a
     source .env
     set +a
+    # Unset placeholder GITHUB_TOKEN so gh CLI uses keyring auth
+    if [[ "${GITHUB_TOKEN:-}" == ghp_xxxxxxxxxxxxxxxxxxxx ]]; then
+        unset GITHUB_TOKEN
+    fi
 else
     echo -e "${RED}Error: .env file not found${NC}"
     exit 1

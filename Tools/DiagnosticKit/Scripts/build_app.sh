@@ -15,12 +15,16 @@ NC='\033[0m'
 DIAGNOSTIC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$DIAGNOSTIC_DIR"
 
-# Build configuration
+# Build configuration — SPM expects lowercase "debug" or "release"
 BUILD_CONFIG="${1:-release}"
-BUILD_CONFIG_SWIFT=$(echo "$BUILD_CONFIG" | tr '[:lower:]' '[:upper:]' | sed 's/PROD/RELEASE/')
+BUILD_CONFIG_LOWER=$(echo "$BUILD_CONFIG" | tr '[:upper:]' '[:lower:]' | sed 's/prod/release/')
+case "$BUILD_CONFIG_LOWER" in
+    debug) BUILD_CONFIG_SPM="debug" ;;
+    *)     BUILD_CONFIG_SPM="release" ;;
+esac
 
 echo -e "${GREEN}Building DiagnosticKit...${NC}"
-echo "Configuration: $BUILD_CONFIG_SWIFT"
+echo "Configuration: $BUILD_CONFIG_SPM"
 
 # Check if .env exists
 if [[ ! -f ".env" ]]; then
@@ -46,7 +50,7 @@ echo "Building Swift package..."
 
 # Build with Swift Package Manager
 swift build \
-    --configuration "$BUILD_CONFIG_SWIFT" \
+    --configuration "$BUILD_CONFIG_SPM" \
     --product DiagnosticKit \
     --build-path "$BUILD_DIR/.build"
 
@@ -56,7 +60,7 @@ if [[ $? -ne 0 ]]; then
 fi
 
 # Get built binary path
-if [[ "$BUILD_CONFIG_SWIFT" == "DEBUG" ]]; then
+if [[ "$BUILD_CONFIG_SPM" == "debug" ]]; then
     BINARY_PATH="$BUILD_DIR/.build/debug/DiagnosticKit"
 else
     BINARY_PATH="$BUILD_DIR/.build/release/DiagnosticKit"
