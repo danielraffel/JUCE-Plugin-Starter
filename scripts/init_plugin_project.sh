@@ -561,9 +561,16 @@ GITHUB_USER=$GITHUB_USER
 GITHUB_REPO=$PROJECT_FOLDER
 
 # DiagnosticKit Settings
+# DiagnosticKit lets your users submit diagnostic reports (system info, crash logs,
+# plugin status) as GitHub issues. To finish setup, run: ./scripts/setup_diagnostic_repo.sh
 ENABLE_DIAGNOSTICS=$ENABLE_DIAGNOSTICS
+# The private GitHub repo where diagnostic reports are filed as issues
 DIAGNOSTIC_GITHUB_REPO=${DIAGNOSTIC_GITHUB_REPO:-}
+# A fine-grained GitHub PAT with Issues:Write permission scoped to the repo above.
+# Create one at: https://github.com/settings/tokens?type=beta
+# Select "Only select repositories" → pick the diagnostics repo → Permissions → Issues: Read and Write
 DIAGNOSTIC_GITHUB_PAT=
+# Email shown in the diagnostic app's support link (optional)
 DIAGNOSTIC_SUPPORT_EMAIL=${APPLE_ID:-}
 
 # Build Configuration
