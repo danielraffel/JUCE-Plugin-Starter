@@ -1,0 +1,17 @@
+# Upstream PR: https://github.com/VitalAudio/visage/pull/83
+# Remove this patch file when PR #83 is merged
+#
+# Caps MTKView to 60 FPS instead of 120 to reduce CPU/GPU usage,
+# especially on ProMotion displays.
+diff --git a/visage_windowing/macos/windowing_macos.mm b/visage_windowing/macos/windowing_macos.mm
+--- a/visage_windowing/macos/windowing_macos.mm
++++ b/visage_windowing/macos/windowing_macos.mm
+@@ -357,7 +357,7 @@
+   self.enableSetNeedsDisplay = NO;
+   self.framebufferOnly = YES;
+   self.layerContentsPlacement = NSViewLayerContentsPlacementTopLeft;
+-  self.preferredFramesPerSecond = 120;
++  self.preferredFramesPerSecond = 60;
+
+   [self registerForDraggedTypes:@[NSPasteboardTypeFileURL]];
+   self.drag_source = [[VisageDraggingSource alloc] init];

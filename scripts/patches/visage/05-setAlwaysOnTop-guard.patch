@@ -1,0 +1,25 @@
+# Upstream PR: https://github.com/VitalAudio/visage/pull/80
+# Remove this patch file when PR #80 is merged
+#
+# Guards setAlwaysOnTop() so it only promotes the window level when
+# explicitly requested (always_on_top_ == true). Without this, calling
+# setAlwaysOnTop(false) demotes a DAW's floating plugin panel to
+# NSNormalWindowLevel, hiding it behind the DAW window.
+diff --git a/visage_app/application_window.cpp b/visage_app/application_window.cpp
+--- a/visage_app/application_window.cpp
++++ b/visage_app/application_window.cpp
+@@ -118,7 +118,13 @@
+   void ApplicationWindow::showWindow(bool maximized) {
+     if (!title_.empty())
+       window_->setWindowTitle(title_);
+-    window_->setAlwaysOnTop(always_on_top_);
++
++    // Only promote window level when explicitly requested.
++    // When always_on_top_ is false, leave the window at whatever level the host
++    // (e.g., DAW plugin host) already set — calling setAlwaysOnTop(false) would
++    // demote a host's floating panel to NSNormalWindowLevel, hiding it behind the DAW.
++    if (always_on_top_)
++      window_->setAlwaysOnTop(true);
+
+     addToWindow(window_.get());
+     if (maximized)

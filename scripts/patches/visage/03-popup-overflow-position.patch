@@ -1,0 +1,20 @@
+# Upstream PR: https://github.com/VitalAudio/visage/pull/79
+# Remove this patch file when PR #79 is merged
+#
+# Fixes popup menus appearing at wrong screen position when they overflow
+# below the window. Positions the menu above the source frame instead of
+# using a broken coordinate calculation.
+diff --git a/visage_ui/popup_menu.cpp b/visage_ui/popup_menu.cpp
+--- a/visage_ui/popup_menu.cpp
++++ b/visage_ui/popup_menu.cpp
+@@ -269,8 +269,8 @@
+     int bottom = y + h;
+     int right = x + w;
+     if (bottom > height()) {
+-      int top = point.y == PopupMenu::kNotSet ? window_bounds.y() : point.y;
+-      y = std::max(0, top - h);
++      // Menu doesn't fit below - show it above the source frame, aligned with it
++      y = std::max(0, static_cast<int>(window_bounds.y()) - h);
+     }
+     if (right > width())
+       x = std::max(0, x - w);

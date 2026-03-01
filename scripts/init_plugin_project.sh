@@ -450,6 +450,24 @@ else
     echo -e "${CYAN}DiagnosticKit will not be included. You can add it later if needed.${NC}"
 fi
 
+# Visage GPU UI opt-in (optional)
+echo ""
+echo -e "${YELLOW}Optional: Visage GPU UI${NC}"
+echo "Visage is a Metal-based GPU-accelerated UI framework for audio plugins."
+echo -e "${CYAN}Features:${NC}"
+echo "  • GPU-rendered UI with Metal"
+echo "  • Rich widget set (TextEditor, PopupMenu, Sliders, etc.)"
+echo "  • Customizable themes and styles"
+echo ""
+ENABLE_VISAGE="false"
+response=$(get_yes_no "Enable Visage UI?" "n")
+if [ "$response" = "y" ]; then
+    ENABLE_VISAGE="true"
+    echo -e "${GREEN}✓ Visage UI will be set up${NC}"
+else
+    echo -e "${CYAN}Visage will not be included. You can add it later with: ./scripts/setup_visage.sh${NC}"
+fi
+
 # GitHub repository (optional)
 echo ""
 echo -e "${YELLOW}Optional: GitHub Integration${NC}"
@@ -520,6 +538,21 @@ find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.cmake" -o -name "*.tx
     -e "s/PLUGIN_MANUFACTURER_CODE_PLACEHOLDER/$PLUGIN_MANUFACTURER_CODE/g" \
     {} \; 2>/dev/null || true
 
+# --- Set Up Visage (if enabled) ---
+if [ "$ENABLE_VISAGE" = "true" ]; then
+    echo "Setting up Visage GPU UI..."
+    # Replace standard editor with Visage-aware editor
+    cp templates/visage/PluginEditor.h Source/PluginEditor.h
+    cp templates/visage/PluginEditor.cpp Source/PluginEditor.cpp
+    # Apply placeholder replacements to the copied Visage editor files
+    sed -i '' \
+        -e "s/CLASS_NAME_PLACEHOLDER/$CLASS_NAME/g" \
+        Source/PluginEditor.h Source/PluginEditor.cpp
+    # Clone and patch Visage
+    ./scripts/setup_visage.sh
+    echo -e "${GREEN}✓ Visage integration ready${NC}"
+fi
+
 # --- Create Project-Specific .env File ---
 echo "Creating configuration file..."
 cat > .env << EOF
@@ -555,6 +588,9 @@ GITHUB_REPO=$PROJECT_FOLDER
 
 # DiagnosticKit Settings
 ENABLE_DIAGNOSTICS=$ENABLE_DIAGNOSTICS
+
+# Visage Settings
+USE_VISAGE_UI=$( [ "$ENABLE_VISAGE" = "true" ] && echo "TRUE" || echo "FALSE" )
 
 # Build Configuration
 CMAKE_BUILD_TYPE=Debug
@@ -674,6 +710,11 @@ if [ "$ENABLE_DIAGNOSTICS" = "true" ]; then
     NEXT_STEP=6
 else
     NEXT_STEP=5
+fi
+
+if [ "$ENABLE_VISAGE" = "true" ]; then
+    echo -e "${YELLOW}$NEXT_STEP. Visage UI is ready — edit Source/PluginEditor.cpp to build your UI${NC}"
+    NEXT_STEP=$((NEXT_STEP + 1))
 fi
 
 if [ -n "$GITHUB_USER" ]; then

@@ -1,0 +1,19 @@
+# Related to upstream windowing stability fixes
+# Remove this patch file when upstream adds the null check
+#
+# Adds a null check for self.visage_window in drawInMTKView: to prevent
+# crashes during window teardown when the Metal view tries to render
+# after the Visage window has been destroyed. Also pauses the display
+# link in the destructor before cleanup.
+diff --git a/visage_windowing/macos/windowing_macos.mm b/visage_windowing/macos/windowing_macos.mm
+--- a/visage_windowing/macos/windowing_macos.mm
++++ b/visage_windowing/macos/windowing_macos.mm
+@@ -340,7 +340,7 @@
+ }
+
+ - (void)drawInMTKView:(MTKView*)view {
+-  if (!view.currentDrawable || !view.currentRenderPassDescriptor)
++  if (!self.visage_window || !view.currentDrawable || !view.currentRenderPassDescriptor)
+     return;
+
+   view.layer.contentsScale = self.visage_window->dpiScale();

@@ -61,6 +61,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
+# Optional: Visage GPU UI Framework
+set(USE_VISAGE_UI $ENV{USE_VISAGE_UI})
+if(USE_VISAGE_UI)
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/visage/CMakeLists.txt")
+        message(FATAL_ERROR "Visage not found at external/visage/. Run: ./scripts/setup_visage.sh")
+    endif()
+
+    set(VISAGE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(VISAGE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    add_subdirectory(external/visage)
+endif()
+
 # Get AU version from environment or calculate it
 set(AU_VERSION_INT $ENV{AU_VERSION_INT})
 if(NOT AU_VERSION_INT)
@@ -110,6 +122,10 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
     JUCE_DISPLAY_SPLASH_SCREEN=0
 )
 
+if(USE_VISAGE_UI)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_VISAGE_UI=1)
+endif()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     juce::juce_audio_basics
     juce::juce_audio_devices
@@ -125,6 +141,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     juce::juce_gui_extra
     ${PROJECT_NAME}_Resources
 )
+
+if(USE_VISAGE_UI)
+    target_link_libraries(${PROJECT_NAME} PRIVATE visage)
+endif()
 
 # ==============================================================================
 # Standard macOS Paths (no permission prompts)

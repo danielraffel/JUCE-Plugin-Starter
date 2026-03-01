@@ -1,0 +1,60 @@
+# Upstream PR: https://github.com/VitalAudio/visage/pull/81
+# Remove this patch file when PR #81 is merged
+#
+# Intercepts Cmd+A/C/V/X/Z shortcuts when a Visage TextEditor has focus,
+# preventing the DAW's Edit menu from stealing them. Also propagates
+# unhandled Cmd-key events up the responder chain so Cmd+Q etc. still work.
+diff --git a/visage_windowing/macos/windowing_macos.mm b/visage_windowing/macos/windowing_macos.mm
+--- a/visage_windowing/macos/windowing_macos.mm
++++ b/visage_windowing/macos/windowing_macos.mm
+@@ -383,8 +383,48 @@
+     [self interpretKeyEvents:[NSArray arrayWithObject:event]];
+
+   visage::KeyCode key_code = visage::translateKeyCode([event keyCode]);
+-  if (!self.visage_window->handleKeyDown(key_code, modifiers, [event isARepeat]))
+-    [super keyDown:event];
++  if (!self.visage_window->handleKeyDown(key_code, modifiers, [event isARepeat])) {
++    if (command) {
++      // Propagate unhandled command-key shortcuts up the responder chain
++      // so app-level handlers (JUCE menus, Cmd+Q quit) can process them.
++      // [super keyDown:] does NOT propagate on macOS — it silently consumes events.
++      [[self nextResponder] keyDown:event];
++    } else {
++      [super keyDown:event];
++    }
++  }
++}
++
++// Override performKeyEquivalent: to intercept Cmd+key shortcuts (A/C/V/X/Z)
++// before the DAW's menu system steals them. Without this, text editing shortcuts
++// in plugin TextEditors never reach keyDown: because the host's Edit menu
++// handles performKeyEquivalent: first.
++- (BOOL)performKeyEquivalent:(NSEvent*)event {
++  if (!self.visage_window)
++    return [super performKeyEquivalent:event];
++
++  // Only intercept Cmd+key (no Ctrl, Option, etc.)
++  NSUInteger flags = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
++  bool justCmd = (flags & NSEventModifierFlagCommand) &&
++                 !(flags & NSEventModifierFlagControl) &&
++                 !(flags & NSEventModifierFlagOption);
++
++  if (justCmd && self.visage_window->hasActiveTextEntry()) {
++    NSString* chars = [event charactersIgnoringModifiers];
++    if ([chars length] == 1) {
++      unichar ch = [[chars lowercaseString] characterAtIndex:0];
++      // Intercept standard text editing shortcuts
++      if (ch == 'a' || ch == 'c' || ch == 'v' || ch == 'x' || ch == 'z') {
++        // Route through normal key handling which will reach the TextEditor
++        visage::KeyCode key_code = visage::translateKeyCode([event keyCode]);
++        int modifiers = [self keyboardModifiers:event];
++        self.visage_window->handleKeyDown(key_code, modifiers, [event isARepeat]);
++        return YES;  // Prevent DAW from handling this shortcut
++      }
++    }
++  }
++
++  return [super performKeyEquivalent:event];
+ }
+
+ - (void)keyUp:(NSEvent*)event {

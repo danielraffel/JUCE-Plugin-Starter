@@ -1,0 +1,24 @@
+# Upstream PR: https://github.com/VitalAudio/visage/pull/84
+# Remove this patch file when PR #84 is merged
+#
+# Replaces VISAGE_ASSERT(count_ == 0) in InstanceCounter destructor with
+# a log message. DAW plugins may not have cleaned up all Frames by the time
+# static destructors run (e.g., when the DAW calls exit()), so asserting
+# is too aggressive.
+diff --git a/visage_utils/defines.h b/visage_utils/defines.h
+--- a/visage_utils/defines.h
++++ b/visage_utils/defines.h
+@@ -63,7 +63,12 @@
+       return instance;
+     }
+
+-    ~InstanceCounter() { VISAGE_ASSERT(count_ == 0); }
++    ~InstanceCounter() {
++      // Don't crash during static destruction (e.g., when a DAW calls exit()).
++      // Plugin editors may not have been cleaned up yet, so count_ != 0 is expected.
++      if (count_ != 0)
++        VISAGE_LOG("InstanceCounter: %d instance(s) not released during shutdown (expected during DAW exit)", count_);
++    }
+
+     void add() { count_++; }
+     void remove() { count_--; }

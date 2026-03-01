@@ -1,0 +1,31 @@
+# Upstream PR: https://github.com/VitalAudio/visage/pull/82
+# Remove this patch file when PR #82 is merged
+#
+# In single-line TextEditors, Up arrow moves caret to start and Down arrow
+# moves caret to end (with Shift for selection), instead of doing nothing
+# or behaving like a multi-line editor.
+diff --git a/visage_widgets/text_editor.cpp b/visage_widgets/text_editor.cpp
+--- a/visage_widgets/text_editor.cpp
++++ b/visage_widgets/text_editor.cpp
+@@ -538,6 +538,10 @@
+       return focusNextTextReceiver();
+     }
+     if (code == KeyCode::Up) {
++      if (!text_.multiLine()) {
++        // Single-line: Up moves to start (with shift for selection)
++        return moveCaretToTop(shift);
++      }
+       if (modifier && shift)
+         return false;
+       if (modifier)
+@@ -545,6 +549,10 @@
+       return moveCaretUp(shift);
+     }
+     if (code == KeyCode::Down) {
++      if (!text_.multiLine()) {
++        // Single-line: Down moves to end (with shift for selection)
++        return moveCaretToEnd(shift);
++      }
+       if (modifier && shift)
+         return false;
+       if (modifier)
