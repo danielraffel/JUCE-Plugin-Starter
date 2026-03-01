@@ -347,6 +347,7 @@ done
 CLASS_NAME=$(echo "$PLUGIN_NAME" | sed 's/[^a-zA-Z0-9]//g')
 PROJECT_NAME=$CLASS_NAME  # Same as CLASS_NAME (preserves case)
 PROJECT_FOLDER=$(echo "$PLUGIN_NAME" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
+GITHUB_REPO_NAME=$(echo "$PLUGIN_NAME" | sed 's/[^a-zA-Z0-9]/-/g')  # Preserves case for GitHub repo
 
 # Create C++ namespace from developer name (safe for C++)
 if [ -n "$DEVELOPER_NAME" ]; then
@@ -584,7 +585,7 @@ APP_SPECIFIC_PASSWORD=$APP_SPECIFIC_PASSWORD
 
 # GitHub Settings
 GITHUB_USER=$GITHUB_USER
-GITHUB_REPO=$PROJECT_FOLDER
+GITHUB_REPO=$GITHUB_REPO_NAME
 
 # DiagnosticKit Settings
 ENABLE_DIAGNOSTICS=$ENABLE_DIAGNOSTICS
@@ -677,8 +678,8 @@ if [ -n "$GITHUB_USER" ]; then
             fi
 
             echo -e "${CYAN}🌐 Creating $REPO_VISIBILITY GitHub repo...${NC}"
-            gh repo create "$PROJECT_FOLDER" $VISIBILITY_FLAG --description "$PLUGIN_NAME - Audio Plugin built with JUCE"
-            git remote add origin "https://github.com/$GITHUB_USER/$PROJECT_FOLDER.git"
+            gh repo create "$GITHUB_REPO_NAME" $VISIBILITY_FLAG --description "$PLUGIN_NAME - Audio Plugin built with JUCE"
+            git remote add origin "https://github.com/$GITHUB_USER/$GITHUB_REPO_NAME.git"
             git branch -M main
             git push -u origin main
             echo -e "${GREEN}✓ GitHub $REPO_VISIBILITY repository created and pushed${NC}"
@@ -695,7 +696,7 @@ echo -e "${CYAN}Plugin Name: $PLUGIN_NAME${NC}"
 echo -e "${CYAN}Project Folder: $PROJECT_FOLDER${NC}"
 echo -e "${CYAN}Bundle ID: $PROJECT_BUNDLE_ID${NC}"
 if [ -n "$GITHUB_USER" ]; then
-    echo -e "${CYAN}GitHub: https://github.com/$GITHUB_USER/$PROJECT_FOLDER${NC}"
+    echo -e "${CYAN}GitHub: https://github.com/$GITHUB_USER/$GITHUB_REPO_NAME${NC}"
 fi
 
 echo ""
