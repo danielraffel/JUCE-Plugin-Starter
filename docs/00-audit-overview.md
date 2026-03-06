@@ -32,5 +32,5 @@ This document tracks the feature gap analysis between JUCE-Plugin-Starter (+ juc
 - [x] Branch strategy
 - [ ] Phase 1: macOS/iOS enhancements
 - [ ] Phase 2: Windows support
-- [ ] Phase 3: Android investigation
-- [ ] Phase 4: Linux support
+- [ ] Phase 3: Linux support
+- [ ] Phase 4: Android investigation (research only)

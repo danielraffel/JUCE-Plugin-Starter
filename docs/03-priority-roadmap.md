@@ -58,6 +58,59 @@ Before executing, we need to decide between two approaches:
 
 **Recommendation:** Option C (Hybrid) seems strongest. Our developer experience and architecture are significantly ahead. The reference template's main advantages are cross-platform CI/CD and a few plugin formats (CLAP, AUv3) that we can add independently.
 
+**Decision:** Option C confirmed.
+
+---
+
+## Core Principle: Local-First Development
+
+Everything must work locally without cloud services. CI/CD (GitHub Actions) is opt-in for developers who want automated cross-platform builds, but the primary workflow is:
+
+1. Clone the repo (or run init script)
+2. Run a single dependency script for your platform
+3. Build and develop locally
+
+This mirrors our current macOS experience:
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/scripts/dependencies.sh)
+git clone https://github.com/danielraffel/JUCE-Plugin-Starter.git
+cd JUCE-Plugin-Starter
+./scripts/init_plugin_project.sh
+```
+
+### Cross-Platform Dependency Strategy
+
+The dependency script must detect the platform and install the right prerequisites automatically. Approach:
+
+**Single entry point, platform-aware routing:**
+```bash
+# Works on any platform - detects OS and installs the right things
+bash <(curl -fsSL .../scripts/dependencies.sh)
+```
+
+The script detects the OS (`uname` on macOS/Linux, or runs as PowerShell on Windows) and routes to platform-specific setup:
+
+| Platform | Package Manager | Compiler | Build Tool | Plugin Validator |
+|----------|----------------|----------|------------|-----------------|
+| macOS | Homebrew | Xcode CLT (Clang) | CMake + Xcode | PluginVal |
+| Windows | winget or Chocolatey | MSVC (Visual Studio Build Tools) | CMake + Ninja | PluginVal |
+| Linux | apt (Ubuntu/Debian) | Clang | CMake + Ninja | PluginVal |
+
+**Implementation options (decide during Phase 2):**
+- Single `dependencies.sh` with platform detection (simplest for users, one URL)
+- Platform-specific scripts called by a dispatcher (easier to maintain)
+- The juce-dev plugin auto-detects platform and runs the right script
+
+**Key requirement:** A non-technical user on any platform can paste one command and get everything installed. The plugin can also detect missing deps and offer to install them.
+
+### CI/CD is Opt-In
+
+GitHub Actions CI is available for developers who want it, but never required:
+- Local builds work identically with or without CI configured
+- `/juce-dev:create` can optionally add `.github/workflows/build.yml`
+- CI extends reach to platforms you don't develop on locally
+- CI can auto-build PRs and attach cross-platform installers
+
 ---
 
 ## Phase 1: macOS/iOS Enhancements (No Windows Required)
@@ -156,9 +209,42 @@ Before executing, we need to decide between two approaches:
 
 ---
 
-## Phase 3: Android Investigation
+## Phase 3: Linux Support
 
-### 3.1 JUCE Android Assessment
+### 3.1 Linux Build System
+**Priority:** Medium
+**Effort:** Medium
+**What:** CMake for Linux (Clang + Ninja), dependency installation
+**Where:** CMakeLists.txt, dependencies script (platform detection added in Phase 2)
+**CLI impact:** build.sh works on Linux
+**Plugin impact:** Platform-aware /juce-dev:create and /juce-dev:build
+**Dependencies (Linux/Ubuntu/Debian):** libasound2-dev, libx11-dev, libxinerama-dev, libxext-dev, libfreetype6-dev, libwebkit2gtk-4.1-dev, libglu1-mesa-dev, clang, ninja-build, cmake
+
+### 3.2 Linux Packaging
+**Priority:** Medium
+**Effort:** Small
+**What:** .deb/.rpm or AppImage or tar.gz distribution
+**Where:** packaging scripts
+**Plugin impact:** Update distribution workflow
+
+### 3.3 Visage Linux Bridge
+**Priority:** Medium
+**Effort:** Medium
+**What:** JuceVisageBridge for X11 window embedding (Vulkan rendering via Visage)
+**Where:** Source/Visage/JuceVisageBridge_linux.cpp
+**Plugin impact:** Update juce-visage skill with Linux patterns
+
+### 3.4 Linux CI
+**Priority:** Medium
+**Effort:** Small (once Windows CI exists, just add to matrix)
+**What:** Add Linux to GitHub Actions matrix
+**Where:** .github/workflows/build.yml
+
+---
+
+## Phase 4: Android Investigation (Research Only)
+
+### 4.1 JUCE Android Assessment
 **Effort:** Research only
 **What:** Determine if JUCE supports Android with GPU frontends
 **Questions:**
@@ -167,42 +253,10 @@ Before executing, we need to decide between two approaches:
 - What's the Android audio plugin landscape? (no AU/VST3 on Android)
 - Is there a JUCE Android app template that makes sense?
 
-### 3.2 Visage Android Backend (if feasible)
+### 4.2 Visage Android Backend (if feasible)
 **Effort:** Very Large
 **What:** Would require new windowing (SurfaceView), JNI bridge, OpenGL ES/Vulkan
 **Decision:** Likely defer unless JUCE Android is mature enough
-
----
-
-## Phase 4: Linux Support
-
-### 4.1 Linux Build System
-**Priority:** Medium
-**Effort:** Medium
-**What:** CMake for Linux (Clang + Ninja), dependency installation
-**Where:** CMakeLists.txt, dependencies script
-**CLI impact:** build.sh works on Linux
-**Plugin impact:** Platform-aware /juce-dev:create and /juce-dev:build
-
-### 4.2 Linux Packaging
-**Priority:** Medium
-**Effort:** Small
-**What:** .deb/.rpm or AppImage or tar.gz distribution
-**Where:** packaging scripts
-**Plugin impact:** Update distribution workflow
-
-### 4.3 Visage Linux Bridge
-**Priority:** Medium
-**Effort:** Medium
-**What:** JuceVisageBridge for X11 window embedding
-**Where:** Source/Visage/JuceVisageBridge_linux.cpp
-**Plugin impact:** Update juce-visage skill with Linux patterns
-
-### 4.4 Linux CI
-**Priority:** Medium
-**Effort:** Small (once Windows CI exists)
-**What:** Add Linux to GitHub Actions matrix
-**Where:** .github/workflows/build.yml
 
 ---
 

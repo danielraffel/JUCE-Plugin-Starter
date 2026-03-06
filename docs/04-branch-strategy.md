@@ -36,13 +36,13 @@ feature/cross-platform-{phase}-{feature}
 | JUCE-Plugin-Starter | `feature/cross-platform-2-ci` | GitHub Actions CI/CD |
 | juce-dev | `feature/cross-platform-2-ci` | CI setup in /juce-dev:create |
 
-## Planned Branches (Phase 4: Linux)
+## Planned Branches (Phase 3: Linux)
 
 | Repo | Branch | Work |
 |------|--------|------|
-| JUCE-Plugin-Starter | `feature/cross-platform-4-linux` | Linux build system |
-| Visage | `feature/cross-platform-4-juce-bridge-linux` | Linux JUCE-Visage bridge |
-| juce-dev | `feature/cross-platform-4-linux` | Linux-aware commands |
+| JUCE-Plugin-Starter | `feature/cross-platform-3-linux` | Linux build system |
+| Visage | `feature/cross-platform-3-juce-bridge-linux` | Linux JUCE-Visage bridge |
+| juce-dev | `feature/cross-platform-3-linux` | Linux-aware commands |
 
 ## Merge Strategy
 
