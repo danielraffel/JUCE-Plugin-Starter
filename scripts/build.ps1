@@ -60,7 +60,7 @@ $BuildConfig = "Release"
 foreach ($arg in $Args) {
     switch ($arg) {
         { $_ -in "all","vst3","clap","standalone" } { $Targets += $_ }
-        { $_ -in "local","test" } { $Action = $_ }
+        { $_ -in "local","test","sign","publish","unsigned" } { $Action = $_ }
         "debug" { $BuildConfig = "Debug" }
         "release" { $BuildConfig = "Release" }
         default { Write-Warn "Unknown argument: $arg" }
@@ -149,6 +149,48 @@ if ($Action -eq "local" -and "Standalone" -in $BuildFormats) {
     if (Test-Path $standaloneExe) {
         Write-Success "Launching standalone..."
         Start-Process $standaloneExe
+    }
+}
+
+# Create installer if publish or unsigned action
+if ($Action -in "publish","unsigned") {
+    $artifactsDir = Join-Path $ProjectRoot "installer-artifacts"
+    if (Test-Path $artifactsDir) { Remove-Item -Recurse -Force $artifactsDir }
+    New-Item -ItemType Directory -Path $artifactsDir | Out-Null
+
+    # Copy built plugins to artifacts
+    foreach ($format in $BuildFormats) {
+        $srcDir = Join-Path $BuildDir "${ProjectName}_artefacts\$BuildConfig\$format"
+        if (Test-Path $srcDir) {
+            $destDir = Join-Path $artifactsDir $format
+            Copy-Item -Recurse $srcDir $destDir
+            Write-Success "Copied $format artifacts"
+        }
+    }
+
+    # Check for Inno Setup
+    $iscc = Get-Command iscc -ErrorAction SilentlyContinue
+    if (-not $iscc) {
+        $innoPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+        if (Test-Path $innoPath) { $iscc = $innoPath }
+    }
+
+    if ($iscc) {
+        $issTemplate = Join-Path $ProjectRoot "templates\installer.iss"
+        if (Test-Path $issTemplate) {
+            Write-Success "Creating installer with Inno Setup..."
+            & $iscc /DAppName="$ProjectName" /DAppVersion="$Version" `
+                /DAppPublisher="$CompanyName" /DAppBundleId="$BundleId" `
+                /O"$([Environment]::GetFolderPath('Desktop'))" $issTemplate
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "Installer created on Desktop"
+            } else {
+                Write-Err "Inno Setup failed"
+            }
+        }
+    } else {
+        Write-Warn "Inno Setup not found. Install from: https://jrsoftware.org/issetup.exe"
+        Write-Host "Artifacts are available at: $artifactsDir"
     }
 }
 
