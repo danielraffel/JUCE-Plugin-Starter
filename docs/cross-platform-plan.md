@@ -25,8 +25,8 @@ Reference docs: [01-feature-comparison.md](01-feature-comparison.md), [02-visage
 | 2.2 | Windows code signing (Azure Trusted Signing). Inno Setup installer template. Windows distribution in build.ps1. | `feature/cross-platform-2-windows` | Starter | [x] | Inno Setup template, build.ps1 packaging, Azure signing vars |
 | 2.3 | JuceVisageBridge for Windows (Win32 HWND, DirectX via Visage). | `feature/cross-platform-2-juce-bridge-win` | Visage | [!] | Blocked: needs Windows dev environment with DirectX SDK + deep Visage context. Human intervention needed. |
 | 2.4 | GitHub Actions CI/CD: macOS + Windows matrix, sccache, pluginval, artifact upload. | `feature/cross-platform-2-ci` | Starter | [x] | sccache, Catch2 via ctest, PluginVal VST3, artifact upload |
-| 2.5 | Update juce-dev plugin: build command (Windows paths, MSVC detection), create command (Windows env checks, winget/choco deps), juce-starter skill (Windows build docs, .env vars), juce-visage skill (Windows bridge patterns). | `feature/cross-platform-2-windows` | juce-dev | [ ] | Do NOT delegate - must align with 2.1 |
-| 2.6 | Cross-platform dependencies.sh: detect OS, install right prerequisites (brew/winget/apt). | `feature/cross-platform-2-windows` | Starter | [ ] | |
+| 2.5 | Update juce-dev plugin: build command (Windows paths, MSVC detection), create command (Windows env checks, winget/choco deps), juce-starter skill (Windows build docs, .env vars), juce-visage skill (Windows bridge patterns). | `feature/cross-platform-2-windows` | juce-dev | [x] | build: platform detection + build.ps1; create: winget deps; skill: Windows build docs; visage: noted as blocked |
+| 2.6 | Cross-platform dependencies.sh: detect OS, install right prerequisites (brew/winget/apt). | `feature/cross-platform-2-windows` | Starter | [x] | Platform detection, winget for Windows, brew for macOS, Linux placeholder |
 | 2.7 | Update JUCE-Plugin-Starter README.md to document Windows support, CI/CD, and all Phase 2 features. | `feature/cross-platform-2-docs` | Starter | [ ] | |
 | 2.8 | Update juce-dev plugin README to document Windows capabilities. | `feature/cross-platform-2-docs` | juce-dev | [ ] | |
 
@@ -64,6 +64,7 @@ Record what was actually built/changed for each completed item. This is filled i
 | 2.1 | Windows CMake: MSVC debug info, platform-conditional FORMATS (no AU/AUv3 on Windows), conditional post-build and VST3 helper. PowerShell build.ps1. Windows .env vars in .env.example (Azure Trusted Signing). | `CMakeLists.txt`, `scripts/build.ps1`, `.env.example` | b647919 |
 | 2.2 | Created Inno Setup installer template with VST3/CLAP/Standalone task selection. Updated build.ps1 with publish/unsigned actions, artifact copying, Inno Setup invocation. | `templates/installer.iss`, `scripts/build.ps1` | fb8e015 |
 | 2.4 | GitHub Actions CI/CD workflow with macOS + Windows matrix. sccache for build caching, Catch2 via ctest, PluginVal for VST3 validation, artifact upload. | `.github/workflows/build.yml` | 168c0f0 |
+| 2.5 | Updated juce-dev build command (platform detection, build.ps1), create command (winget deps), juce-starter skill (Windows build docs, cross-platform CMake), juce-visage skill (Windows note). Also fixed CMakeLists.txt: FETCHCONTENT path escaping + conditional Resources link. | `CMakeLists.txt`, juce-dev `commands/build.md`, juce-dev `commands/create.md`, juce-dev `skills/juce-starter/SKILL.md`, juce-dev `skills/juce-visage/SKILL.md` | 2195d7c (Starter), 82dfa45 (juce-dev) |
 
 ## Human Testing Checklist
 
