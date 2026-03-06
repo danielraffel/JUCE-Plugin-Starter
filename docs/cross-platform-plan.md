@@ -21,7 +21,7 @@ Reference docs: [01-feature-comparison.md](01-feature-comparison.md), [02-visage
 
 | # | Task | Branch | Repos | Status | Notes |
 |---|------|--------|-------|--------|-------|
-| 2.1 | Windows CMake config (MSVC + Ninja). Platform-aware build scripts for macOS + Windows. Windows .env variables. | `feature/cross-platform-2-windows` | Starter | [ ] | |
+| 2.1 | Windows CMake config (MSVC + Ninja). Platform-aware build scripts for macOS + Windows. Windows .env variables. | `feature/cross-platform-2-windows` | Starter | [x] | CMakeLists.txt platform-conditional, build.ps1 for Windows, .env.example updated |
 | 2.2 | Windows code signing (Azure Trusted Signing). Inno Setup installer template. Windows distribution in build.sh. | `feature/cross-platform-2-windows` | Starter | [ ] | Codex: Inno Setup template |
 | 2.3 | JuceVisageBridge for Windows (Win32 HWND, DirectX via Visage). | `feature/cross-platform-2-juce-bridge-win` | Visage | [ ] | Do NOT delegate - deep Visage context needed |
 | 2.4 | GitHub Actions CI/CD: macOS + Windows matrix, sccache, pluginval, artifact upload. | `feature/cross-platform-2-ci` | Starter | [ ] | Codex: draft workflow YAML |
@@ -60,7 +60,8 @@ Record what was actually built/changed for each completed item. This is filled i
 | 1.3 | Integrated Catch2 v3 via FetchContent. Created tests/ with Catch2Main.cpp, PluginBasics.cpp, test_helpers.h. Added Tests CMake target. Updated build.sh to build and run Catch2 tests alongside PluginVal. Updated juce-dev build command and juce-starter skill with testing docs. | `CMakeLists.txt`, `tests/Catch2Main.cpp`, `tests/PluginBasics.cpp`, `tests/helpers/test_helpers.h`, `scripts/build.sh`, juce-dev `commands/build.md`, juce-dev `skills/juce-starter/SKILL.md` | a6907c3 (Starter), c648485 (juce-dev) |
 | 1.4 | Added .clang-format with JUCE Allman-style conventions, C++17, ObjC section. | `.clang-format` | 2ec9423 |
 | 1.5 | Updated README.md with CLAP, AUv3, Catch2 testing, .clang-format sections. Updated build targets, install paths, dependencies, project structure, packaging table. | `README.md` | 8470597 |
-| 1.6 | Final juce-dev skill updates: added tests/ and .clang-format to project tree, updated build.sh format list in tree. | juce-dev `skills/juce-starter/SKILL.md` | (pending) |
+| 1.6 | Final juce-dev skill updates: added tests/ and .clang-format to project tree, updated build.sh format list in tree. | juce-dev `skills/juce-starter/SKILL.md` | 2179060 (Starter), 273752f (juce-dev) |
+| 2.1 | Windows CMake: MSVC debug info, platform-conditional FORMATS (no AU/AUv3 on Windows), conditional post-build and VST3 helper. PowerShell build.ps1. Windows .env vars in .env.example (Azure Trusted Signing). | `CMakeLists.txt`, `scripts/build.ps1`, `.env.example` | (pending) |
 
 ## Human Testing Checklist
 

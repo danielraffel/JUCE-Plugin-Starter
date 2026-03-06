@@ -1,7 +1,13 @@
 cmake_minimum_required(VERSION 3.15)
 
-# Set minimum macOS version before defining the project
-set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "Minimum macOS version")
+# Platform-specific configuration
+if(APPLE)
+    # Set minimum macOS version before defining the project
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "Minimum macOS version")
+elseif(MSVC)
+    # Embed debug info in object files instead of separate .pdb
+    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT Embedded CACHE STRING "" FORCE)
+endif()
 
 # Get environment variables
 set(PROJECT_NAME $ENV{PROJECT_NAME})
@@ -85,6 +91,14 @@ if(NOT AU_VERSION_INT)
     math(EXPR AU_VERSION_INT "(${VERSION_MAJOR} << 16) | (${VERSION_MINOR} << 8) | ${VERSION_PATCH}")
 endif()
 
+# Determine plugin formats based on platform
+# AU and AUv3 are macOS/iOS only
+if(APPLE)
+    set(PLUGIN_FORMATS AU AUv3 VST3 Standalone)
+else()
+    set(PLUGIN_FORMATS VST3 Standalone)
+endif()
+
 # Create the plugin
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME ${COMPANY_NAME}
@@ -98,7 +112,7 @@ juce_add_plugin(${PROJECT_NAME}
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE Juce
     PLUGIN_CODE Mrbl
-    FORMATS AU AUv3 VST3 Standalone
+    FORMATS ${PLUGIN_FORMATS}
     # Note: CLAP format is added separately via clap-juce-extensions below
     PRODUCT_NAME ${PROJECT_NAME}
     VERSION ${PLUGIN_VERSION}
@@ -170,29 +184,33 @@ clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
 # PluginProcessor.cpp for accessing these paths.
 # ==============================================================================
 
-add_custom_command(TARGET ${PROJECT_NAME}_AU
-    POST_BUILD
-    COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_AU>"
-    COMMENT "Updating Info.plist version for ${PROJECT_NAME}_AU"
-    VERBATIM
-)
+# Post-build scripts for macOS (Info.plist versioning)
+if(APPLE)
+    if(TARGET ${PROJECT_NAME}_AU)
+        add_custom_command(TARGET ${PROJECT_NAME}_AU
+            POST_BUILD
+            COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_AU>"
+            COMMENT "Updating Info.plist version for ${PROJECT_NAME}_AU"
+            VERBATIM
+        )
+    endif()
 
-# Add post-build for VST3 if it's being built
-if(TARGET ${PROJECT_NAME}_VST3)
-    add_custom_command(TARGET ${PROJECT_NAME}_VST3
-        POST_BUILD
-        COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_VST3>"
-        COMMENT "Updating Info.plist version for ${PROJECT_NAME}_VST3"
+    if(TARGET ${PROJECT_NAME}_VST3)
+        add_custom_command(TARGET ${PROJECT_NAME}_VST3
+            POST_BUILD
+            COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh" "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_VST3>"
+            COMMENT "Updating Info.plist version for ${PROJECT_NAME}_VST3"
         VERBATIM
     )
-endif()
+    endif()
+endif() # APPLE
 
 # Set global C++ standard for all targets
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Fix code signing and C++ standard for VST3 helper tool (must be after JUCE targets are created)
-if(TARGET juce_vst3_helper)
+# Fix code signing and C++ standard for VST3 helper tool (macOS Xcode only)
+if(APPLE AND TARGET juce_vst3_helper)
     set_target_properties(juce_vst3_helper PROPERTIES
         XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
         XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "-"
@@ -203,7 +221,6 @@ if(TARGET juce_vst3_helper)
         XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++"
     )
     target_compile_features(juce_vst3_helper PRIVATE cxx_std_17)
-    # Explicitly set compile options
     target_compile_options(juce_vst3_helper PRIVATE -std=c++17)
 endif()
 
