@@ -39,8 +39,8 @@ Reference docs: [01-feature-comparison.md](01-feature-comparison.md), [02-visage
 | 3.3 | Linux packaging (.deb or AppImage or tar.gz). Update build.sh for Linux distribution. | `feature/cross-platform-3-linux` | Starter | [x] | tar.gz packaging, platform-aware build.sh (Ninja on Linux, format filtering, plugin paths) |
 | 3.4 | Add Linux to GitHub Actions CI matrix (extend workflow from 2.4). | `feature/cross-platform-3-linux` | Starter | [x] | ubuntu-22.04, Clang, JUCE deps, Xvfb, PluginVal Linux validation |
 | 3.5 | Update juce-dev plugin: build command (Linux paths), create command (Linux env checks, apt deps), juce-starter skill (Linux build docs), juce-visage skill (Linux/X11 bridge patterns). | `feature/cross-platform-3-linux` | juce-dev | [x] | build: Linux platform, tar.gz; create: apt deps; skill: Clang+Ninja; visage: blocked note |
-| 3.6 | Update JUCE-Plugin-Starter README.md to document Linux support and all Phase 3 features. | `feature/cross-platform-3-docs` | Starter | [ ] | |
-| 3.7 | Update juce-dev plugin README to document Linux capabilities. | `feature/cross-platform-3-docs` | juce-dev | [ ] | |
+| 3.6 | Update JUCE-Plugin-Starter README.md to document Linux support and all Phase 3 features. | `feature/cross-platform-3-docs` | Starter | [x] | Platforms, prerequisites, build targets, install paths, build commands, CI/CD |
+| 3.7 | Update juce-dev plugin README to document Linux capabilities. | `feature/cross-platform-3-docs` | juce-dev | [x] | Description, prerequisites, platform note |
 
 ## Phase 4: Android Investigation (Deferred)
 
@@ -72,6 +72,8 @@ Record what was actually built/changed for each completed item. This is filled i
 | 3.3 | Platform-aware build.sh: detect macOS/Linux, use Ninja on Linux, filter AU/AUv3, cmake --build for Linux, Linux plugin paths (VST3→~/.vst3, CLAP→~/.clap), tar.gz packaging, PluginVal path handling. | `scripts/build.sh` | (on feature/cross-platform-3-linux) |
 | 3.4 | Added Linux to CI matrix: ubuntu-22.04 with Clang, JUCE apt deps, Xvfb for PluginVal, Linux VST3 validation step. | `.github/workflows/build.yml` | (on feature/cross-platform-3-linux) |
 | 3.5 | Updated juce-dev: build command (Linux platform, tar.gz), create command (apt deps), juce-starter skill (Clang+Ninja, Linux build docs), juce-visage skill (Linux Vulkan blocked note). | juce-dev `commands/build.md`, `commands/create.md`, `skills/juce-starter/SKILL.md`, `skills/juce-visage/SKILL.md` | 00c3b4e (juce-dev) |
+| 3.6 | Updated README with Linux: platforms, prerequisites, build targets, install paths, build commands, CI/CD, project structure. | `README.md` | (on feature/cross-platform-3-docs) |
+| 3.7 | Updated juce-dev README: Linux in description, prerequisites, platform note. | juce-dev `README.md` | 75dafe6 (juce-dev) |
 
 ## Human Testing Checklist
 
