@@ -7,6 +7,21 @@ if(APPLE)
 elseif(MSVC)
     # Embed debug info in object files instead of separate .pdb
     set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT Embedded CACHE STRING "" FORCE)
+elseif(UNIX AND NOT APPLE)
+    # Linux: prefer Clang for consistency with macOS/Windows (both use Clang/MSVC)
+    # This is a suggestion — the user can override via -DCMAKE_C_COMPILER / -DCMAKE_CXX_COMPILER
+    if(NOT DEFINED CMAKE_C_COMPILER)
+        find_program(CLANG_C_COMPILER clang)
+        if(CLANG_C_COMPILER)
+            set(CMAKE_C_COMPILER "${CLANG_C_COMPILER}" CACHE STRING "")
+        endif()
+    endif()
+    if(NOT DEFINED CMAKE_CXX_COMPILER)
+        find_program(CLANG_CXX_COMPILER clang++)
+        if(CLANG_CXX_COMPILER)
+            set(CMAKE_CXX_COMPILER "${CLANG_CXX_COMPILER}" CACHE STRING "")
+        endif()
+    endif()
 endif()
 
 # Get environment variables

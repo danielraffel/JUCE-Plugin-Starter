@@ -34,7 +34,7 @@ Reference docs: [01-feature-comparison.md](01-feature-comparison.md), [02-visage
 
 | # | Task | Branch | Repos | Status | Notes |
 |---|------|--------|-------|--------|-------|
-| 3.1 | Linux CMake config (Clang + Ninja). Linux dependency script (apt for Ubuntu/Debian). Update dependencies.sh platform detection from 2.6. | `feature/cross-platform-3-linux` | Starter | [ ] | Deps: libasound2-dev libx11-dev libxinerama-dev libxext-dev libfreetype6-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev clang ninja-build cmake |
+| 3.1 | Linux CMake config (Clang + Ninja). Linux dependency script (apt for Ubuntu/Debian). Update dependencies.sh platform detection from 2.6. | `feature/cross-platform-3-linux` | Starter | [x] | CMake auto-detects Clang on Linux, apt deps in dependencies.sh, macOS build verified |
 | 3.2 | JuceVisageBridge for Linux (X11 window embedding, Vulkan rendering via Visage). | `feature/cross-platform-3-juce-bridge-linux` | Visage | [ ] | Do NOT delegate - deep Visage context needed |
 | 3.3 | Linux packaging (.deb or AppImage or tar.gz). Update build.sh for Linux distribution. | `feature/cross-platform-3-linux` | Starter | [ ] | |
 | 3.4 | Add Linux to GitHub Actions CI matrix (extend workflow from 2.4). | `feature/cross-platform-3-linux` | Starter | [ ] | Small - just add to existing matrix |
@@ -68,6 +68,7 @@ Record what was actually built/changed for each completed item. This is filled i
 | 2.6 | Cross-platform dependencies.sh with platform detection (macOS/Windows/Linux), winget for Windows, brew for macOS, Linux placeholder. Added ninja to macOS deps. | `scripts/dependencies.sh` | (part of b647919) |
 | 2.7 | Updated README.md with Windows prerequisites, build commands (PowerShell), CI/CD section, cross-platform project structure. | `README.md` | (on feature/cross-platform-2-docs) |
 | 2.8 | Updated juce-dev README with cross-platform description, Windows prerequisites, platform notes on targets. | juce-dev `README.md` | 4facce0 (juce-dev) |
+| 3.1 | Linux CMake config: auto-detect Clang, UNIX-specific block. dependencies.sh: full apt package list for Ubuntu/Debian (ALSA, X11, FreeType, WebKit2GTK, GLU, etc). | `CMakeLists.txt`, `scripts/dependencies.sh` | (on feature/cross-platform-3-linux) |
 
 ## Human Testing Checklist
 

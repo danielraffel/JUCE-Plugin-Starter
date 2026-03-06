@@ -143,14 +143,57 @@ elif [[ "$PLATFORM" == "Windows" ]]; then
     echo '     Enter-VsDevShell -VsInstallPath "C:\Program Files\Microsoft Visual Studio\2022\Community" -SkipAutomaticLocation'
 
 # ==============================================================
-# Linux Setup (placeholder for Phase 3)
+# Linux Setup (apt for Ubuntu/Debian)
 # ==============================================================
 elif [[ "$PLATFORM" == "Linux" ]]; then
-    echo "Linux support coming soon."
-    echo "Required packages: cmake ninja-build clang git"
-    echo "  libasound2-dev libx11-dev libxinerama-dev libxext-dev"
-    echo "  libfreetype6-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev"
-    exit 1
+
+    # Check for apt
+    if ! command -v apt-get &>/dev/null; then
+        echo "ERROR: apt-get not found. This script supports Ubuntu/Debian-based distributions."
+        echo "For other distributions, install these packages manually:"
+        echo "  cmake ninja-build clang git"
+        echo "  ALSA dev, X11 dev, Xinerama dev, Xext dev, FreeType dev"
+        echo "  WebKit2GTK 4.1 dev, GLU dev, Xcursor dev, Xrandr dev"
+        exit 1
+    else
+        echo "OK: apt-get is available."
+    fi
+
+    # JUCE Linux dependencies
+    # Reference: https://forum.juce.com/t/list-of-juce-dependencies-under-linux/15121/44
+    LINUX_PACKAGES=(
+        # Build tools
+        cmake
+        ninja-build
+        clang
+        git
+        pkg-config
+        # JUCE audio
+        libasound2-dev
+        # JUCE GUI / X11
+        libx11-dev
+        libxinerama-dev
+        libxext-dev
+        libxrandr-dev
+        libxcursor-dev
+        # JUCE fonts
+        libfreetype6-dev
+        # JUCE web browser component (required even if disabled — header dependency)
+        libwebkit2gtk-4.1-dev
+        # JUCE OpenGL
+        libglu1-mesa-dev
+        # curl (JUCE networking, even if we disable it — some modules reference it)
+        libcurl4-openssl-dev
+    )
+
+    echo "Installing JUCE development dependencies via apt..."
+    echo "This may require sudo access."
+
+    sudo apt-get update
+    sudo apt-get install -y "${LINUX_PACKAGES[@]}"
+
+    echo ""
+    echo "Installed packages: ${LINUX_PACKAGES[*]}"
 fi
 
 # ==============================================================
