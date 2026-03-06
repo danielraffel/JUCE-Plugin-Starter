@@ -393,6 +393,25 @@ launch_standalone() {
 
 # Function to run tests with PluginVal
 run_tests() {
+    echo -e "${GREEN}Running tests...${NC}"
+
+    # --- Catch2 Unit Tests ---
+    local catch2_binary="$BUILD_DIR/Tests_artefacts/$CMAKE_BUILD_TYPE/Tests"
+    if [[ -f "$catch2_binary" ]]; then
+        echo -e "${GREEN}Running Catch2 unit tests...${NC}"
+        "$catch2_binary" --reporter console || {
+            echo -e "${RED}Catch2 tests failed!${NC}"
+            return 1
+        }
+        echo -e "${GREEN}Catch2 tests passed.${NC}"
+    else
+        echo -e "${YELLOW}Note: Catch2 test binary not found at $catch2_binary${NC}"
+        echo "Build the Tests target first: cmake --build build --target Tests"
+    fi
+
+    echo ""
+
+    # --- PluginVal Tests ---
     echo -e "${GREEN}Running PluginVal tests...${NC}"
 
     local has_pluginval=true
@@ -1515,6 +1534,14 @@ main() {
             fi
             ;;
         test)
+            # Build Catch2 test target if it exists in the Xcode project
+            if xcodebuild -project "$BUILD_DIR/${PROJECT_NAME}.xcodeproj" -list 2>/dev/null | grep -q "Tests"; then
+                echo -e "${GREEN}Building Catch2 test target...${NC}"
+                xcodebuild -project "$BUILD_DIR/${PROJECT_NAME}.xcodeproj" \
+                    -scheme "Tests" \
+                    -configuration "$CMAKE_BUILD_TYPE" \
+                    build 2>&1 | tail -5
+            fi
             run_tests
             ;;
         sign)

@@ -68,7 +68,15 @@ FetchContent_Declare(
     GIT_SHALLOW ON
 )
 
-FetchContent_MakeAvailable(JUCE clap-juce-extensions)
+# Fetch Catch2 v3 for unit testing
+FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.7.1
+    GIT_SHALLOW ON
+)
+
+FetchContent_MakeAvailable(JUCE clap-juce-extensions Catch2)
 
 # Get AU version from environment or calculate it
 set(AU_VERSION_INT $ENV{AU_VERSION_INT})
@@ -197,4 +205,57 @@ if(TARGET juce_vst3_helper)
     target_compile_features(juce_vst3_helper PRIVATE cxx_std_17)
     # Explicitly set compile options
     target_compile_options(juce_vst3_helper PRIVATE -std=c++17)
+endif()
+
+# ==============================================================================
+# Unit Tests (Catch2 v3)
+# ==============================================================================
+# Build tests with: cmake --build build --target Tests
+# Run tests with:   ./build/Tests_artefacts/Release/Tests
+# Or via build.sh:  ./scripts/build.sh all test
+
+file(GLOB_RECURSE TestFiles CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.h"
+)
+
+add_executable(Tests ${TestFiles})
+
+target_compile_features(Tests PRIVATE cxx_std_17)
+
+target_include_directories(Tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests
+)
+
+# Link against the plugin's shared code and Catch2
+target_link_libraries(Tests PRIVATE
+    ${PROJECT_NAME}
+    Catch2::Catch2
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_audio_formats
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_dsp
+    juce::juce_events
+    juce::juce_graphics
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+)
+
+target_compile_definitions(Tests PRIVATE
+    JUCE_VST3_CAN_REPLACE_VST2=0
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+    JUCE_DISPLAY_SPLASH_SCREEN=0
+)
+
+# Register tests with CTest
+include(CTest)
+include(Catch2::Catch2WithMain OPTIONAL)
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(Tests)
 endif()

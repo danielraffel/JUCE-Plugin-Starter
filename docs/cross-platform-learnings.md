@@ -29,6 +29,14 @@ Each entry:
 - **Insight**: JUCE's `COPY_PLUGIN_AFTER_BUILD` for AUv3 places the .appex in the build artefacts directory, not in a system plugin folder like AU/VST3. PluginVal cannot validate AUv3 directly. AUv3 is most useful for iOS (AUM, GarageBand, Cubasis) but also works on macOS.
 - **Files**: `CMakeLists.txt`, `scripts/build.sh`
 
+## Catch2 v3 Integration with JUCE
+
+- **Date**: 2026-03-06
+- **Problem**: Catch2 needs a custom main() when used with JUCE because tests that touch PluginProcessor or PluginEditor require JUCE's MessageManager to be initialized.
+- **Solution**: Custom `Catch2Main.cpp` that creates a `juce::ScopedJuceInitialiser_GUI` before running Catch2 sessions. This avoids the need for per-test initialization.
+- **Insight**: Link the Tests target against the plugin target itself (not just SharedCode) since we use `${PROJECT_NAME}` directly. Catch2 v3 uses `Catch2::Catch2` (without Main) when providing a custom main. The `catch_discover_tests` integration with CTest is optional but nice for IDE test runners.
+- **Files**: `CMakeLists.txt`, `tests/Catch2Main.cpp`
+
 ## Template .env sourcing with spaces
 
 - **Date**: 2026-03-06
