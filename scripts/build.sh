@@ -64,7 +64,8 @@ Usage: $0 [TARGET(s)] [ACTION] [OPTIONS]
 
 TARGETS (can specify multiple):
   all         Build all formats (default)
-  au          Build Audio Unit only
+  au          Build Audio Unit v2 (AU) only
+  auv3        Build Audio Unit v3 (AUv3) only
   vst3        Build VST3 only
   clap        Build CLAP only
   standalone  Build Standalone only
@@ -113,7 +114,7 @@ EOF
 # Process arguments - now supports multiple targets
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        all|au|vst3|clap|standalone)
+        all|au|auv3|vst3|clap|standalone)
             TARGETS+=("$1")
             shift
             ;;
@@ -148,7 +149,7 @@ BUILD_FORMATS=""
 for TARGET in "${TARGETS[@]}"; do
     case "$TARGET" in
         all)
-            BUILD_FORMATS="AU VST3 CLAP Standalone"
+            BUILD_FORMATS="AU AUv3 VST3 CLAP Standalone"
             ;;
         au)
             if [[ ! $BUILD_FORMATS =~ "AU" ]]; then
@@ -163,6 +164,11 @@ for TARGET in "${TARGETS[@]}"; do
         clap)
             if [[ ! $BUILD_FORMATS =~ "CLAP" ]]; then
                 BUILD_FORMATS="$BUILD_FORMATS CLAP"
+            fi
+            ;;
+        auv3)
+            if [[ ! $BUILD_FORMATS =~ "AUv3" ]]; then
+                BUILD_FORMATS="$BUILD_FORMATS AUv3"
             fi
             ;;
         standalone)
@@ -284,6 +290,9 @@ get_schemes_for_format() {
         CLAP)
             echo "$all_schemes" | grep "_CLAP$"
             ;;
+        AUv3)
+            echo "$all_schemes" | grep "_AUv3$"
+            ;;
         Standalone)
             echo "$all_schemes" | grep "_Standalone$"
             ;;
@@ -309,13 +318,17 @@ build_xcode() {
 
             # Extract plugin name from scheme (remove format suffix)
             local plugin_name="${scheme%_AU}"
+            plugin_name="${plugin_name%_AUv3}"
             plugin_name="${plugin_name%_VST3}"
             plugin_name="${plugin_name%_CLAP}"
             plugin_name="${plugin_name%_Standalone}"
 
             case "$format" in
                 AU)
-                    echo "Building Audio Unit: $scheme"
+                    echo "Building Audio Unit v2 (AU): $scheme"
+                    ;;
+                AUv3)
+                    echo "Building Audio Unit v3 (AUv3): $scheme"
                     ;;
                 VST3)
                     echo "Building VST3: $scheme"
@@ -430,6 +443,15 @@ run_tests() {
                     done < <(find "$clap_dir" -maxdepth 1 -name "*.clap" -print0 2>/dev/null)
                 fi
                 ;;
+            AUv3)
+                # AUv3 is an app extension (.appex) - PluginVal doesn't validate AUv3 directly
+                local auv3_path="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/AUv3/${PROJECT_NAME}.appex"
+                if [[ -d "$auv3_path" ]]; then
+                    echo "AUv3 built: $auv3_path"
+                    echo -e "${YELLOW}Note: PluginVal does not validate AUv3 format directly. Test in a DAW or AUM on iOS.${NC}"
+                    tested_something=true
+                fi
+                ;;
             Standalone)
                 # For standalone, launch the app for manual testing
                 launch_standalone
@@ -491,6 +513,19 @@ sign_plugins() {
                         "$plugin"
                 else
                     echo -e "${YELLOW}Warning: CLAP plugin not found at $plugin${NC}"
+                fi
+                ;;
+            AUv3)
+                # Sign the AUv3 app extension
+                local plugin="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/AUv3/${PROJECT_NAME}.appex"
+                if [[ -d "$plugin" ]]; then
+                    echo "Signing AUv3: $plugin"
+                    codesign --force --deep --strict --timestamp \
+                        --sign "$APP_CERT" \
+                        --options runtime \
+                        "$plugin"
+                else
+                    echo -e "${YELLOW}Warning: AUv3 plugin not found at $plugin${NC}"
                 fi
                 ;;
             Standalone)
@@ -582,6 +617,26 @@ notarize_plugins() {
                     rm "$zip_path"
                 else
                     echo -e "${YELLOW}Warning: CLAP plugin not found at $plugin${NC}"
+                fi
+                ;;
+            AUv3)
+                # Notarize the AUv3 app extension
+                local plugin="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/AUv3/${PROJECT_NAME}.appex"
+                if [[ -d "$plugin" ]]; then
+                    echo "Notarizing AUv3: ${PROJECT_NAME}..."
+                    local zip_path="/tmp/${PROJECT_NAME}_AUv3.zip"
+                    ditto -c -k --keepParent "$plugin" "$zip_path"
+
+                    xcrun notarytool submit "$zip_path" \
+                        --apple-id "$APPLE_ID" \
+                        --password "$NOTARY_PASSWORD" \
+                        --team-id "$TEAM_ID" \
+                        --wait
+
+                    xcrun stapler staple "$plugin"
+                    rm "$zip_path"
+                else
+                    echo -e "${YELLOW}Warning: AUv3 plugin not found at $plugin${NC}"
                 fi
                 ;;
         esac
@@ -791,6 +846,15 @@ create_installer() {
                 if [[ -d "$PLUGIN_PATH" ]]; then
                     mkdir -p "$PKG_ROOT/Library/Audio/Plug-Ins/CLAP"
                     cp -R "$PLUGIN_PATH" "$PKG_ROOT/Library/Audio/Plug-Ins/CLAP/"
+                fi
+                ;;
+            AUv3)
+                # AUv3 is an app extension - typically bundled inside the standalone app
+                # For standalone distribution, include it in the package
+                local APPEX_PATH="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/AUv3/${PROJECT_NAME}.appex"
+                if [[ -d "$APPEX_PATH" ]]; then
+                    mkdir -p "$PKG_ROOT/Library/Audio/Plug-Ins/Components"
+                    cp -R "$APPEX_PATH" "$PKG_ROOT/Library/Audio/Plug-Ins/Components/"
                 fi
                 ;;
         esac

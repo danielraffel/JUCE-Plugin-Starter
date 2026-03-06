@@ -21,6 +21,14 @@ Each entry:
 - **Insight**: CLAP is added as a separate step after the main JUCE plugin target, not via the FORMATS parameter. The extension creates its own CMake target. PluginVal does not support CLAP validation directly.
 - **Files**: `CMakeLists.txt`, `scripts/build.sh`
 
+## AUv3 Format in JUCE
+
+- **Date**: 2026-03-06
+- **Problem**: AUv3 (Audio Unit v3) is an app extension format (.appex), different from AU/AUv2 (.component). Users may confuse the two since JUCE uses "AU" for v2 internally.
+- **Solution**: Added AUv3 to FORMATS in CMakeLists.txt. Clarified naming in build.sh to say "Audio Unit v2 (AU)" and "Audio Unit v3 (AUv3)". AUv3 on macOS is built as a separate target but typically needs to be bundled inside a host app for distribution.
+- **Insight**: JUCE's `COPY_PLUGIN_AFTER_BUILD` for AUv3 places the .appex in the build artefacts directory, not in a system plugin folder like AU/VST3. PluginVal cannot validate AUv3 directly. AUv3 is most useful for iOS (AUM, GarageBand, Cubasis) but also works on macOS.
+- **Files**: `CMakeLists.txt`, `scripts/build.sh`
+
 ## Template .env sourcing with spaces
 
 - **Date**: 2026-03-06

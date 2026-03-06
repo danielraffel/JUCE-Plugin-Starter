@@ -90,7 +90,7 @@ juce_add_plugin(${PROJECT_NAME}
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE Juce
     PLUGIN_CODE Mrbl
-    FORMATS AU VST3 Standalone
+    FORMATS AU AUv3 VST3 Standalone
     # Note: CLAP format is added separately via clap-juce-extensions below
     PRODUCT_NAME ${PROJECT_NAME}
     VERSION ${PLUGIN_VERSION}
