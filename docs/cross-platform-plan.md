@@ -13,7 +13,7 @@ Reference docs: [01-feature-comparison.md](01-feature-comparison.md), [02-visage
 | 1.1 | Add CLAP format via clap-juce-extensions. Update CMakeLists.txt, build.sh, juce-dev build command, juce-starter skill. | `feature/cross-platform-1-clap` | Starter, juce-dev | [x] | CMake configures CLAP target successfully |
 | 1.2 | Add AUv3 format to CMakeLists.txt. Update /juce-dev:setup-ios to offer AUv3 alongside standalone iOS app. | `feature/cross-platform-1-auv3` | Starter, juce-dev | [x] | AUv3 target confirmed in CMake. AU vs AUv3 naming clarified in UI. |
 | 1.3 | Integrate Catch2 v3. Add tests/ with helpers and example tests. Update build.sh to run Catch2 + PluginVal. Update juce-dev build command. | `feature/cross-platform-1-catch2` | Starter, juce-dev | [x] | Tests target confirmed in CMake. Catch2 v3.7.1 via FetchContent. |
-| 1.4 | Add .clang-format with JUCE-style conventions to template root. | `feature/cross-platform-1-clang-format` | Starter | [ ] | Codex: good parallel candidate |
+| 1.4 | Add .clang-format with JUCE-style conventions to template root. | `feature/cross-platform-1-clang-format` | Starter | [x] | JUCE Allman-style, C++17, ObjC section |
 | 1.5 | Update JUCE-Plugin-Starter README.md to document all current + new Phase 1 features. | `feature/cross-platform-1-docs` | Starter | [ ] | |
 | 1.6 | Update juce-dev plugin: juce-starter skill (CLAP, AUv3, Catch2, .clang-format), build command (clap target, test runner), setup-ios command (AUv3 option). | `feature/cross-platform-1-docs` | juce-dev | [ ] | |
 
@@ -57,7 +57,8 @@ Record what was actually built/changed for each completed item. This is filled i
 |---|-------------|----------------|---------|
 | 1.1 | Added CLAP format via clap-juce-extensions FetchContent. Updated build.sh signing, notarization, packaging, uninstall for CLAP. Updated uninstall_template.sh. Updated juce-dev build command and juce-starter skill. | `CMakeLists.txt`, `scripts/build.sh`, `scripts/uninstall_template.sh`, juce-dev `commands/build.md`, juce-dev `skills/juce-starter/SKILL.md` | 1292eec (Starter), 05b8bf0 (juce-dev) |
 | 1.2 | Added AUv3 to FORMATS in CMakeLists.txt. Updated build.sh with AUv3 in all sections (args, schemes, build, test, sign, notarize, package). Clarified AU vs AUv3 naming in user-facing text. Updated setup-ios command with AUv3 note. Updated juce-dev build command and juce-starter skill. | `CMakeLists.txt`, `scripts/build.sh`, juce-dev `commands/build.md`, juce-dev `commands/setup-ios.md`, juce-dev `skills/juce-starter/SKILL.md` | 11646b4 (Starter), 22a3ac5 (juce-dev) |
-| 1.3 | Integrated Catch2 v3 via FetchContent. Created tests/ with Catch2Main.cpp, PluginBasics.cpp, test_helpers.h. Added Tests CMake target. Updated build.sh to build and run Catch2 tests alongside PluginVal. Updated juce-dev build command and juce-starter skill with testing docs. | `CMakeLists.txt`, `tests/Catch2Main.cpp`, `tests/PluginBasics.cpp`, `tests/helpers/test_helpers.h`, `scripts/build.sh`, juce-dev `commands/build.md`, juce-dev `skills/juce-starter/SKILL.md` | (pending) |
+| 1.3 | Integrated Catch2 v3 via FetchContent. Created tests/ with Catch2Main.cpp, PluginBasics.cpp, test_helpers.h. Added Tests CMake target. Updated build.sh to build and run Catch2 tests alongside PluginVal. Updated juce-dev build command and juce-starter skill with testing docs. | `CMakeLists.txt`, `tests/Catch2Main.cpp`, `tests/PluginBasics.cpp`, `tests/helpers/test_helpers.h`, `scripts/build.sh`, juce-dev `commands/build.md`, juce-dev `skills/juce-starter/SKILL.md` | a6907c3 (Starter), c648485 (juce-dev) |
+| 1.4 | Added .clang-format with JUCE Allman-style conventions, C++17, ObjC section. | `.clang-format` | (pending) |
 
 ## Human Testing Checklist
 
