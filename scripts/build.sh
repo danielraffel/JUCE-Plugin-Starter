@@ -2,7 +2,7 @@
 
 # Unified Build System for JUCE Audio Plugins
 # Reads all configuration from .env file - completely project-agnostic
-# Supports: AU, VST3, Standalone (no CLAP)
+# Supports: AU, VST3, CLAP, Standalone
 
 set -e  # Exit on error
 
@@ -66,6 +66,7 @@ TARGETS (can specify multiple):
   all         Build all formats (default)
   au          Build Audio Unit only
   vst3        Build VST3 only
+  clap        Build CLAP only
   standalone  Build Standalone only
 
 ACTIONS:
@@ -112,7 +113,7 @@ EOF
 # Process arguments - now supports multiple targets
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        all|au|vst3|standalone)
+        all|au|vst3|clap|standalone)
             TARGETS+=("$1")
             shift
             ;;
@@ -147,7 +148,7 @@ BUILD_FORMATS=""
 for TARGET in "${TARGETS[@]}"; do
     case "$TARGET" in
         all)
-            BUILD_FORMATS="AU VST3 Standalone"
+            BUILD_FORMATS="AU VST3 CLAP Standalone"
             ;;
         au)
             if [[ ! $BUILD_FORMATS =~ "AU" ]]; then
@@ -157,6 +158,11 @@ for TARGET in "${TARGETS[@]}"; do
         vst3)
             if [[ ! $BUILD_FORMATS =~ "VST3" ]]; then
                 BUILD_FORMATS="$BUILD_FORMATS VST3"
+            fi
+            ;;
+        clap)
+            if [[ ! $BUILD_FORMATS =~ "CLAP" ]]; then
+                BUILD_FORMATS="$BUILD_FORMATS CLAP"
             fi
             ;;
         standalone)
@@ -275,6 +281,9 @@ get_schemes_for_format() {
         VST3)
             echo "$all_schemes" | grep "_VST3$"
             ;;
+        CLAP)
+            echo "$all_schemes" | grep "_CLAP$"
+            ;;
         Standalone)
             echo "$all_schemes" | grep "_Standalone$"
             ;;
@@ -301,6 +310,7 @@ build_xcode() {
             # Extract plugin name from scheme (remove format suffix)
             local plugin_name="${scheme%_AU}"
             plugin_name="${plugin_name%_VST3}"
+            plugin_name="${plugin_name%_CLAP}"
             plugin_name="${plugin_name%_Standalone}"
 
             case "$format" in
@@ -309,6 +319,9 @@ build_xcode() {
                     ;;
                 VST3)
                     echo "Building VST3: $scheme"
+                    ;;
+                CLAP)
+                    echo "Building CLAP: $scheme"
                     ;;
                 Standalone)
                     echo "Building Standalone: $scheme"
@@ -406,6 +419,17 @@ run_tests() {
                     done < <(find "$vst3_dir" -maxdepth 1 -name "*.vst3" -print0 2>/dev/null)
                 fi
                 ;;
+            CLAP)
+                # Find all CLAP plugins in CLAP directory
+                local clap_dir="$HOME/Library/Audio/Plug-Ins/CLAP"
+                if [[ -d "$clap_dir" ]]; then
+                    while IFS= read -r -d '' plugin; do
+                        echo "Testing CLAP: $plugin"
+                        echo -e "${YELLOW}Note: PluginVal does not validate CLAP format directly${NC}"
+                        tested_something=true
+                    done < <(find "$clap_dir" -maxdepth 1 -name "*.clap" -print0 2>/dev/null)
+                fi
+                ;;
             Standalone)
                 # For standalone, launch the app for manual testing
                 launch_standalone
@@ -454,6 +478,19 @@ sign_plugins() {
                         "$plugin"
                 else
                     echo -e "${YELLOW}Warning: VST3 plugin not found at $plugin${NC}"
+                fi
+                ;;
+            CLAP)
+                # Sign only the current project's CLAP plugin
+                local plugin="$HOME/Library/Audio/Plug-Ins/CLAP/${PROJECT_NAME}.clap"
+                if [[ -d "$plugin" ]]; then
+                    echo "Signing CLAP: $plugin"
+                    codesign --force --deep --strict --timestamp \
+                        --sign "$APP_CERT" \
+                        --options runtime \
+                        "$plugin"
+                else
+                    echo -e "${YELLOW}Warning: CLAP plugin not found at $plugin${NC}"
                 fi
                 ;;
             Standalone)
@@ -525,6 +562,26 @@ notarize_plugins() {
                     rm "$zip_path"
                 else
                     echo -e "${YELLOW}Warning: VST3 plugin not found at $plugin${NC}"
+                fi
+                ;;
+            CLAP)
+                # Notarize only the current project's CLAP plugin
+                local plugin="$HOME/Library/Audio/Plug-Ins/CLAP/${PROJECT_NAME}.clap"
+                if [[ -d "$plugin" ]]; then
+                    echo "Notarizing CLAP: ${PROJECT_NAME}..."
+                    local zip_path="/tmp/${PROJECT_NAME}_CLAP.zip"
+                    ditto -c -k --keepParent "$plugin" "$zip_path"
+
+                    xcrun notarytool submit "$zip_path" \
+                        --apple-id "$APPLE_ID" \
+                        --password "$NOTARY_PASSWORD" \
+                        --team-id "$TEAM_ID" \
+                        --wait
+
+                    xcrun stapler staple "$plugin"
+                    rm "$zip_path"
+                else
+                    echo -e "${YELLOW}Warning: CLAP plugin not found at $plugin${NC}"
                 fi
                 ;;
         esac
@@ -727,6 +784,13 @@ create_installer() {
                 if [[ -d "$PLUGIN_PATH" ]]; then
                     mkdir -p "$PKG_ROOT/Library/Audio/Plug-Ins/VST3"
                     cp -R "$PLUGIN_PATH" "$PKG_ROOT/Library/Audio/Plug-Ins/VST3/"
+                fi
+                ;;
+            CLAP)
+                PLUGIN_PATH="$HOME/Library/Audio/Plug-Ins/CLAP/${PROJECT_NAME}.clap"
+                if [[ -d "$PLUGIN_PATH" ]]; then
+                    mkdir -p "$PKG_ROOT/Library/Audio/Plug-Ins/CLAP"
+                    cp -R "$PLUGIN_PATH" "$PKG_ROOT/Library/Audio/Plug-Ins/CLAP/"
                 fi
                 ;;
         esac

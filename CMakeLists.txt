@@ -54,12 +54,21 @@ include(FetchContent)
 set(FETCHCONTENT_BASE_DIR "$ENV{HOME}/.juce_cache")
 
 FetchContent_Declare(
-    JUCE 
+    JUCE
     GIT_REPOSITORY ${JUCE_REPO}
     GIT_TAG ${JUCE_TAG}
     GIT_SHALLOW ON
 )
-FetchContent_MakeAvailable(JUCE)
+
+# Fetch clap-juce-extensions for CLAP plugin format support
+FetchContent_Declare(
+    clap-juce-extensions
+    GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git
+    GIT_TAG main
+    GIT_SHALLOW ON
+)
+
+FetchContent_MakeAvailable(JUCE clap-juce-extensions)
 
 # Get AU version from environment or calculate it
 set(AU_VERSION_INT $ENV{AU_VERSION_INT})
@@ -82,6 +91,7 @@ juce_add_plugin(${PROJECT_NAME}
     PLUGIN_MANUFACTURER_CODE Juce
     PLUGIN_CODE Mrbl
     FORMATS AU VST3 Standalone
+    # Note: CLAP format is added separately via clap-juce-extensions below
     PRODUCT_NAME ${PROJECT_NAME}
     VERSION ${PLUGIN_VERSION}
     AU_MAIN_TYPE kAudioUnitType_MIDIProcessor
@@ -125,6 +135,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     juce::juce_gui_extra
     ${PROJECT_NAME}_Resources
 )
+
+# Add CLAP plugin format
+clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
+    CLAP_ID "${PROJECT_BUNDLE_ID}"
+    CLAP_FEATURES audio-effect)
 
 # ==============================================================================
 # Standard macOS Paths (no permission prompts)

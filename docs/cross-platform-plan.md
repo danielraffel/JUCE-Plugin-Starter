@@ -10,7 +10,7 @@ Reference docs: [01-feature-comparison.md](01-feature-comparison.md), [02-visage
 
 | # | Task | Branch | Repos | Status | Notes |
 |---|------|--------|-------|--------|-------|
-| 1.1 | Add CLAP format via clap-juce-extensions. Update CMakeLists.txt, build.sh, juce-dev build command, juce-starter skill. | `feature/cross-platform-1-clap` | Starter, juce-dev | [ ] | |
+| 1.1 | Add CLAP format via clap-juce-extensions. Update CMakeLists.txt, build.sh, juce-dev build command, juce-starter skill. | `feature/cross-platform-1-clap` | Starter, juce-dev | [x] | CMake configures CLAP target successfully |
 | 1.2 | Add AUv3 format to CMakeLists.txt. Update /juce-dev:setup-ios to offer AUv3 alongside standalone iOS app. | `feature/cross-platform-1-auv3` | Starter, juce-dev | [ ] | |
 | 1.3 | Integrate Catch2 v3. Add tests/ with helpers and example tests. Update build.sh to run Catch2 + PluginVal. Update juce-dev build command. | `feature/cross-platform-1-catch2` | Starter, juce-dev | [ ] | Codex: delegate test writing after framework setup |
 | 1.4 | Add .clang-format with JUCE-style conventions to template root. | `feature/cross-platform-1-clang-format` | Starter | [ ] | Codex: good parallel candidate |
@@ -55,7 +55,7 @@ Record what was actually built/changed for each completed item. This is filled i
 
 | # | What Changed | Files Modified | Commits |
 |---|-------------|----------------|---------|
-| | | | |
+| 1.1 | Added CLAP format via clap-juce-extensions FetchContent. Updated build.sh signing, notarization, packaging, uninstall for CLAP. Updated uninstall_template.sh. Updated juce-dev build command and juce-starter skill. | `CMakeLists.txt`, `scripts/build.sh`, `scripts/uninstall_template.sh`, juce-dev `commands/build.md`, juce-dev `skills/juce-starter/SKILL.md` | (pending) |
 
 ## Human Testing Checklist
 
