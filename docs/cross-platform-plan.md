@@ -37,7 +37,7 @@ Reference docs: [01-feature-comparison.md](01-feature-comparison.md), [02-visage
 | 3.1 | Linux CMake config (Clang + Ninja). Linux dependency script (apt for Ubuntu/Debian). Update dependencies.sh platform detection from 2.6. | `feature/cross-platform-3-linux` | Starter | [x] | CMake auto-detects Clang on Linux, apt deps in dependencies.sh, macOS build verified |
 | 3.2 | JuceVisageBridge for Linux (X11 window embedding, Vulkan rendering via Visage). | `feature/cross-platform-3-juce-bridge-linux` | Visage | [!] | Blocked: same as 2.3 — needs Linux dev environment with Vulkan SDK + deep Visage windowing context. Human intervention needed. |
 | 3.3 | Linux packaging (.deb or AppImage or tar.gz). Update build.sh for Linux distribution. | `feature/cross-platform-3-linux` | Starter | [x] | tar.gz packaging, platform-aware build.sh (Ninja on Linux, format filtering, plugin paths) |
-| 3.4 | Add Linux to GitHub Actions CI matrix (extend workflow from 2.4). | `feature/cross-platform-3-linux` | Starter | [ ] | Small - just add to existing matrix |
+| 3.4 | Add Linux to GitHub Actions CI matrix (extend workflow from 2.4). | `feature/cross-platform-3-linux` | Starter | [x] | ubuntu-22.04, Clang, JUCE deps, Xvfb, PluginVal Linux validation |
 | 3.5 | Update juce-dev plugin: build command (Linux paths), create command (Linux env checks, apt deps), juce-starter skill (Linux build docs), juce-visage skill (Linux/X11 bridge patterns). | `feature/cross-platform-3-linux` | juce-dev | [ ] | |
 | 3.6 | Update JUCE-Plugin-Starter README.md to document Linux support and all Phase 3 features. | `feature/cross-platform-3-docs` | Starter | [ ] | |
 | 3.7 | Update juce-dev plugin README to document Linux capabilities. | `feature/cross-platform-3-docs` | juce-dev | [ ] | |
@@ -70,6 +70,7 @@ Record what was actually built/changed for each completed item. This is filled i
 | 2.8 | Updated juce-dev README with cross-platform description, Windows prerequisites, platform notes on targets. | juce-dev `README.md` | 4facce0 (juce-dev) |
 | 3.1 | Linux CMake config: auto-detect Clang, UNIX-specific block. dependencies.sh: full apt package list for Ubuntu/Debian (ALSA, X11, FreeType, WebKit2GTK, GLU, etc). | `CMakeLists.txt`, `scripts/dependencies.sh` | (on feature/cross-platform-3-linux) |
 | 3.3 | Platform-aware build.sh: detect macOS/Linux, use Ninja on Linux, filter AU/AUv3, cmake --build for Linux, Linux plugin paths (VST3→~/.vst3, CLAP→~/.clap), tar.gz packaging, PluginVal path handling. | `scripts/build.sh` | (on feature/cross-platform-3-linux) |
+| 3.4 | Added Linux to CI matrix: ubuntu-22.04 with Clang, JUCE apt deps, Xvfb for PluginVal, Linux VST3 validation step. | `.github/workflows/build.yml` | (on feature/cross-platform-3-linux) |
 
 ## Human Testing Checklist
 
