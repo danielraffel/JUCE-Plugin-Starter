@@ -27,8 +27,8 @@ Reference docs: [01-feature-comparison.md](01-feature-comparison.md), [02-visage
 | 2.4 | GitHub Actions CI/CD: macOS + Windows matrix, sccache, pluginval, artifact upload. | `feature/cross-platform-2-ci` | Starter | [x] | sccache, Catch2 via ctest, PluginVal VST3, artifact upload |
 | 2.5 | Update juce-dev plugin: build command (Windows paths, MSVC detection), create command (Windows env checks, winget/choco deps), juce-starter skill (Windows build docs, .env vars), juce-visage skill (Windows bridge patterns). | `feature/cross-platform-2-windows` | juce-dev | [x] | build: platform detection + build.ps1; create: winget deps; skill: Windows build docs; visage: noted as blocked |
 | 2.6 | Cross-platform dependencies.sh: detect OS, install right prerequisites (brew/winget/apt). | `feature/cross-platform-2-windows` | Starter | [x] | Platform detection, winget for Windows, brew for macOS, Linux placeholder |
-| 2.7 | Update JUCE-Plugin-Starter README.md to document Windows support, CI/CD, and all Phase 2 features. | `feature/cross-platform-2-docs` | Starter | [ ] | |
-| 2.8 | Update juce-dev plugin README to document Windows capabilities. | `feature/cross-platform-2-docs` | juce-dev | [ ] | |
+| 2.7 | Update JUCE-Plugin-Starter README.md to document Windows support, CI/CD, and all Phase 2 features. | `feature/cross-platform-2-docs` | Starter | [x] | Overview, prerequisites, build targets, build commands, CI/CD, project structure |
+| 2.8 | Update juce-dev plugin README to document Windows capabilities. | `feature/cross-platform-2-docs` | juce-dev | [x] | Cross-platform description, Windows prerequisites, platform note on targets |
 
 ## Phase 3: Linux Support
 
@@ -65,6 +65,9 @@ Record what was actually built/changed for each completed item. This is filled i
 | 2.2 | Created Inno Setup installer template with VST3/CLAP/Standalone task selection. Updated build.ps1 with publish/unsigned actions, artifact copying, Inno Setup invocation. | `templates/installer.iss`, `scripts/build.ps1` | fb8e015 |
 | 2.4 | GitHub Actions CI/CD workflow with macOS + Windows matrix. sccache for build caching, Catch2 via ctest, PluginVal for VST3 validation, artifact upload. | `.github/workflows/build.yml` | 168c0f0 |
 | 2.5 | Updated juce-dev build command (platform detection, build.ps1), create command (winget deps), juce-starter skill (Windows build docs, cross-platform CMake), juce-visage skill (Windows note). Also fixed CMakeLists.txt: FETCHCONTENT path escaping + conditional Resources link. | `CMakeLists.txt`, juce-dev `commands/build.md`, juce-dev `commands/create.md`, juce-dev `skills/juce-starter/SKILL.md`, juce-dev `skills/juce-visage/SKILL.md` | 2195d7c (Starter), 82dfa45 (juce-dev) |
+| 2.6 | Cross-platform dependencies.sh with platform detection (macOS/Windows/Linux), winget for Windows, brew for macOS, Linux placeholder. Added ninja to macOS deps. | `scripts/dependencies.sh` | (part of b647919) |
+| 2.7 | Updated README.md with Windows prerequisites, build commands (PowerShell), CI/CD section, cross-platform project structure. | `README.md` | (on feature/cross-platform-2-docs) |
+| 2.8 | Updated juce-dev README with cross-platform description, Windows prerequisites, platform notes on targets. | juce-dev `README.md` | 4facce0 (juce-dev) |
 
 ## Human Testing Checklist
 
