@@ -155,7 +155,12 @@ Run Codex in background, check output before marking complete.
 | juce-dev plugin | `/Users/danielraffel/Code/generous-corp-marketplace/plugins/juce-dev` |
 | Visage fork | `/Users/danielraffel/Code/visage` |
 
-## Windows Dev Environment
+## Dev Environments
 
-- SSH: `ssh win` (configured in ~/.ssh/config)
-- UTM VM, needs dev tools configured in Phase 2
+**Windows:**
+- SSH: `ssh win` (configured in ~/.ssh/config, key already added)
+- UTM VM, running, needs dev tools configured in Phase 2
+
+**Linux:**
+- No VM set up yet. Can create one if needed during Phase 3.
+- CI (GitHub Actions) may be sufficient for Linux verification until then.
