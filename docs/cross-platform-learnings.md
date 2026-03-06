@@ -70,3 +70,11 @@ Each entry:
   - `${PROJECT_NAME}_Resources` link fails when no `juce_add_binary_data()` is defined — fixed with `$<TARGET_NAME_IF_EXISTS:...>`
   - Template test files use `PluginProcessor` class name which only exists after `init_plugin_project.sh` replaces placeholders
 - **Files**: `CMakeLists.txt`, `scripts/build.ps1`
+
+## Linux build.sh platform detection pattern
+
+- **Date**: 2026-03-06
+- **Problem**: build.sh was entirely macOS/Xcode-centric (xcodebuild, .app bundles, ~/Library paths). Needed to work on Linux too without breaking macOS.
+- **Solution**: Added `BUILD_PLATFORM` detection via `uname -s` at script start. Used conditional blocks: `if [[ "$BUILD_PLATFORM" == "Linux" ]]` for Ninja-based builds, Linux plugin paths (~/.vst3, ~/.clap), and tar.gz packaging. macOS path remains the default (uses Xcode generator, .app bundles, ~/Library paths).
+- **Insight**: The key platform differences for build scripts are: (1) generator (Xcode vs Ninja), (2) build command (xcodebuild vs cmake --build), (3) plugin install paths, (4) executable format (.app bundle vs raw binary), (5) packaging (PKG/DMG vs tar.gz). Signing/notarization are macOS-only. The pattern of detecting once at top and branching is cleaner than repeating platform checks everywhere.
+- **Files**: `scripts/build.sh`
