@@ -57,7 +57,13 @@ project(${PROJECT_NAME} VERSION ${PLUGIN_VERSION})
 include(FetchContent)
 
 # Use shared JUCE cache to avoid re-downloading across projects
-set(FETCHCONTENT_BASE_DIR "$ENV{HOME}/.juce_cache")
+# Use HOME on macOS/Linux, USERPROFILE on Windows; convert to forward slashes
+if(DEFINED ENV{HOME})
+    set(_HOME_DIR "$ENV{HOME}")
+else()
+    set(_HOME_DIR "$ENV{USERPROFILE}")
+endif()
+file(TO_CMAKE_PATH "${_HOME_DIR}/.juce_cache" FETCHCONTENT_BASE_DIR)
 
 FetchContent_Declare(
     JUCE
@@ -155,7 +161,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     juce::juce_graphics
     juce::juce_gui_basics
     juce::juce_gui_extra
-    ${PROJECT_NAME}_Resources
+    $<TARGET_NAME_IF_EXISTS:${PROJECT_NAME}_Resources>
 )
 
 # Add CLAP plugin format

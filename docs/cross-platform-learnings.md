@@ -44,3 +44,29 @@ Each entry:
 - **Solution**: Pre-existing issue - not fixed in this iteration. Values with spaces must be quoted in .env files.
 - **Insight**: When testing template changes, use explicit env vars (`PROJECT_NAME="TestPlugin" cmake ...`) rather than relying on the local .env which may have project-specific quirks.
 - **Files**: `scripts/build.sh` (line 24), `.env`
+
+## FETCHCONTENT_BASE_DIR backslash escape on Windows (CMake 4.2+)
+
+- **Date**: 2026-03-06
+- **Problem**: `set(FETCHCONTENT_BASE_DIR "$ENV{HOME}/.juce_cache")` expands to `C:\Users\daniel/.juce_cache` on Windows. CMake 4.2's `FetchContent.cmake` interprets the backslash in `C:\Users` as an escape sequence (`\U`), causing `Invalid character escape '\U'` errors during configure.
+- **Solution**: Use `file(TO_CMAKE_PATH ...)` to convert the path to forward slashes. Also use `$ENV{USERPROFILE}` as fallback since `$ENV{HOME}` may not be set on Windows.
+- **Insight**: Always convert user-provided or environment paths to CMake paths (forward slashes) before using them in CMake variables. This is critical for cross-platform builds. The shared JUCE cache also needs the generator to match — if `~/.juce_cache` was previously configured with a different generator (e.g., Visual Studio), you must delete it before switching to Ninja.
+- **Files**: `CMakeLists.txt`
+
+## Windows build validation results (ARM64 UTM VM)
+
+- **Date**: 2026-03-06
+- **Problem**: First real test of the Windows build pipeline on an ARM64 Windows 11 VM via UTM.
+- **Solution**: Installed Git, CMake, Ninja via winget. VS2022 Community with MSVC was already present. Successfully:
+  1. CMake configure with Ninja generator (MSVC ARM64 compiler detected)
+  2. Built VST3 plugin (installed to `C:\Program Files\Common Files\VST3\`)
+  3. Built CLAP plugin
+  4. Built Standalone .exe
+  5. Catch2 library compiled (test source compilation failed due to template placeholders — pre-existing issue)
+- **Insight**: The Windows build works end-to-end. Key findings:
+  - winget is available on Windows 11 ARM64 via `C:\Users\...\AppData\Local\Microsoft\WindowsApps\winget.exe` even when not in PATH
+  - VS2022 Community works; BuildTools installer failed (exit code 1) possibly due to Community already being installed
+  - MSVC dev environment must be loaded via `Import-Module ...Microsoft.VisualStudio.DevShell.dll; Enter-VsDevShell`
+  - `${PROJECT_NAME}_Resources` link fails when no `juce_add_binary_data()` is defined — fixed with `$<TARGET_NAME_IF_EXISTS:...>`
+  - Template test files use `PluginProcessor` class name which only exists after `init_plugin_project.sh` replaces placeholders
+- **Files**: `CMakeLists.txt`, `scripts/build.ps1`
