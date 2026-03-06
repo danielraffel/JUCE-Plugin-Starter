@@ -2,7 +2,11 @@
 
 ## ℹ️ Overview
 
-This is a JUCE plugin starter template using CMake and environment-based configuration for folks new to audio plugin development on macOS. It allows you to create standalone apps and audio plugins (AU, AUv3, VST3, CLAP) for macOS using Xcode. It’s designed for quick setup, ease of customization, and modern JUCE development workflows.
+This is a cross-platform JUCE plugin starter template using CMake and environment-based configuration for folks new to audio plugin development. It allows you to create standalone apps and audio plugins for macOS and Windows. It’s designed for quick setup, ease of customization, and modern JUCE development workflows.
+
+**Supported platforms:**
+- **macOS**: AU, AUv3, VST3, CLAP, Standalone (Xcode or Ninja)
+- **Windows**: VST3, CLAP, Standalone (MSVC + Ninja)
 
 ---
 
@@ -122,9 +126,16 @@ cd JUCE-Plugin-Starter
 To build and develop plugins with this template, you’ll need:
 
 ### System Requirements
+
+**macOS:**
 - macOS 15.0 or later
 - [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12) (latest version)
 - Recommended: Additional IDE with Support for 3rd Party AI Models ([Alex Sidebar](http://alexcodes.app), [Cursor](http://cursor.com), [Windsurf](http://windsurf.com), [Trae](http://trae.ai), or [VSCode](https://code.visualstudio.com))
+
+**Windows:**
+- Windows 10/11
+- [Visual Studio 2022](https://visualstudio.microsoft.com/) (Community or Build Tools) with C++ workload
+- CMake and Ninja (installable via winget)
 
 ---
 
@@ -147,18 +158,11 @@ Use the included [`dependencies.sh`](./scripts/dependencies.sh) script. It **che
 bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/scripts/dependencies.sh)
 ```
 
-The script handles:
+The script auto-detects your platform and handles:
 
-* ✅ **Xcode Command Line Tools**
-* ✅ **Homebrew**
-* ✅ **CMake**
-* ✅ **PluginVal**
+**macOS:** Xcode CLI Tools, Homebrew, CMake, Ninja, PluginVal
 
-It also includes **optional installs**, commented out by default:
-
-* **Faust** – DSP prototyping compiler
-* **GoogleTest** – C++ unit testing
-* **Python 3**, **pip3**, and **behave** – for behavior-driven development (BDD)
+**Windows:** Git, CMake, Ninja, Visual Studio Build Tools (via winget)
 
 > ✏️ When you run `dependencies.sh` software like Homebrew may ask you to do additonal configurations to complete your setup:
 ```
@@ -293,19 +297,23 @@ Want to pre-configure your developer settings?
 
 ## 🧱 Build Targets
 
-Once the project is open in Xcode, you can build:
-
+**macOS** (via Xcode or command line):
 * ✅ **Standalone App**
 * ✅ **Audio Unit v2 (AU)** – for Logic Pro, GarageBand
 * ✅ **Audio Unit v3 (AUv3)** – app extension format, also works on iOS
 * ✅ **VST3 Plugin** – for Reaper, Ableton Live, etc.
 * ✅ **CLAP Plugin** – for Bitwig, Reaper, and other CLAP-compatible DAWs
 
-> Switch targets using the Xcode scheme selector.
+**Windows** (via PowerShell + MSVC):
+* ✅ **Standalone App (.exe)**
+* ✅ **VST3 Plugin** – installs to `C:\Program Files\Common Files\VST3\`
+* ✅ **CLAP Plugin**
+
+> On macOS, switch targets using the Xcode scheme selector.
 >
 <img width="352" alt="image" src="https://github.com/user-attachments/assets/4c3c3ac7-0613-46dc-a6b0-286743b858be" />
 
-> Make sure the `FORMATS AU AUv3 VST3 Standalone` line is present in `CMakeLists.txt`. CLAP is added separately via `clap-juce-extensions`.
+> On macOS, the `FORMATS AU AUv3 VST3 Standalone` line is in `CMakeLists.txt`. On Windows, only `VST3 Standalone` are used (AU/AUv3 are macOS-only). CLAP is added separately via `clap-juce-extensions`.
 
 ---
 ## Where Files Are Generated (Plugins + App)
@@ -499,9 +507,10 @@ JUCE-Plugin-Starter/
 ├── scripts/                       ← Automation / helper scripts
 │   ├── about/                     ← Documentation
 │   │   └── build_system.md        ← Comprehensive build system documentation
-│   ├── build.sh                   ← Unified build system (local, test, sign, notarize, publish)
+│   ├── build.sh                   ← macOS build system (local, test, sign, notarize, publish)
+│   ├── build.ps1                  ← Windows build system (local, test, publish via Inno Setup)
 │   ├── bump_version.py            ← Semantic version management
-│   ├── dependencies.sh            ← Automated dependency setup
+│   ├── dependencies.sh            ← Cross-platform dependency setup (macOS/Windows/Linux)
 │   ├── diagnose_plugin.sh         ← Plugin diagnostic tool
 │   ├── generate_and_open_xcode.sh ← Script that loads `.env`, runs CMake, and opens Xcode
 │   ├── generate_release_notes.py  ← AI-powered release notes generator
@@ -516,8 +525,12 @@ JUCE-Plugin-Starter/
 │   ├── Catch2Main.cpp             ← Custom main with JUCE init
 │   ├── PluginBasics.cpp           ← Example plugin tests
 │   └── helpers/test_helpers.h     ← Test utilities
+├── templates/
+│   └── installer.iss              ← Windows Inno Setup installer template
+├── .github/
+│   └── workflows/build.yml       ← CI/CD: macOS + Windows matrix build
 └── build/                         ← Generated by CMake (can be deleted anytime)
-    └── YourPlugin.xcodeproj       ← Generated Xcode project
+    └── YourPlugin.xcodeproj       ← Generated Xcode project (macOS)
 
 ~/.juce_cache/                     ← Shared JUCE location (outside project)
 └── juce-src/                      ← JUCE framework (shared across all projects)
@@ -536,10 +549,13 @@ JUCE-Plugin-Starter/
 
 ## 🔨 Enhanced Build System
 
-This template now includes a unified build system (`scripts/build.sh`) that provides comprehensive functionality:
+This template includes platform-specific build scripts:
+- **macOS**: `scripts/build.sh` — full-featured (build, test, sign, notarize, publish)
+- **Windows**: `scripts/build.ps1` — build, test, and package with Inno Setup
 
 ### Quick Build Commands
 
+**macOS:**
 ```bash
 # Quick local build (all formats)
 ./scripts/build.sh
@@ -570,6 +586,18 @@ This template now includes a unified build system (`scripts/build.sh`) that prov
 ./scripts/build.sh all pkg      # Build, sign, notarize PKG (no GitHub release)
 ./scripts/build.sh all publish  # Full release with installer and GitHub publishing
 ```
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\build.ps1                    # Build all formats (VST3, CLAP, Standalone)
+.\scripts\build.ps1 vst3              # Build VST3 only
+.\scripts\build.ps1 standalone        # Build Standalone only
+.\scripts\build.ps1 all test          # Build and run Catch2 + PluginVal tests
+.\scripts\build.ps1 all publish       # Build and create Inno Setup installer
+.\scripts\build.ps1 all unsigned      # Unsigned installer (fast testing)
+```
+
+> **Note:** On Windows, you must load the Visual Studio developer environment before building. See [Windows Prerequisites](#system-requirements).
 
 ### New Build Actions
 
@@ -616,6 +644,17 @@ python3 scripts/bump_version.py major  # 0.1.0 → 1.0.0
 - **Plugin Validation**: `./scripts/validate_plugin.sh` - Comprehensive plugin validation
 - **Diagnostic Tool**: `./scripts/diagnose_plugin.sh` - Troubleshoot plugin issues
 - **AI Release Notes**: `./scripts/generate_release_notes.py` - Generate release notes from git history
+
+### CI/CD with GitHub Actions
+
+The template includes a GitHub Actions workflow (`.github/workflows/build.yml`) that:
+- Builds on **macOS** (arm64 + x86_64 universal binary) and **Windows**
+- Uses **sccache** for build caching
+- Runs **Catch2** unit tests via CTest
+- Validates **VST3** with PluginVal
+- Uploads build artifacts
+
+The workflow triggers on pushes to `main` and `feature/**` branches, plus pull requests.
 
 ### Complete Documentation
 
