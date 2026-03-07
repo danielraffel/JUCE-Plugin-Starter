@@ -174,3 +174,11 @@ Each entry:
   4. Changed Windows CI from default VS generator to Ninja (`-G Ninja`) for consistency across all platforms.
 - **Insight**: When using Ninja with `cmake --build`, the exit code is non-zero if ANY target fails, even with `-k 0`. GitHub Actions treats non-zero exit as step failure and skips all subsequent steps unless `continue-on-error: true` is set. The template's test files always fail to compile until `init_plugin_project.sh` replaces the `PluginProcessor` placeholder — this is expected and not a platform issue.
 - **Files**: `.github/workflows/build.yml`, `scripts/dependencies.sh`
+
+## CMAKE_POSITION_INDEPENDENT_CODE for Linux VST3
+
+- **Date**: 2026-03-07
+- **Problem**: On Linux, VST3 plugins are shared libraries (.so). When a static library like nanosvg (from Visage's third_party) is compiled without `-fPIC` and then linked into the VST3 .so, the linker fails with: `relocation R_AARCH64_ADR_PREL_PG_HI21 against symbol 'nsvg__colors' which may bind externally can not be used when making a shared object; recompile with -fPIC`.
+- **Solution**: Set `set(CMAKE_POSITION_INDEPENDENT_CODE ON)` globally in the top-level CMakeLists.txt. This ensures ALL static libraries (including third-party ones fetched via FetchContent or add_subdirectory) are compiled with -fPIC. Per-target `set_target_properties(nanosvg PROPERTIES POSITION_INDEPENDENT_CODE ON)` also works but requires modifying each affected target.
+- **Insight**: This is a Linux-specific issue. macOS uses position-independent code by default (Mach-O), and Windows DLLs handle relocations differently. Any project linking static libs into shared libs on Linux needs this. Setting it globally is safest since it covers all subdirectories.
+- **Files**: `CMakeLists.txt` (top-level)
