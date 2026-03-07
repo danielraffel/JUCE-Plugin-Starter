@@ -831,7 +831,11 @@ check_diagnostic_setup() {
                     echo "Disabling DiagnosticKit permanently..."
                     # Update .env file
                     if [[ -f .env ]]; then
-                        sed -i '' 's/^ENABLE_DIAGNOSTICS=.*/ENABLE_DIAGNOSTICS=false/' .env
+                        if [[ "$BUILD_PLATFORM" == "macOS" ]]; then
+                            sed -i '' 's/^ENABLE_DIAGNOSTICS=.*/ENABLE_DIAGNOSTICS=false/' .env
+                        else
+                            sed -i 's/^ENABLE_DIAGNOSTICS=.*/ENABLE_DIAGNOSTICS=false/' .env
+                        fi
                         echo "✅ Updated .env: ENABLE_DIAGNOSTICS=false"
                         echo "   (You can re-enable it later by editing .env)"
                         ENABLE_DIAGNOSTICS="false"  # Also disable for current run
@@ -855,6 +859,12 @@ check_diagnostic_setup() {
 # Function to build DiagnosticKit app
 build_diagnostics() {
     if [[ "${ENABLE_DIAGNOSTICS:-false}" != "true" ]]; then
+        return 0
+    fi
+
+    # DiagnosticKit is currently macOS-only (Swift/SwiftUI)
+    if [[ "$BUILD_PLATFORM" != "macOS" ]]; then
+        echo -e "${YELLOW}Warning: DiagnosticKit is currently macOS-only. Skipping on $BUILD_PLATFORM.${NC}"
         return 0
     fi
 
