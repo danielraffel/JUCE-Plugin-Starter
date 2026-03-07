@@ -5,13 +5,13 @@
 // Creates a processor, opens its editor, runs the test, then cleans up.
 //
 // Example usage:
-//   runWithinPluginEditor ([&] (PluginProcessor& plugin) {
+//   runWithinPluginEditor ([&] (CLASS_NAME_PLACEHOLDERAudioProcessor& plugin) {
 //       auto* editor = plugin.getActiveEditor();
 //       REQUIRE (editor != nullptr);
 //   });
-[[maybe_unused]] static void runWithinPluginEditor (const std::function<void (PluginProcessor& plugin)>& testCode)
+[[maybe_unused]] static void runWithinPluginEditor (const std::function<void (CLASS_NAME_PLACEHOLDERAudioProcessor& plugin)>& testCode)
 {
-    PluginProcessor plugin;
+    CLASS_NAME_PLACEHOLDERAudioProcessor plugin;
     const auto editor = plugin.createEditorIfNeeded();
 
     testCode (plugin);

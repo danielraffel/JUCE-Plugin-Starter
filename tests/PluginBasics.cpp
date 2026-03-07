@@ -4,14 +4,14 @@
 
 TEST_CASE ("Plugin instance name", "[plugin]")
 {
-    PluginProcessor testPlugin;
+    CLASS_NAME_PLACEHOLDERAudioProcessor testPlugin;
     // The plugin name comes from CMake's PRODUCT_NAME
     CHECK (testPlugin.getName().isNotEmpty());
 }
 
 TEST_CASE ("Plugin default bus layout", "[plugin]")
 {
-    PluginProcessor testPlugin;
+    CLASS_NAME_PLACEHOLDERAudioProcessor testPlugin;
     auto layout = testPlugin.getBusesLayout();
 
     // Verify the plugin has at least one input or output bus
@@ -20,7 +20,7 @@ TEST_CASE ("Plugin default bus layout", "[plugin]")
 
 TEST_CASE ("Plugin produces editor", "[editor]")
 {
-    runWithinPluginEditor ([] (PluginProcessor& plugin) {
+    runWithinPluginEditor ([] (CLASS_NAME_PLACEHOLDERAudioProcessor& plugin) {
         REQUIRE (plugin.getActiveEditor() != nullptr);
     });
 }
