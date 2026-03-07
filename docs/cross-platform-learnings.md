@@ -99,6 +99,14 @@ Each entry:
 - **Insight**: This is a fundamental limitation of sharing a FetchContent cache across projects with different generators. Possible long-term fixes: (1) include generator name in cache path, (2) use separate cache dirs per generator, (3) document the workaround prominently. This affects both macOS (Xcode↔Ninja) and cross-platform workflows (Windows Ninja vs macOS Xcode).
 - **Files**: `CMakeLists.txt` (FETCHCONTENT_BASE_DIR setting)
 
+## bgfx shaderc builds from source on ARM64 Windows
+
+- **Date**: 2026-03-07
+- **Problem**: The pre-built bgfx shaderc.exe is x86-64 only and crashes on ARM64 Windows. Need to build from source for Visage shader compilation.
+- **Solution**: Set `VISAGE_BUILD_SHADERC=ON` in CMake (or set `BGFX_BUILD_TOOLS=ON` in bgfx.cmake). On ARM64 Windows with MSVC 19.44 and Ninja, shaderc compiles 433 units successfully. The resulting shaderc.exe (v1.18.129) runs natively without x86-64 emulation.
+- **Insight**: Building shaderc from source is the correct approach for ARM64 Windows. It's CPU-only (no GPU needed), so it works in UTM VMs without GPU passthrough. The D9007 warnings about `/JMC` requiring debug info are harmless. Build takes ~5 minutes on ARM64 VM. The built binary lands at `${FETCHCONTENT_BASE_DIR}/bgfx-build/cmake/bgfx/shaderc.exe`.
+- **Files**: `external/visage/visage_graphics/CMakeLists.txt`, `external/visage/visage_graphics/embedded.cmake`
+
 ## Visage is fully cross-platform (NOT macOS-only)
 
 - **Date**: 2026-03-06
