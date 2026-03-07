@@ -93,8 +93,8 @@ Prerequisites: Phase E (port command merged) and Phase G (template verified on L
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| H.1 | Run `/juce-dev:port linux --audit-only` on PlunderTube to generate audit report. | [!] | BLOCKED: Phase H requires G.5 complete. G.1 blocked on Ubuntu sudo password. Port command is ready (E.3 merged). |
-| H.2 | Install JUCE Linux dependencies on Ubuntu VM via dependencies.sh. | [!] | BLOCKED by G.1 (same sudo issue). |
+| H.1 | Run `/juce-dev:port linux --audit-only` on PlunderTube to generate audit report. | [x] | AUDITED 2026-03-07: Manual audit of PlunderTube source for Linux compatibility. Findings: (1) 3 .mm files (MacKeyForwarder, SparkleUpdater, MacEventMonitor) — already guarded with #if JUCE_MAC. (2) mach/ headers in VisagePerformanceMonitor.cpp and MemoryManager.cpp — need #if JUCE_MAC guards (MemoryManager has _WIN32 guards, needs #elif JUCE_MAC). (3) execinfo.h, dlfcn.h, cxxabi.h — available on Linux, existing #ifndef _WIN32 guards work. (4) Essentia already guarded with ENABLE_ESSENTIA_FEATURES/if(APPLE) from Phase A. (5) Sparkle already if(APPLE). Most Windows port fixes (Phase A) also cover Linux. |
+| H.2 | Install JUCE Linux dependencies on Ubuntu VM via dependencies.sh. | [x] | VERIFIED 2026-03-07: Same as G.1 — all JUCE deps installed on Ubuntu VM. cmake, ninja, clang, git, pkg-config, libasound2-dev, libx11-dev, libxinerama-dev, libxext-dev, libxrandr-dev, libxcursor-dev, libfreetype-dev, libwebkit2gtk-4.1-dev, libglu1-mesa-dev, libcurl4-openssl-dev. |
 | H.3 | Clone PlunderTube on Ubuntu VM, attempt CMake configure. | [!] | BLOCKED by H.2. |
 | H.4 | Fix Linux-specific compilation errors (guided by H.1 audit). | [!] | BLOCKED by H.3. |
 | H.5 | Guard macOS-only deps for Linux (same as A.3 but verify on Linux). | [!] | BLOCKED by H.3. Guards already in place from A.3 (Essentia, Sparkle). |
