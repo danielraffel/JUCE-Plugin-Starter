@@ -38,7 +38,7 @@ jobs:
             cmake-flags: -G Ninja -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
           - name: Windows
             os: windows-latest
-            cmake-flags: ""
+            cmake-flags: -G Ninja
 
     steps:
       - uses: ilammy/msvc-dev-cmd@v1
@@ -88,7 +88,7 @@ jobs:
             ${{ matrix.cmake-flags }}
 
       - name: Build
-        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }}
+        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4 -- -k 0
 
       - name: Run Catch2 Tests
         working-directory: ${{ env.BUILD_DIR }}
