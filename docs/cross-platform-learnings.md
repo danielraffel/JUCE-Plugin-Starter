@@ -118,3 +118,19 @@ Each entry:
   - **Web/Emscripten**: WebGL
 - **Insight**: NEVER add `#ifdef USE_VISAGE_UI` guards to disable Visage on non-macOS platforms. The `USE_VISAGE_UI` flag is for choosing between Visage UI vs fallback JUCE UI, not for platform selection. Visage works on all platforms. The `external/visage/` directory contains platform-specific code in `visage_graphics/win32/`, `visage_graphics/linux/`, `visage_graphics/macos/`, and `visage_windowing/` has platform windowing backends.
 - **Files**: `external/visage/visage_graphics/CMakeLists.txt`, `CMakeLists.txt`
+
+## MSVC C++ compilation differences from Clang/GCC
+
+- **Date**: 2026-03-07
+- **Problem**: MSVC has several behaviors that differ from Clang/GCC, causing compilation failures when porting macOS code to Windows.
+- **Solution**: Multiple patterns needed fixing:
+  1. **Dead code type-checking**: MSVC resolves types inside `if(false)` blocks. Pattern `#if X / if(expr) / #else / if(false) / #endif / { body }` fails. Fix: use proper `#if / #else / #endif` around the entire block.
+  2. **NOMINMAX**: Windows headers define `min`/`max` macros conflicting with `std::min`/`std::max`. Add `NOMINMAX` and `WIN32_LEAN_AND_MEAN` to CMake compile definitions.
+  3. **M_PI undefined**: MSVC needs `#define _USE_MATH_DEFINES` before `<cmath>`, plus `#ifndef M_PI` fallback.
+  4. **Missing `<optional>` include**: MSVC requires explicit include; Clang includes it transitively.
+  5. **`cxxabi.h` / `execinfo.h`**: GCC/Clang-only. Guard with `#ifndef _WIN32`.
+  6. **Lambda default parameters**: MSVC doesn't allow local `constexpr` as default params — use `static constexpr`.
+  7. **`#if JUCE_WINDOWS` before JUCE headers**: Use `#ifdef _WIN32` instead, since `JUCE_WINDOWS` isn't defined until after `JuceHeader.h`.
+  8. **Visage API names**: `kModifierCtrl` doesn't exist — correct names are `kModifierRegCtrl` (Windows/Linux) and `kModifierMacCtrl` (macOS).
+- **Insight**: When writing cross-platform JUCE+Visage code, always: (a) use `#ifdef _WIN32` for pre-JUCE-header guards, (b) never rely on Clang's implicit includes, (c) use `static constexpr` instead of local `constexpr` for lambda defaults, (d) avoid `#else if(false)` patterns entirely.
+- **Files**: `CMakeLists.txt`, `Source/Visage/*.cpp`, `Source/Visage/*.h`, `Source/Settings/SettingsManager.cpp`
