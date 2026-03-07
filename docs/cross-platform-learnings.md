@@ -147,6 +147,14 @@ Each entry:
 - **Insight**: Visage's `visage_windowing/` abstracts platform differences. The bridge layer is essentially platform-agnostic. No separate Windows/Linux bridge implementations needed. Only macOS-specific comments needed updating.
 - **Files**: `templates/visage/JuceVisageBridge.h`, `templates/visage/JuceVisageBridge.cpp`
 
+## bgfx shaderc on ARM64 Linux — same fix as ARM64 Windows
+
+- **Date**: 2026-03-07
+- **Problem**: Pre-built shaderc in `external/visage/visage_graphics/bin/linux/shaderc` is x86-64 ELF binary. On ARM64 Linux (Ubuntu 24.04 aarch64), it fails with "Exec format error" — same category of issue as A.1 (Windows ARM64).
+- **Solution**: Set `VISAGE_BUILD_SHADERC=ON` in CMake to build shaderc from source. This is the same solution as A.1 (Windows ARM64). On Linux, bgfx builds with Clang and produces a native aarch64 shaderc binary.
+- **Insight**: ANY ARM64 platform (Windows, Linux, macOS Apple Silicon) needs shaderc built from source unless a pre-built ARM64 binary is provided. The pre-built binaries in `bin/linux/` and `bin/windows/` are x86-64 only. macOS Apple Silicon works because the pre-built binary in `bin/macos/` is a universal binary (x86-64 + arm64). For CI (GitHub Actions), the default x86-64 runners use the pre-built binaries fine. ARM64 runners need VISAGE_BUILD_SHADERC=ON.
+- **Files**: `external/visage/visage_graphics/bin/linux/shaderc`, `external/visage/visage_graphics/CMakeLists.txt`
+
 ## Ubuntu 24.04 package naming and JUCE-Plugin-Starter CI
 
 - **Date**: 2026-03-07
