@@ -72,8 +72,8 @@ Scan the project for platform-specific dependencies. Output a structured report.
 - `generate_and_open_xcode.sh` — macOS-only, need Ninja equivalent
 
 **External dependencies:**
-- Visage: check if used, note bridge status per platform
-- DiagnosticKit: macOS-only Swift app, will be skipped
+- Visage: FULLY CROSS-PLATFORM (Metal/D3D11/Vulkan/WebGL via bgfx). Do NOT skip on non-macOS. JuceVisageBridge may need platform windowing adaptation.
+- DiagnosticKit: macOS-only Swift app, will be skipped (JUCE-based cross-platform version planned)
 - FetchContent deps: generally cross-platform, but verify
 
 **Configuration:**
@@ -285,8 +285,8 @@ Found 3 issues:
 - [HIGH] No build.ps1
 - [LOW] CI workflow missing Windows matrix
 
-Visage bridge is macOS-only. Windows DirectX bridge is not yet available.
-Your plugin will build WITHOUT Visage UI on Windows (fallback to JUCE UI needed).
+Visage is cross-platform (D3D11 on Windows via bgfx).
+JuceVisageBridge windowing layer may need platform adaptation.
 
 Ready to port? [Execute all changes / Export plan / Cancel]
 > Execute all changes
@@ -300,7 +300,7 @@ Pulling branch on VM...
 Running build.ps1...
 
 BUILD SUCCEEDED: VST3, Standalone
-BUILD SKIPPED: AU (macOS-only), Visage UI (bridge not available)
+BUILD SKIPPED: AU (macOS-only)
 
 Port complete! Your plugin builds on Windows.
 Next: Load the VST3 in a Windows DAW to verify it works.
@@ -335,7 +335,7 @@ The audit should detect and handle third-party dependencies:
 - Scan `CMakeLists.txt` for `FetchContent_Declare`, `add_subdirectory`, `find_package`
 - Scan `external/` directory for vendored libraries
 - Look for `LICENSE`, `COPYING`, `NOTICE` files referencing third-party code
-- Check for Visage (macOS Metal only — needs DirectX bridge for Windows, Vulkan for Linux)
+- Check for Visage (fully cross-platform: Metal/D3D11/Vulkan/WebGL via bgfx — JuceVisageBridge may need windowing adaptation per platform)
 - Check for platform-specific frameworks (`CoreAudio`, `AudioToolbox`, `Accelerate`)
 
 **License Management:**
@@ -349,11 +349,10 @@ The audit should detect and handle third-party dependencies:
 - Offer to create/update `THIRD_PARTY_LICENSES.md` with per-platform sections
 
 **Visage-Specific Handling:**
-- If Visage is detected, warn that the bridge layer is macOS-only
-- Offer two paths:
-  1. Build without Visage on Windows/Linux (fallback to JUCE UI)
-  2. Wait for Visage bridge to be implemented (blocked — see cross-platform plan item 2.3/3.2)
-- Update `#if USE_VISAGE_UI` guards to work cross-platform
+- If Visage is detected, confirm it's cross-platform (D3D11/Vulkan/WebGL via bgfx)
+- Check JuceVisageBridge for platform-specific windowing code (NSView, HWND, X11)
+- Verify bgfx shaderc binary is compatible with target architecture (x86-64 shaderc may crash on ARM64 Windows)
+- Check if Windows SDK is installed (needed for D3D11 shader compilation)
 
 ### This should be a new juce-dev command, not a skill
 

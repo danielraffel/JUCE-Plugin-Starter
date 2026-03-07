@@ -78,3 +78,35 @@ Each entry:
 - **Solution**: Added `BUILD_PLATFORM` detection via `uname -s` at script start. Used conditional blocks: `if [[ "$BUILD_PLATFORM" == "Linux" ]]` for Ninja-based builds, Linux plugin paths (~/.vst3, ~/.clap), and tar.gz packaging. macOS path remains the default (uses Xcode generator, .app bundles, ~/Library paths).
 - **Insight**: The key platform differences for build scripts are: (1) generator (Xcode vs Ninja), (2) build command (xcodebuild vs cmake --build), (3) plugin install paths, (4) executable format (.app bundle vs raw binary), (5) packaging (PKG/DMG vs tar.gz). Signing/notarization are macOS-only. The pattern of detecting once at top and branching is cleaner than repeating platform checks everywhere.
 - **Files**: `scripts/build.sh`
+
+## Windows VM SSH build workflow
+
+- **Date**: 2026-03-06
+- **Problem**: Building JUCE on a Windows ARM64 VM via SSH from macOS has several pitfalls: `cmd /c` with nested quotes fails over SSH, `Enter-VsDevShell` changes the working directory, and concurrent SSH sessions to the same VM create JUCE cache lock conflicts (`.ninja_log` and git pack files locked by orphan processes).
+- **Solution**:
+  1. Use `.bat` scripts instead of inline `cmd /c` — write the batch file via SSH then execute it
+  2. Use `VsDevCmd.bat` instead of `Enter-VsDevShell` — it loads MSVC environment without changing CWD
+  3. Kill orphan processes by PID before cleaning cache: `taskkill /f /pid <PID>`
+  4. Never run multiple build agents against the same VM simultaneously
+- **Insight**: The reliable pattern for SSH-based Windows builds is: create a `.bat` file that calls VsDevCmd.bat then runs cmake, then execute that `.bat` via SSH. This avoids all quoting issues. The JUCE FetchContent cache at `~/.juce_cache` is a single-writer resource — concurrent access causes lock failures that require process killing and cache deletion to recover from.
+- **Files**: `docs/testing-checklist.md`
+
+## Shared JUCE cache generator conflict
+
+- **Date**: 2026-03-06
+- **Problem**: The shared `~/.juce_cache/` directory stores FetchContent subbuild CMake cache files that are generator-specific. When one project uses `-G Xcode` and another uses `-G Ninja` (or the same project switches generators), the cache conflicts cause `CMake Error: generator : Xcode Does not match the generator used previously: Ninja`.
+- **Solution**: Delete `CMakeCache.txt` and `CMakeFiles` from `~/.juce_cache/` subdirectories when switching generators: `find ~/.juce_cache -name CMakeCache.txt -delete && find ~/.juce_cache -type d -name CMakeFiles -exec rm -rf {} +`
+- **Insight**: This is a fundamental limitation of sharing a FetchContent cache across projects with different generators. Possible long-term fixes: (1) include generator name in cache path, (2) use separate cache dirs per generator, (3) document the workaround prominently. This affects both macOS (Xcode↔Ninja) and cross-platform workflows (Windows Ninja vs macOS Xcode).
+- **Files**: `CMakeLists.txt` (FETCHCONTENT_BASE_DIR setting)
+
+## Visage is fully cross-platform (NOT macOS-only)
+
+- **Date**: 2026-03-06
+- **Problem**: Incorrectly assumed Visage GPU UI framework was macOS Metal-only, leading to building PlunderTube with `USE_VISAGE_UI=OFF` on Windows. This was wrong — Visage uses bgfx as its rendering backend, which supports multiple graphics APIs.
+- **Solution**: Always build with `USE_VISAGE_UI=ON` on all platforms. Visage rendering backends:
+  - **macOS**: Metal
+  - **Windows**: Direct3D11
+  - **Linux**: Vulkan
+  - **Web/Emscripten**: WebGL
+- **Insight**: NEVER add `#ifdef USE_VISAGE_UI` guards to disable Visage on non-macOS platforms. The `USE_VISAGE_UI` flag is for choosing between Visage UI vs fallback JUCE UI, not for platform selection. Visage works on all platforms. The `external/visage/` directory contains platform-specific code in `visage_graphics/win32/`, `visage_graphics/linux/`, `visage_graphics/macos/`, and `visage_windowing/` has platform windowing backends.
+- **Files**: `external/visage/visage_graphics/CMakeLists.txt`, `CMakeLists.txt`
