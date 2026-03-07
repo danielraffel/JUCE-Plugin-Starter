@@ -327,6 +327,34 @@ Port verified via CI. For thorough testing, consider a local VM.
 
 ## Implementation Notes
 
+### Third-Party Dependencies & Licensing
+
+The audit should detect and handle third-party dependencies:
+
+**Detection:**
+- Scan `CMakeLists.txt` for `FetchContent_Declare`, `add_subdirectory`, `find_package`
+- Scan `external/` directory for vendored libraries
+- Look for `LICENSE`, `COPYING`, `NOTICE` files referencing third-party code
+- Check for Visage (macOS Metal only — needs DirectX bridge for Windows, Vulkan for Linux)
+- Check for platform-specific frameworks (`CoreAudio`, `AudioToolbox`, `Accelerate`)
+
+**License Management:**
+- Detect existing license files (e.g., `LICENSE.md`, `THIRD_PARTY_LICENSES.md`)
+- Parse referenced third-party libraries and their licenses
+- Generate platform-specific license files if dependencies differ:
+  - `LICENSE-macOS.md` — includes macOS-specific deps (Visage Metal backend, CoreAudio)
+  - `LICENSE-Windows.md` — includes Windows-specific deps (ASIO SDK if used, DirectX)
+  - `LICENSE-Linux.md` — includes Linux-specific deps (ALSA, X11)
+- If all deps are cross-platform, keep a single `LICENSE.md`
+- Offer to create/update `THIRD_PARTY_LICENSES.md` with per-platform sections
+
+**Visage-Specific Handling:**
+- If Visage is detected, warn that the bridge layer is macOS-only
+- Offer two paths:
+  1. Build without Visage on Windows/Linux (fallback to JUCE UI)
+  2. Wait for Visage bridge to be implemented (blocked — see cross-platform plan item 2.3/3.2)
+- Update `#if USE_VISAGE_UI` guards to work cross-platform
+
 ### This should be a new juce-dev command, not a skill
 
 - Commands have access to Bash, file tools, AskUserQuestion
