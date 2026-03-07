@@ -147,6 +147,14 @@ Each entry:
 - **Insight**: Visage's `visage_windowing/` abstracts platform differences. The bridge layer is essentially platform-agnostic. No separate Windows/Linux bridge implementations needed. Only macOS-specific comments needed updating.
 - **Files**: `templates/visage/JuceVisageBridge.h`, `templates/visage/JuceVisageBridge.cpp`
 
+## int64_t vs juce::int64 on ARM64 Linux
+
+- **Date**: 2026-03-07
+- **Problem**: On ARM64 Linux, `int64_t` is `long` while `juce::int64` is `long long`. Both are 64-bit but different types. This causes multiple compilation errors: (1) `int64_t(var_value)` is ambiguous (var has conversions to int, int64, bool, float, double — no `long` conversion). (2) `std::max(0LL, int64_t_expr)` fails because `0LL` is `long long` but `int64_t` is `long`. (3) `ValueTree::setProperty(name, int64_t_value, nullptr)` is ambiguous because `var` has no `long` constructor. (4) `juce::jmax<int64>(...)` triggers `SIMDNativeOps<long long>` which has no NEON specialization.
+- **Solution**: At JUCE `var`/`ValueTree` boundaries: use `static_cast<int>(var_value)` or `static_cast<juce::int64>(var_value)` for reading, `static_cast<juce::int64>(int64_t_value)` for writing. For `std::max`/`std::min`: use `int64_t(0)` instead of `0LL` when other args are `int64_t`. For `jmax`/`jmin`: avoid explicit `<int64>` template parameter, use `std::max` instead or let template deduction work.
+- **Insight**: This is unique to ARM64 Linux. On ARM64 macOS, `int64_t` and `long long` are both `long long`. On x86-64 Linux, `int64_t` is `long` and `long long` is `long long` (same issue, but x86-64 SIMD ops exist for both). The safest cross-platform pattern: use `juce::int64` consistently instead of `int64_t` when interacting with JUCE APIs.
+- **Files**: `Source/PluginProcessor.cpp`, `Source/SliceManager.cpp`, `Source/BackgroundSampleLoader.cpp`, `Source/Algorithms/OnsetDetection/Algorithms/OriginalEnhancedAlgorithm.cpp`, `Source/Visage/VisageSingleSampleView.cpp`
+
 ## bgfx shaderc on ARM64 Linux — same fix as ARM64 Windows
 
 - **Date**: 2026-03-07
