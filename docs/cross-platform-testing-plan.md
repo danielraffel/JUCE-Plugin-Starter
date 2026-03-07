@@ -22,8 +22,8 @@ Goal: PlunderTube builds and runs on Windows with Visage GPU UI (D3D11) enabled.
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | A.1 | Verify bgfx shaderc builds from source on ARM64 Windows (VISAGE_BUILD_SHADERC). If VM fails, use GitHub Actions CI with windows-latest runner. | [x] | VERIFIED 2026-03-07: shaderc v1.18.129 builds from source on ARM64 Windows (MSVC 19.44, Ninja). 433 compilation units, all succeeded. shaderc.exe runs natively — no x86-64 emulation needed. Built at C:\Users\daniel\.juce_cache\bgfx-build\cmake\bgfx\shaderc.exe. |
-| A.2 | Fix remaining C++ compilation errors on Windows (MSVC). Iterate: build, fix, push, rebuild. | [ ] | Expect: missing headers, MSVC template quirks, deprecated APIs. |
-| A.3 | Guard macOS-only dependencies in CMakeLists.txt: Sparkle (already done?), Essentia prebuilt libs. | [ ] | Sparkle already wrapped in if(APPLE). Essentia prebuilt libs are arm64 macOS — need if(APPLE) guard or cross-platform build. |
+| A.2 | Fix remaining C++ compilation errors on Windows (MSVC). Iterate: build, fix, push, rebuild. | [~] | Fixed: HWND missing windows.h include in JuceVisageBridge.h. Remaining: 237 Essentia references in source files need #if ENABLE_ESSENTIA_FEATURES guards (see A.3). Build reached 341/469 before failure. |
+| A.3 | Guard macOS-only dependencies in CMakeLists.txt: Sparkle (already done?), Essentia prebuilt libs. | [~] | CMake side is done (ENABLE_ESSENTIA_FEATURES only set on APPLE). C++ source files need #if ENABLE_ESSENTIA_FEATURES guards around 237 references in PluginProcessor.cpp, WaveformState.h, SliceManager.h. Sparkle already if(APPLE) guarded. |
 | A.4 | Bundle Windows versions of cross-platform tools: yt-dlp.exe, ffmpeg.exe, ffprobe.exe, deno.exe, aria2c.exe. | [ ] | All tools have official Windows builds. Need download + packaging strategy. |
 | A.5 | Windows installer_binaries path resolution — ensure PlunderTube finds bundled tools on Windows. | [ ] | Check Source/ for hardcoded Unix paths to installer_binaries/bin/. |
 | A.6 | End-to-end test: PlunderTube standalone launches on Windows, UI renders via D3D11/Visage. | [ ] | Requires A.1-A.5 complete. |
