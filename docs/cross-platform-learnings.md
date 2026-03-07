@@ -134,3 +134,15 @@ Each entry:
   8. **Visage API names**: `kModifierCtrl` doesn't exist — correct names are `kModifierRegCtrl` (Windows/Linux) and `kModifierMacCtrl` (macOS).
 - **Insight**: When writing cross-platform JUCE+Visage code, always: (a) use `#ifdef _WIN32` for pre-JUCE-header guards, (b) never rely on Clang's implicit includes, (c) use `static constexpr` instead of local `constexpr` for lambda defaults, (d) avoid `#else if(false)` patterns entirely.
 - **Files**: `CMakeLists.txt`, `Source/Visage/*.cpp`, `Source/Visage/*.h`, `Source/Settings/SettingsManager.cpp`
+
+## JuceVisageBridge is already cross-platform
+
+- **Date**: 2026-03-07
+- **Problem**: Assumed the JuceVisageBridge needed separate Windows (HWND+D3D11) and Linux (X11+Vulkan) implementations.
+- **Solution**: The bridge is already cross-platform by design. Key patterns:
+  1. **Window creation**: `visageWindow->show(width, height, parentHandle)` calls `createPluginWindow()` which creates `WindowWin32` or `WindowX11` automatically based on platform.
+  2. **Parent handle**: `peer->getNativeHandle()` returns the right native type (NSView*, HWND, X11 Window) on each platform.
+  3. **Modifier keys**: `#if JUCE_MAC || JUCE_IOS` / `#else` handles Mac Cmd vs Windows/Linux Ctrl mapping.
+  4. **Mouse events**: `#if !JUCE_IOS` correctly enables mouse forwarding on ALL desktop platforms (macOS, Windows, Linux).
+- **Insight**: Visage's `visage_windowing/` abstracts platform differences. The bridge layer is essentially platform-agnostic. No separate Windows/Linux bridge implementations needed. Only macOS-specific comments needed updating.
+- **Files**: `templates/visage/JuceVisageBridge.h`, `templates/visage/JuceVisageBridge.cpp`

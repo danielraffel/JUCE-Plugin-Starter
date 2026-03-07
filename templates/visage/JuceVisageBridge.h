@@ -5,7 +5,7 @@
 #include <visage_widgets/frame.h>
 
 /**
- * JuceVisageBridge — Embeds Visage Metal rendering inside a JUCE component.
+ * JuceVisageBridge — Embeds Visage GPU rendering inside a JUCE component.
  *
  * Handles: window creation, mouse/keyboard event routing, focus management,
  * clipboard integration, and cursor style mapping.
@@ -34,7 +34,7 @@ public:
     void timerCallback() override;
 
 #if !JUCE_IOS
-    // Mouse events (macOS only — iOS uses native touch via VisageMetalView)
+    // Mouse events (desktop only — iOS uses native touch via VisageMetalView)
     void mouseDown (const juce::MouseEvent& e) override;
     void mouseUp (const juce::MouseEvent& e) override;
     void mouseDrag (const juce::MouseEvent& e) override;
