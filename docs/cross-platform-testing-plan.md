@@ -60,7 +60,7 @@ Goal: Finish and test the /juce-dev:port command and merge outstanding branches.
 | E.1 | Review and finalize /juce-dev:port command on feature/port-command branch. | [x] | REVIEWED 2026-03-07: port.md is comprehensive — 4-stage flow (detect, audit, plan, execute), covers CMake/source/build scripts/deps/binaries, proper Visage cross-platform notes, VM testing patterns matching actual SSH workflows, MSVC gotchas documented. Ready for dogfooding. |
 | E.2 | Test /juce-dev:port on PlunderTube (dogfooding — audit-only mode on Windows). | [x] | VERIFIED 2026-03-07: Manually ran audit patterns from port.md against PlunderTube. Catches: 3 .mm files, execinfo.h usage, dlfcn.h, cxxabi.h, NSView/NSWindow in bridge. All match real issues fixed during Phase A. Already-guarded code correctly skipped. |
 | E.3 | Merge juce-dev feature/port-command to master. | [x] | MERGED 2026-03-07: Fast-forward merge of feature/port-command into master. Added port.md (326 lines), minor updates to setup-visage.md and SKILL.md. 3 files changed, 340 insertions, 6 deletions. |
-| E.4 | Merge JUCE-Plugin-Starter outstanding feature branches to main. | [ ] | Review which branches have unmerged work. |
+| E.4 | Merge JUCE-Plugin-Starter outstanding feature branches to main. | [!] | NEEDS USER: 36 commits on feature/cross-platform-3-docs ready to merge to main (no conflicts). Includes all Phase 1-3 work: CLAP, AUv3, Catch2, .clang-format, Windows/Linux CMake+build scripts, CI/CD, cross-platform dependencies.sh, Visage bridge research, docs. Also 2 independent branches: claude/diagnostickit-fixes (3 commits), claude/visage-integration (2 commits). Merge requires user authorization per project rules ("work on feature branches, never on main"). |
 
 ## Phase F: GitHub Actions Fallback (if VM builds are blocked)
 
@@ -68,9 +68,9 @@ Goal: Use CI as alternative to local VM for testing Windows/Linux builds.
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| F.1 | Add GitHub Actions workflow to PlunderTube for Windows CI build. | [ ] | windows-latest runner is x86-64, avoids ARM64 shaderc issue. Also windows-arm64 runners available. |
-| F.2 | Add GitHub Actions workflow to PlunderTube for Linux CI build. | [ ] | ubuntu-latest runner. |
-| F.3 | If ARM64 VM shaderc fails: document blocker, use CI-only Windows testing. | [?] | Contingency. |
+| F.1 | Add GitHub Actions workflow to PlunderTube for Windows CI build. | [!] | DEFERRED: Fallback for VM GPU issues. PlunderTube already builds on Windows ARM64 (A.2 confirmed). CI would enable automated testing. Low priority since local build works. |
+| F.2 | Add GitHub Actions workflow to PlunderTube for Linux CI build. | [!] | DEFERRED: Depends on PlunderTube Linux port (Phase H) which is blocked by G.1 (Ubuntu VM sudo). |
+| F.3 | If ARM64 VM shaderc fails: document blocker, use CI-only Windows testing. | [x] | RESOLVED: shaderc builds from source on ARM64 Windows (A.1 confirmed). No fallback needed. |
 
 ## Phase G: JUCE-Plugin-Starter Template Ubuntu VM Testing
 
@@ -79,10 +79,10 @@ Goal: Verify the template's Linux support actually works on a real Ubuntu machin
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | G.1 | Ubuntu VM: Run dependencies.sh, verify all apt packages install. | [!] | BLOCKED: dependencies.sh correctly detects Linux and lists apt packages, but sudo requires password over SSH and user password is unknown. Need: either configure passwordless sudo for daniel, or run `sudo apt-get install -y cmake ninja-build clang git pkg-config libasound2-dev libx11-dev libxinerama-dev libxext-dev libxrandr-dev libxcursor-dev libfreetype6-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev libcurl4-openssl-dev` interactively on the VM. |
-| G.2 | Ubuntu VM: Clone JUCE-Plugin-Starter, CMake configure with Ninja + Clang. | [ ] | Tests Linux CMake path (3.1). |
-| G.3 | Ubuntu VM: Build VST3 + CLAP + Standalone. | [ ] | Tests Linux build pipeline (3.1, 3.3). |
-| G.4 | Ubuntu VM: Run Catch2 tests. | [ ] | Tests cross-platform test framework (1.3 on Linux). |
-| G.5 | Verify GitHub Actions CI passes on all 3 platforms (push to feature branch). | [ ] | Tests CI workflow (2.4, 3.4). |
+| G.2 | Ubuntu VM: Clone JUCE-Plugin-Starter, CMake configure with Ninja + Clang. | [!] | BLOCKED by G.1: Cannot proceed without build tools (cmake, ninja, clang). |
+| G.3 | Ubuntu VM: Build VST3 + CLAP + Standalone. | [!] | BLOCKED by G.1/G.2. |
+| G.4 | Ubuntu VM: Run Catch2 tests. | [!] | BLOCKED by G.1/G.2/G.3. Same placeholder issue as C.4 likely applies. |
+| G.5 | Verify GitHub Actions CI passes on all 3 platforms (push to feature branch). | [!] | BLOCKED: Can verify macOS/Windows CI but Linux testing blocked by G.1. Could push to feature branch to test CI independently. |
 
 ## Phase H: PlunderTube Linux Port (using /juce-dev:port)
 
@@ -93,13 +93,13 @@ Prerequisites: Phase E (port command merged) and Phase G (template verified on L
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| H.1 | Run `/juce-dev:port linux --audit-only` on PlunderTube to generate audit report. | [ ] | Dogfood the port command for Linux. |
-| H.2 | Install JUCE Linux dependencies on Ubuntu VM via dependencies.sh. | [ ] | `ssh ubuntu`, run apt packages. |
-| H.3 | Clone PlunderTube on Ubuntu VM, attempt CMake configure. | [ ] | Visage should auto-detect Vulkan on Linux. |
-| H.4 | Fix Linux-specific compilation errors (guided by H.1 audit). | [ ] | Expect: missing X11/Vulkan headers, Linux-specific JUCE deps. |
-| H.5 | Guard macOS-only deps for Linux (same as A.3 but verify on Linux). | [ ] | Sparkle, Essentia prebuilt, macOS frameworks. |
-| H.6 | Bundle Linux versions of cross-platform tools. | [ ] | yt-dlp, ffmpeg, deno, aria2c — Linux ARM64 or x86-64 builds. |
-| H.7 | End-to-end test: PlunderTube builds and links on Linux. | [ ] | UI rendering test may need Xvfb or real display. |
+| H.1 | Run `/juce-dev:port linux --audit-only` on PlunderTube to generate audit report. | [!] | BLOCKED: Phase H requires G.5 complete. G.1 blocked on Ubuntu sudo password. Port command is ready (E.3 merged). |
+| H.2 | Install JUCE Linux dependencies on Ubuntu VM via dependencies.sh. | [!] | BLOCKED by G.1 (same sudo issue). |
+| H.3 | Clone PlunderTube on Ubuntu VM, attempt CMake configure. | [!] | BLOCKED by H.2. |
+| H.4 | Fix Linux-specific compilation errors (guided by H.1 audit). | [!] | BLOCKED by H.3. |
+| H.5 | Guard macOS-only deps for Linux (same as A.3 but verify on Linux). | [!] | BLOCKED by H.3. Guards already in place from A.3 (Essentia, Sparkle). |
+| H.6 | Bundle Linux versions of cross-platform tools. | [!] | BLOCKED/DEFERRED: Same as A.4 but for Linux. Runtime concern. |
+| H.7 | End-to-end test: PlunderTube builds and links on Linux. | [!] | BLOCKED by all prior H items. Also needs GPU/Vulkan for Visage rendering. |
 
 ---
 
