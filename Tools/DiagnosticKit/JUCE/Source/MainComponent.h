@@ -15,11 +15,15 @@ public:
     void resized() override;
 
 private:
-    enum class State { Idle, Collecting, Submitting, Success, Error };
+    enum class State { Idle, Collecting, Preview, Submitting, Success, Error };
 
     void run() override; // Background thread for collection + upload
     void updateUI();
+    void onCollectClicked();
     void onSubmitClicked();
+
+    /** Replace username/home paths with anonymized versions. */
+    static juce::String anonymize (const juce::String& text);
 
     const AppConfig& config_;
     DiagnosticCollector collector_;
@@ -29,6 +33,7 @@ private:
     juce::String statusMessage_;
     juce::String issueUrl_;
     juce::String errorMessage_;
+    DiagnosticData collectedData_;
 
     // UI Components
     juce::Label titleLabel_;
@@ -36,10 +41,13 @@ private:
     juce::Label statusLabel_;
     juce::Label feedbackLabel_;
     juce::TextEditor feedbackEditor_;
-    juce::TextButton submitButton_ { "Collect & Submit Diagnostic" };
+    juce::TextEditor previewEditor_;  // Shows collected data before upload
+    juce::TextButton collectButton_ { "Collect Diagnostic" };
+    juce::TextButton submitButton_ { "Submit to GitHub" };
     juce::TextButton openBrowserButton_ { "Open in Browser" };
     juce::TextButton doneButton_ { "Done" };
     juce::TextButton tryAgainButton_ { "Try Again" };
+    juce::TextButton cancelButton_ { "Cancel" };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

@@ -36,9 +36,18 @@ MainComponent::MainComponent (const AppConfig& config)
         addAndMakeVisible (feedbackEditor_);
     }
 
+    // Preview editor (read-only, shows collected data before upload)
+    previewEditor_.setMultiLine (true);
+    previewEditor_.setReadOnly (true);
+    previewEditor_.setScrollbarsShown (true);
+    addChildComponent (previewEditor_);
+
     // Buttons
+    collectButton_.onClick = [this] { onCollectClicked(); };
+    addAndMakeVisible (collectButton_);
+
     submitButton_.onClick = [this] { onSubmitClicked(); };
-    addAndMakeVisible (submitButton_);
+    addChildComponent (submitButton_);
 
     openBrowserButton_.onClick = [this]
     {
@@ -61,6 +70,13 @@ MainComponent::MainComponent (const AppConfig& config)
     };
     addChildComponent (tryAgainButton_);
 
+    cancelButton_.onClick = [this]
+    {
+        state_ = State::Idle;
+        updateUI();
+    };
+    addChildComponent (cancelButton_);
+
     setSize (config_.windowWidth, config_.windowHeight);
     updateUI();
 }
@@ -82,7 +98,7 @@ void MainComponent::resized()
     titleLabel_.setBounds (area.removeFromTop (30));
     area.removeFromTop (5);
     subtitleLabel_.setBounds (area.removeFromTop (20));
-    area.removeFromTop (20);
+    area.removeFromTop (15);
 
     if (state_ == State::Idle)
     {
@@ -95,11 +111,24 @@ void MainComponent::resized()
         }
 
         auto buttonArea = area.removeFromBottom (40);
-        submitButton_.setBounds (buttonArea);
+        collectButton_.setBounds (buttonArea);
     }
     else if (state_ == State::Collecting || state_ == State::Submitting)
     {
         statusLabel_.setBounds (area.withTrimmedTop (60).removeFromTop (60));
+    }
+    else if (state_ == State::Preview)
+    {
+        statusLabel_.setBounds (area.removeFromTop (25));
+        area.removeFromTop (5);
+
+        auto buttonArea = area.removeFromBottom (40);
+        auto thirdWidth = buttonArea.getWidth() / 2 - 5;
+        submitButton_.setBounds (buttonArea.removeFromLeft (thirdWidth));
+        buttonArea.removeFromLeft (10);
+        cancelButton_.setBounds (buttonArea);
+
+        previewEditor_.setBounds (area);
     }
     else if (state_ == State::Success)
     {
@@ -125,70 +154,165 @@ void MainComponent::resized()
 
 void MainComponent::updateUI()
 {
-    feedbackLabel_.setVisible (state_ == State::Idle && config_.allowUserFeedback);
-    feedbackEditor_.setVisible (state_ == State::Idle && config_.allowUserFeedback);
-    submitButton_.setVisible (state_ == State::Idle);
+    // Hide everything first
+    feedbackLabel_.setVisible (false);
+    feedbackEditor_.setVisible (false);
+    collectButton_.setVisible (false);
+    submitButton_.setVisible (false);
+    cancelButton_.setVisible (false);
+    previewEditor_.setVisible (false);
+    statusLabel_.setVisible (false);
+    openBrowserButton_.setVisible (false);
+    doneButton_.setVisible (false);
+    tryAgainButton_.setVisible (false);
 
-    statusLabel_.setVisible (state_ != State::Idle);
-    openBrowserButton_.setVisible (state_ == State::Success);
-    doneButton_.setVisible (state_ == State::Success || state_ == State::Error);
-    tryAgainButton_.setVisible (state_ == State::Error);
+    switch (state_)
+    {
+        case State::Idle:
+            if (config_.allowUserFeedback)
+            {
+                feedbackLabel_.setVisible (true);
+                feedbackEditor_.setVisible (true);
+            }
+            collectButton_.setVisible (true);
+            break;
 
-    if (state_ == State::Collecting)
-        statusLabel_.setText ("Collecting diagnostic information...", juce::dontSendNotification);
-    else if (state_ == State::Submitting)
-        statusLabel_.setText ("Submitting to GitHub...", juce::dontSendNotification);
-    else if (state_ == State::Success)
-        statusLabel_.setText ("Report submitted successfully!\n\n" + issueUrl_, juce::dontSendNotification);
-    else if (state_ == State::Error)
-        statusLabel_.setText ("Submission failed:\n\n" + errorMessage_, juce::dontSendNotification);
+        case State::Collecting:
+            statusLabel_.setVisible (true);
+            statusLabel_.setText ("Collecting diagnostic information...", juce::dontSendNotification);
+            break;
+
+        case State::Preview:
+            statusLabel_.setVisible (true);
+            statusLabel_.setText ("Review the data below before submitting:", juce::dontSendNotification);
+            previewEditor_.setVisible (true);
+            submitButton_.setVisible (true);
+            cancelButton_.setVisible (true);
+            break;
+
+        case State::Submitting:
+            statusLabel_.setVisible (true);
+            statusLabel_.setText ("Submitting to GitHub...", juce::dontSendNotification);
+            break;
+
+        case State::Success:
+            statusLabel_.setVisible (true);
+            statusLabel_.setText ("Report submitted successfully!\n\n" + issueUrl_, juce::dontSendNotification);
+            openBrowserButton_.setVisible (true);
+            doneButton_.setVisible (true);
+            break;
+
+        case State::Error:
+            statusLabel_.setVisible (true);
+            statusLabel_.setText ("Submission failed:\n\n" + errorMessage_, juce::dontSendNotification);
+            tryAgainButton_.setVisible (true);
+            doneButton_.setVisible (true);
+            break;
+    }
 
     resized();
     repaint();
 }
 
-void MainComponent::onSubmitClicked()
+juce::String MainComponent::anonymize (const juce::String& text)
+{
+    auto result = text;
+
+    // Get the current username and home path
+    auto home = juce::File::getSpecialLocation (juce::File::userHomeDirectory);
+    auto homePath = home.getFullPathName();
+    auto username = home.getFileName(); // Last component of home path is the username
+
+   #if JUCE_WINDOWS
+    // C:\Users\daniel -> C:\Users\<user>
+    result = result.replace (homePath, "C:\\Users\\<user>", true);
+    result = result.replace (username, "<user>", false);
+    // Also handle forward-slash variants
+    result = result.replace (homePath.replace ("\\", "/"), "C:/Users/<user>", true);
+   #else
+    // /home/daniel -> /home/<user>
+    result = result.replace (homePath, "/home/<user>", true);
+    result = result.replace ("/Users/" + username, "/Users/<user>", true);
+    // Replace bare username if it appears in paths (conservative — only after path separators)
+    result = result.replace ("/" + username + "/", "/<user>/", true);
+   #endif
+
+    // Anonymize hostname in crash log filenames (e.g., _machinename.ips)
+    auto hostname = juce::SystemStats::getComputerName();
+    if (hostname.isNotEmpty())
+        result = result.replace (hostname, "<hostname>", true);
+
+    return result;
+}
+
+void MainComponent::onCollectClicked()
 {
     state_ = State::Collecting;
     updateUI();
     startThread();
 }
 
+void MainComponent::onSubmitClicked()
+{
+    state_ = State::Submitting;
+    updateUI();
+
+    // Run upload on background thread
+    auto& uploader = uploader_;
+    auto& data = collectedData_;
+
+    juce::Thread::launch ([this, &uploader, &data]
+    {
+        juce::String errorMsg;
+        auto url = uploader.submit (data, errorMsg);
+
+        juce::MessageManager::callAsync ([this, url, errorMsg]
+        {
+            if (url.isNotEmpty())
+            {
+                issueUrl_ = url;
+                state_ = State::Success;
+            }
+            else
+            {
+                errorMessage_ = errorMsg;
+                state_ = State::Error;
+            }
+            updateUI();
+        });
+    });
+}
+
 void MainComponent::run()
 {
     // Collect diagnostics (runs on background thread)
-    auto data = collector_.collectAll (feedbackEditor_.getText());
+    collectedData_ = collector_.collectAll (feedbackEditor_.getText());
 
     if (threadShouldExit())
         return;
 
-    // Switch to submitting state
-    juce::MessageManager::callAsync ([this]
+    // Anonymize all collected data
+    collectedData_.systemInfo       = anonymize (collectedData_.systemInfo);
+    collectedData_.pluginStatus     = anonymize (collectedData_.pluginStatus);
+    collectedData_.crashLogs        = anonymize (collectedData_.crashLogs);
+    collectedData_.pluginValidation = anonymize (collectedData_.pluginValidation);
+    collectedData_.dawDiagnostics   = anonymize (collectedData_.dawDiagnostics);
+
+    // Build preview text
+    juce::String preview;
+    if (collectedData_.userFeedback.isNotEmpty())
+        preview << "== User Feedback ==\n" << collectedData_.userFeedback << "\n\n";
+    preview << collectedData_.systemInfo << "\n";
+    preview << collectedData_.pluginStatus << "\n";
+    preview << collectedData_.crashLogs << "\n";
+    preview << collectedData_.pluginValidation << "\n";
+    preview << collectedData_.dawDiagnostics;
+
+    // Switch to preview state on message thread
+    juce::MessageManager::callAsync ([this, preview]
     {
-        state_ = State::Submitting;
-        updateUI();
-    });
-
-    // Upload to GitHub
-    juce::String errorMsg;
-    auto url = uploader_.submit (data, errorMsg);
-
-    if (threadShouldExit())
-        return;
-
-    // Update UI with result
-    juce::MessageManager::callAsync ([this, url, errorMsg]
-    {
-        if (url.isNotEmpty())
-        {
-            issueUrl_ = url;
-            state_ = State::Success;
-        }
-        else
-        {
-            errorMessage_ = errorMsg;
-            state_ = State::Error;
-        }
+        previewEditor_.setText (preview);
+        state_ = State::Preview;
         updateUI();
     });
 }
