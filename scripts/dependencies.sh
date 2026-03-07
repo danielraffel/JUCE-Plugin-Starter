@@ -113,6 +113,7 @@ elif [[ "$PLATFORM" == "Windows" ]]; then
     check_winget_package "Git.Git" "Git" "command -v git"
     check_winget_package "Kitware.CMake" "CMake" "command -v cmake"
     check_winget_package "Ninja-build.Ninja" "Ninja" "command -v ninja"
+    check_winget_package "GitHub.cli" "GitHub CLI (gh)" "command -v gh"
 
     # Check for Visual Studio / Build Tools with MSVC
     VS_FOUND=false
@@ -133,6 +134,24 @@ elif [[ "$PLATFORM" == "Windows" ]]; then
         winget install --id Microsoft.VisualStudio.2022.BuildTools -e \
             --accept-package-agreements --accept-source-agreements \
             --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+    fi
+
+    # Check for Windows SDK (needed for D3D11 shader compilation with Visage/bgfx)
+    SDK_FOUND=false
+    for sdk_path in \
+        "/c/Program Files (x86)/Windows Kits/10" \
+        "/c/Program Files/Windows Kits/10"; do
+        if [[ -d "$sdk_path/bin" ]]; then
+            SDK_FOUND=true
+            echo "OK: Windows SDK found at $sdk_path"
+            break
+        fi
+    done
+
+    if [[ "$SDK_FOUND" == "false" ]]; then
+        echo "Windows SDK not found. Installing (needed for D3D11/Visage GPU UI)..."
+        winget install --id Microsoft.WindowsSDK.10.0.26100 -e \
+            --accept-package-agreements --accept-source-agreements
     fi
 
     echo ""
@@ -194,6 +213,22 @@ elif [[ "$PLATFORM" == "Linux" ]]; then
 
     echo ""
     echo "Installed packages: ${LINUX_PACKAGES[*]}"
+
+    # GitHub CLI (gh) — not in default Ubuntu repos, needs official source
+    if ! command -v gh &>/dev/null; then
+        echo "Installing GitHub CLI (gh)..."
+        (type -p wget >/dev/null || sudo apt-get install -y wget) \
+            && sudo mkdir -p -m 755 /etc/apt/keyrings \
+            && out=$(mktemp) && wget -nv -O "$out" https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+            && cat "$out" | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+            && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && sudo apt-get update \
+            && sudo apt-get install -y gh \
+            && rm -f "$out"
+    else
+        echo "OK: GitHub CLI (gh) is already installed."
+    fi
 fi
 
 # ==============================================================
