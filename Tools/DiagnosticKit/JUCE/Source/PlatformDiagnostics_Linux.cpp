@@ -190,10 +190,11 @@ juce::String collectCrashLogs (const juce::String& pluginName, juce::StringArray
     return logs;
 }
 
-/** Download pluginval if not already cached. Returns the path to the executable, or empty on failure. */
-static juce::File ensurePluginVal()
+/** Find pluginval. Checks PATH and common locations.
+    Does NOT auto-download — pluginval should be installed via the package or bundled by installer. */
+static juce::File findPluginVal()
 {
-    // Check if already in PATH
+    // Check if in PATH
     juce::ChildProcess which;
     if (which.start ("which pluginval"))
     {
@@ -206,48 +207,17 @@ static juce::File ensurePluginVal()
         }
     }
 
-    // Cache location: ~/.local/bin/pluginval
-    auto cacheDir = juce::File::getSpecialLocation (juce::File::userHomeDirectory)
-                        .getChildFile (".local/bin");
-    auto cachedExe = cacheDir.getChildFile ("pluginval");
+    // Check common locations
+    auto home = juce::File::getSpecialLocation (juce::File::userHomeDirectory);
+    auto localBin = home.getChildFile (".local/bin/pluginval");
+    if (localBin.existsAsFile())
+        return localBin;
 
-    if (cachedExe.existsAsFile())
-        return cachedExe;
-
-    // Auto-download from GitHub
-    cacheDir.createDirectory();
-    auto zipFile = cacheDir.getChildFile ("pluginval_Linux.zip");
-
-    juce::String downloadUrl = "https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Linux.zip";
-
-    // Use curl or wget to download
-    juce::ChildProcess dlProc;
-    juce::String dlCmd = "curl -fsSL -o '" + zipFile.getFullPathName() + "' '" + downloadUrl + "'";
-    if (dlProc.start (dlCmd))
-        dlProc.waitForProcessToFinish (60000);
-
-    if (! zipFile.existsAsFile() || zipFile.getSize() < 1000)
-    {
-        zipFile.deleteFile();
-        return {};
-    }
-
-    // Extract
-    juce::ChildProcess extractProc;
-    juce::String extractCmd = "unzip -o '" + zipFile.getFullPathName() + "' -d '" + cacheDir.getFullPathName() + "'";
-    if (extractProc.start (extractCmd))
-        extractProc.waitForProcessToFinish (30000);
-
-    zipFile.deleteFile();
-
-    // Make executable
-    if (cachedExe.existsAsFile())
-    {
-        juce::ChildProcess chmod;
-        chmod.start ("chmod +x '" + cachedExe.getFullPathName() + "'");
-        chmod.waitForProcessToFinish (5000);
-        return cachedExe;
-    }
+    // Check next to the diagnostic executable (if bundled by installer)
+    auto exeDir = juce::File::getSpecialLocation (juce::File::currentExecutableFile).getParentDirectory();
+    auto bundled = exeDir.getChildFile ("pluginval");
+    if (bundled.existsAsFile())
+        return bundled;
 
     return {};
 }
@@ -257,7 +227,7 @@ juce::String runPluginValidation (const AppConfig& config)
     juce::String result;
     result << "# Plugin Validation\n\n";
 
-    auto pluginval = ensurePluginVal();
+    auto pluginval = findPluginVal();
 
     if (! pluginval.existsAsFile())
     {

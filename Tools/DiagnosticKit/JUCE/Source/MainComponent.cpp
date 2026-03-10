@@ -140,7 +140,7 @@ void MainComponent::timerCallback()
         dots << ".";
 
     if (state_ == State::Collecting)
-        statusLabel_.setText ("Collecting diagnostic information" + dots + "\n\nThis may take up to 30 seconds", juce::dontSendNotification);
+        statusLabel_.setText ("Collecting diagnostic information" + dots + "\n\nThis may take a minute or two", juce::dontSendNotification);
     else if (state_ == State::Submitting)
         statusLabel_.setText ("Submitting to GitHub" + dots, juce::dontSendNotification);
 }
@@ -265,7 +265,7 @@ void MainComponent::updateUI()
 
         case State::Collecting:
             statusLabel_.setVisible (true);
-            statusLabel_.setText ("Collecting diagnostic information...\n\nThis may take up to 30 seconds", juce::dontSendNotification);
+            statusLabel_.setText ("Collecting diagnostic information...\n\nThis may take a minute or two", juce::dontSendNotification);
             progressDots_ = 0;
             startTimer (500);
             break;

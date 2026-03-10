@@ -304,8 +304,8 @@ juce::String collectCrashLogs (const juce::String& pluginName, juce::StringArray
 }
 
 /** Find pluginval.exe. Checks next to the diagnostic exe first (bundled by installer),
-    then common locations, then falls back to auto-download if needed. */
-static juce::File ensurePluginVal()
+    then common installed locations. Does NOT auto-download — pluginval is bundled by the installer. */
+static juce::File findPluginVal()
 {
     // 1. Check next to the diagnostic executable (bundled by installer into {app}\Diagnostics\)
     auto exeDir = juce::File::getSpecialLocation (juce::File::currentExecutableFile).getParentDirectory();
@@ -326,42 +326,10 @@ static juce::File ensurePluginVal()
             return found;
     }
 
-    // 3. Check local cache (%LOCALAPPDATA%\pluginval\pluginval.exe)
+    // 3. Check local cache (in case user installed it manually)
     auto cacheDir = juce::File::getSpecialLocation (juce::File::windowsLocalAppData)
                         .getChildFile ("pluginval");
     auto cachedExe = cacheDir.getChildFile ("pluginval.exe");
-    if (cachedExe.existsAsFile())
-        return cachedExe;
-
-    // 4. Auto-download as last resort (for dev machines without installer)
-    cacheDir.createDirectory();
-    auto zipFile = cacheDir.getChildFile ("pluginval_Windows.zip");
-
-    juce::String downloadUrl = "https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip";
-
-    auto psCmd = "powershell -NoProfile -Command \"Invoke-WebRequest -Uri '"
-               + downloadUrl + "' -OutFile '" + zipFile.getFullPathName() + "'\"";
-
-    juce::ChildProcess dlProc;
-    if (dlProc.start (psCmd))
-        dlProc.waitForProcessToFinish (60000);
-
-    if (! zipFile.existsAsFile() || zipFile.getSize() < 1000)
-    {
-        zipFile.deleteFile();
-        return {};
-    }
-
-    auto extractCmd = "powershell -NoProfile -Command \"Expand-Archive -Path '"
-                    + zipFile.getFullPathName() + "' -DestinationPath '"
-                    + cacheDir.getFullPathName() + "' -Force\"";
-
-    juce::ChildProcess extractProc;
-    if (extractProc.start (extractCmd))
-        extractProc.waitForProcessToFinish (30000);
-
-    zipFile.deleteFile();
-
     if (cachedExe.existsAsFile())
         return cachedExe;
 
@@ -373,7 +341,7 @@ juce::String runPluginValidation (const AppConfig& config)
     juce::String result;
     result << "# Plugin Validation\n\n";
 
-    auto pluginval = ensurePluginVal();
+    auto pluginval = findPluginVal();
 
     if (! pluginval.existsAsFile())
     {
@@ -394,18 +362,33 @@ juce::String runPluginValidation (const AppConfig& config)
 
     result << "Running pluginval on " << config.pluginName << ".vst3...\n\n";
 
-    juce::ChildProcess proc;
-    juce::String cmd = "\"" + pluginval.getFullPathName() + "\" --validate-in-process \""
-                      + vst3Path.getFullPathName() + "\" --strictness-level 5";
+    // pluginval is a GUI app — launch it hidden via PowerShell to avoid a visible window.
+    // Write output to a temp file since Start-Process -WindowStyle Hidden can't capture stdout directly.
+    auto tempDir = juce::File::getSpecialLocation (juce::File::tempDirectory);
+    auto outputFile = tempDir.getChildFile ("pluginval_output.txt");
+    auto exitCodeFile = tempDir.getChildFile ("pluginval_exitcode.txt");
+    outputFile.deleteFile();
+    exitCodeFile.deleteFile();
 
+    juce::String psScript =
+        "$p = Start-Process -FilePath '" + pluginval.getFullPathName() + "' "
+        "-ArgumentList '--validate-in-process','" + vst3Path.getFullPathName() + "','--strictness-level','5' "
+        "-WindowStyle Hidden -Wait -PassThru "
+        "-RedirectStandardOutput '" + outputFile.getFullPathName() + "'; "
+        "$p.ExitCode | Out-File -FilePath '" + exitCodeFile.getFullPathName() + "' -Encoding ascii";
+
+    juce::String cmd = "powershell -NoProfile -Command \"" + psScript + "\"";
+
+    juce::ChildProcess proc;
     if (proc.start (cmd))
     {
-        // PluginVal can take a while — use a longer timeout (120 seconds)
         int timeoutMs = juce::jmax (120000, config.diagnosticTimeout * 1000);
         if (proc.waitForProcessToFinish (timeoutMs))
         {
-            auto output = proc.readAllProcessOutput();
-            auto exitCode = proc.getExitCode();
+            auto output = outputFile.existsAsFile() ? outputFile.loadFileAsString() : juce::String();
+            int exitCode = exitCodeFile.existsAsFile()
+                             ? exitCodeFile.loadFileAsString().trim().getIntValue()
+                             : -1;
 
             if (exitCode == 0)
                 result << "**Result: PASS**\n\n";
@@ -417,6 +400,10 @@ juce::String runPluginValidation (const AppConfig& config)
         else
         {
             proc.kill();
+            // Also kill pluginval in case it's still running
+            juce::ChildProcess killProc;
+            killProc.start ("taskkill /IM pluginval.exe /F");
+            killProc.waitForProcessToFinish (5000);
             result << "_Validation timed out after " << (timeoutMs / 1000) << " seconds_\n";
         }
     }
@@ -424,6 +411,9 @@ juce::String runPluginValidation (const AppConfig& config)
     {
         result << "_Could not run pluginval_\n";
     }
+
+    outputFile.deleteFile();
+    exitCodeFile.deleteFile();
 
     return result;
 }
