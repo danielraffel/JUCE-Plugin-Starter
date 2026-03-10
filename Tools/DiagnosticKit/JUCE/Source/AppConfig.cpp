@@ -76,7 +76,7 @@ std::optional<AppConfig> AppConfig::load()
     config.auManufacturer  = env.getValue ("AU_MANUFACTURER", "");
 
     config.windowWidth     = env.getValue ("WINDOW_WIDTH", "420").getIntValue();
-    config.windowHeight    = env.getValue ("WINDOW_HEIGHT", "580").getIntValue();
+    config.windowHeight    = env.getValue ("WINDOW_HEIGHT", "420").getIntValue();
     config.allowUserFeedback = env.getValue ("ALLOW_USER_FEEDBACK", "true").toLowerCase() == "true";
     config.showPrivacyNotice = env.getValue ("SHOW_PRIVACY_NOTICE", "true").toLowerCase() == "true";
 

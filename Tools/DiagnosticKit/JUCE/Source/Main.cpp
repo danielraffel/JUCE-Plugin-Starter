@@ -13,6 +13,10 @@ public:
 
     void initialise (const juce::String& commandLine) override
     {
+        // Use dark colour scheme to prevent light borders/gaps
+        darkLookAndFeel_.setColourScheme (juce::LookAndFeel_V4::getDarkColourScheme());
+        juce::LookAndFeel::setDefaultLookAndFeel (&darkLookAndFeel_);
+
         auto config = AppConfig::load();
         if (! config.has_value())
         {
@@ -132,6 +136,7 @@ private:
         }
     };
 
+    juce::LookAndFeel_V4 darkLookAndFeel_;
     AppConfig config_;
     std::unique_ptr<MainWindow> mainWindow_;
 };
