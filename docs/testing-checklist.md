@@ -27,18 +27,19 @@ If all three pass, macOS is fine.
 
 ### Full Verification
 
-- [ ] `./scripts/build.sh standalone` — builds and launches
-- [ ] `./scripts/build.sh au` — installs to `~/Library/Audio/Plug-Ins/Components/`
-- [ ] `./scripts/build.sh vst3` — installs to `~/Library/Audio/Plug-Ins/VST3/`
-- [ ] `./scripts/build.sh clap` — installs to `~/Library/Audio/Plug-Ins/CLAP/`
-- [ ] `./scripts/build.sh all test` — PluginVal passes for AU and VST3
-- [ ] `./scripts/build.sh all sign` — code signing works (requires Apple Developer certs)
-- [ ] `./scripts/build.sh all publish` — creates PKG, DMG, GitHub release
-- [ ] Load AU in Logic Pro / GarageBand — plugin appears and processes audio
-- [ ] Load VST3 in Reaper / Ableton — plugin appears and processes audio
-- [ ] DiagnosticKit builds when `ENABLE_DIAGNOSTICS=true`
-- [ ] `./scripts/build.sh uninstall` — removes all installed plugins
-- [ ] New project creation: `./scripts/init_plugin_project.sh` completes successfully
+- [x] `./scripts/build.sh standalone` — builds and launches *(tested 2026-03-06 on PlunderTube)*
+- [ ] `./scripts/build.sh au` — installs to `~/Library/Audio/Plug-Ins/Components/` *(human)*
+- [ ] `./scripts/build.sh vst3` — installs to `~/Library/Audio/Plug-Ins/VST3/` *(human)*
+- [ ] `./scripts/build.sh clap` — installs to `~/Library/Audio/Plug-Ins/CLAP/` *(human)*
+- [ ] `./scripts/build.sh all test` — PluginVal passes for AU and VST3 *(human)*
+- [ ] `./scripts/build.sh all sign` — code signing works (requires Apple Developer certs) *(human)*
+- [ ] `./scripts/build.sh all publish` — creates PKG, DMG, GitHub release *(human)*
+- [ ] Load AU in Logic Pro / GarageBand — plugin appears and processes audio *(human)*
+- [ ] Load VST3 in Reaper / Ableton — plugin appears and processes audio *(human)*
+- [x] DiagnosticKit JUCE build skips on macOS with correct message *(tested 2026-03-06)*
+- [ ] DiagnosticKit Swift app builds when `ENABLE_DIAGNOSTICS=true` *(human)*
+- [ ] `./scripts/build.sh uninstall` — removes all installed plugins *(human)*
+- [ ] New project creation: `./scripts/init_plugin_project.sh` completes successfully *(human)*
 
 ### Testing GitHub Actions from macOS
 
@@ -137,15 +138,15 @@ dir build\*_artefacts\Release\Standalone\
 
 ### Full Verification
 
-- [ ] `.\scripts\build.ps1` — CMake configures with Ninja + MSVC
-- [ ] VST3 builds and installs to `C:\Program Files\Common Files\VST3\`
-- [ ] CLAP builds
-- [ ] Standalone .exe builds and runs
-- [ ] Catch2 tests compile and pass (may fail if template placeholders not replaced)
-- [ ] `build.ps1 test` — PluginVal validates VST3
-- [ ] Load VST3 in a Windows DAW (Reaper is free to evaluate)
+- [x] `.\scripts\build.ps1` — CMake configures with Ninja + MSVC *(tested 2026-03-06, ARM64 MSVC 19.44, 300s configure)*
+- [x] VST3 builds and installs to `C:\Program Files\Common Files\VST3\` *(tested 2026-03-06)*
+- [x] CLAP builds *(tested 2026-03-06)*
+- [x] Standalone .exe builds and runs *(tested 2026-03-06, .exe links successfully)*
+- [ ] Catch2 tests compile and pass — **KNOWN ISSUE**: tests reference `PluginProcessor` which is a placeholder; only works after `init_plugin_project.sh` replaces names
+- [ ] `build.ps1 test` — PluginVal validates VST3 *(human: needs PluginVal installed on Windows)*
+- [ ] Load VST3 in a Windows DAW (Reaper is free to evaluate) *(human)*
 - [ ] DiagnosticKit is skipped with warning (not yet cross-platform)
-- [ ] New project creation works (init_plugin_project.sh via Git Bash)
+- [ ] New project creation works (init_plugin_project.sh via Git Bash) *(human)*
 
 ### Known Issues / Gaps
 
@@ -245,6 +246,49 @@ ls build/*_artefacts/Release/Standalone/
    - Push the branch to GitHub
    - Pull on Windows VM and attempt build
    - Report what breaks
+
+---
+
+## Test Results Log
+
+### 2026-03-06: Windows ARM64 VM (UTM, `ssh win`)
+
+**Environment:** Windows 11 ARM64, MSVC 19.44.35219, CMake 4.2.3, Ninja 1.13.2, Git 2.53.0
+
+**Automated (via SSH from macOS):**
+| Test | Result | Notes |
+|------|--------|-------|
+| CMake configure (Ninja + MSVC ARM64) | PASS | 300s, downloads JUCE via FetchContent |
+| VST3 build + install | PASS | Installed to `C:\Program Files\Common Files\VST3\` |
+| CLAP build | PASS | `.clap` module linked |
+| Standalone build | PASS | `.exe` linked |
+| Catch2 tests | FAIL (expected) | `PluginProcessor` undefined — template placeholder not replaced |
+
+**Needs Human Testing:**
+| Test | Status | Notes |
+|------|--------|-------|
+| Standalone .exe launches and shows UI | NOT TESTED | Need RDP or local access |
+| VST3 loads in Windows DAW | NOT TESTED | Install Reaper on VM |
+| PluginVal validation | NOT TESTED | Need PluginVal installed |
+| `init_plugin_project.sh` via Git Bash | NOT TESTED | Creates new project with replaced placeholders |
+| DiagnosticKit skip warning | NOT TESTED | Run `build.ps1` with ENABLE_DIAGNOSTICS=true |
+
+**Key Learnings:**
+- JUCE cache lock files from concurrent SSH sessions can block builds — kill orphan processes first
+- `cmd /c` with nested quotes doesn't work over SSH — use `.bat` scripts instead
+- VsDevCmd.bat is more reliable than `Enter-VsDevShell` (which changes CWD)
+
+### 2026-03-06: macOS (PlunderTube project, Apple Silicon)
+
+**Automated:**
+| Test | Result | Notes |
+|------|--------|-------|
+| `build.sh standalone` (PlunderTube) | PASS | Built and launched after cache fix |
+| CMake configure (Ninja) | PASS | Template repo configures cleanly |
+| `build.sh` syntax check | PASS | `bash -n` passes |
+| DiagnosticKit JUCE skips on macOS | PASS | Correct message: "macOS uses the native Swift app" |
+
+**Key Issue:** Shared JUCE cache generator conflict — switching between Xcode and Ninja generators requires clearing `~/.juce_cache/` CMake files. Pre-existing issue, not from cross-platform changes.
 
 ---
 
