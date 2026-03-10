@@ -76,18 +76,26 @@ juce::String GitHubUploader::stripBase64Whitespace (const juce::String& base64)
 
 juce::String GitHubUploader::uploadViaCurl (const juce::String& urlStr, const juce::File& payloadFile, juce::String& errorOut)
 {
-    // curl.exe is available on Windows 10 1803+ in System32
-    juce::ChildProcess proc;
-    auto curlCmd = "curl.exe -s -o NUL -w \"%{http_code}\" -X PUT"
-                   " -H \"Authorization: Bearer " + config_.githubPAT + "\""
-                   " -H \"Accept: application/vnd.github+json\""
-                   " -H \"X-GitHub-Api-Version: 2022-11-28\""
-                   " -H \"Content-Type: application/json\""
-                   " -d @\"" + payloadFile.getFullPathName() + "\""
-                   " \"" + urlStr + "\"";
+    // Write a batch file to run curl — avoids CreateProcess quoting issues
+    // and ensures cmd.exe handles NUL device and %% escaping properly
+    auto batchFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                         .getChildFile ("diag_curl_" + juce::String (juce::Random::getSystemRandom().nextInt()) + ".bat");
 
+    juce::String batch;
+    batch << "@echo off\r\n";
+    batch << "curl.exe -s -w \"%%%%{http_code}\" -o NUL -X PUT"
+          << " -H \"Authorization: Bearer " << config_.githubPAT << "\""
+          << " -H \"Accept: application/vnd.github+json\""
+          << " -H \"X-GitHub-Api-Version: 2022-11-28\""
+          << " -H \"Content-Type: application/json\""
+          << " -d @\"" << payloadFile.getFullPathName() << "\""
+          << " \"" << urlStr << "\"\r\n";
+
+    batchFile.replaceWithText (batch);
+
+    juce::ChildProcess proc;
     juce::String result;
-    if (proc.start (curlCmd))
+    if (proc.start ("cmd.exe /C \"" + batchFile.getFullPathName() + "\""))
     {
         if (proc.waitForProcessToFinish (60000))
             result = proc.readAllProcessOutput().trim();
@@ -95,10 +103,12 @@ juce::String GitHubUploader::uploadViaCurl (const juce::String& urlStr, const ju
             proc.kill();
     }
 
-    if (result == "200" || result == "201")
+    batchFile.deleteFile();
+
+    if (result.endsWith ("200") || result.endsWith ("201"))
         return "OK";
 
-    errorOut = "curl returned HTTP " + result;
+    errorOut = "curl: " + result.substring (0, 300);
     return {};
 }
 

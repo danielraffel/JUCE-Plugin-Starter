@@ -43,12 +43,24 @@ MainComponent::MainComponent (const AppConfig& config)
     submitButton_.onClick = [this] { onSubmitClicked(); };
     addChildComponent (submitButton_);
 
+    copyUrlButton_.onClick = [this]
+    {
+        if (issueUrl_.isNotEmpty())
+            juce::SystemClipboard::copyTextToClipboard (issueUrl_);
+    };
+    addChildComponent (copyUrlButton_);
+
     openBrowserButton_.onClick = [this]
     {
         if (issueUrl_.isNotEmpty())
             juce::URL (issueUrl_).launchInDefaultBrowser();
     };
     addChildComponent (openBrowserButton_);
+
+    privacyNoteLabel_.setFont (juce::FontOptions (11.0f));
+    privacyNoteLabel_.setColour (juce::Label::textColourId, juce::Colours::grey);
+    privacyNoteLabel_.setJustificationType (juce::Justification::centred);
+    addChildComponent (privacyNoteLabel_);
 
     doneButton_.onClick = [this]
     {
@@ -140,9 +152,18 @@ void MainComponent::resized()
     {
         statusLabel_.setBounds (area.removeFromTop (80));
 
+        // Privacy note at bottom, above buttons
+        auto doneArea = area.removeFromBottom (40);
+        area.removeFromBottom (8);
+        privacyNoteLabel_.setBounds (area.removeFromBottom (45));
+        area.removeFromBottom (8);
+
+        // Three buttons: Copy URL | Open in Browser | Done
         auto buttonArea = area.removeFromBottom (40);
-        auto halfWidth = buttonArea.getWidth() / 2 - 5;
-        openBrowserButton_.setBounds (buttonArea.removeFromLeft (halfWidth));
+        auto thirdWidth = (buttonArea.getWidth() - 20) / 3;
+        copyUrlButton_.setBounds (buttonArea.removeFromLeft (thirdWidth));
+        buttonArea.removeFromLeft (10);
+        openBrowserButton_.setBounds (buttonArea.removeFromLeft (thirdWidth));
         buttonArea.removeFromLeft (10);
         doneButton_.setBounds (buttonArea);
     }
@@ -168,7 +189,9 @@ void MainComponent::updateUI()
     cancelButton_.setVisible (false);
     previewEditor_.setVisible (false);
     statusLabel_.setVisible (false);
+    copyUrlButton_.setVisible (false);
     openBrowserButton_.setVisible (false);
+    privacyNoteLabel_.setVisible (false);
     doneButton_.setVisible (false);
     tryAgainButton_.setVisible (false);
 
@@ -210,7 +233,13 @@ void MainComponent::updateUI()
             stopTimer();
             statusLabel_.setVisible (true);
             statusLabel_.setText ("Report submitted successfully!\n\n" + issueUrl_, juce::dontSendNotification);
+            copyUrlButton_.setVisible (true);
             openBrowserButton_.setVisible (true);
+            privacyNoteLabel_.setVisible (true);
+            privacyNoteLabel_.setText ("This report was sent to a private repository.\n"
+                                       "The link above may show a 404 page — that's normal.\n"
+                                       "The developer has been automatically notified.",
+                                       juce::dontSendNotification);
             doneButton_.setVisible (true);
             break;
 

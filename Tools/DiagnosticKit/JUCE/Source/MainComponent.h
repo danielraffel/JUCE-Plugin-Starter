@@ -46,7 +46,9 @@ private:
     juce::TextEditor previewEditor_;  // Shows collected data before upload
     juce::TextButton collectButton_ { "Collect Diagnostic" };
     juce::TextButton submitButton_ { "Submit to GitHub" };
+    juce::TextButton copyUrlButton_ { "Copy URL" };
     juce::TextButton openBrowserButton_ { "Open in Browser" };
+    juce::Label privacyNoteLabel_;
     juce::TextButton doneButton_ { "Done" };
     juce::TextButton tryAgainButton_ { "Try Again" };
     juce::TextButton cancelButton_ { "Cancel" };
