@@ -108,6 +108,49 @@ foreach ($format in $BuildFormats) {
     }
 }
 
+# Build DiagnosticKit (if enabled)
+$DiagnosticExe = $null
+if ($env:ENABLE_DIAGNOSTICS -eq "true") {
+    $diagSourceDir = Join-Path $ProjectRoot "Tools\DiagnosticKit\JUCE"
+    $diagBuildDir = Join-Path $diagSourceDir "build"
+    $diagEnvFile = Join-Path $ProjectRoot "Tools\DiagnosticKit\.env"
+
+    if (Test-Path (Join-Path $diagSourceDir "CMakeLists.txt")) {
+        Write-Success "Building DiagnosticKit..."
+
+        if (-not (Test-Path $diagEnvFile)) {
+            $GithubUser = $env:GITHUB_USER
+            $diagRepo = if ($env:DIAGNOSTIC_GITHUB_REPO) { $env:DIAGNOSTIC_GITHUB_REPO } else { "$GithubUser/$ProjectName-diagnostics" }
+            $diagEnvContent = @"
+APP_NAME="$ProjectName Diagnostics"
+APP_IDENTIFIER="$BundleId.diagnostics"
+PRODUCT_NAME="$ProjectName"
+PLUGIN_NAME="$ProjectName"
+GITHUB_REPO="$diagRepo"
+GITHUB_TOKEN="$($env:DIAGNOSTIC_GITHUB_PAT)"
+SUPPORT_EMAIL="$($env:DIAGNOSTIC_SUPPORT_EMAIL)"
+"@
+            Set-Content -Path $diagEnvFile -Value $diagEnvContent -Encoding UTF8
+        }
+
+        Push-Location $diagSourceDir
+        cmake -B $diagBuildDir -G Ninja -DCMAKE_BUILD_TYPE=$BuildConfig -DBUILD_DIAGNOSTICS=ON .
+        if ($LASTEXITCODE -eq 0) {
+            ninja -C $diagBuildDir
+            if ($LASTEXITCODE -eq 0) {
+                $diagAppName = "$ProjectName Diagnostics"
+                $DiagnosticExe = Join-Path $diagBuildDir "DiagnosticKit_artefacts\$BuildConfig\Standalone\$diagAppName.exe"
+                if (Test-Path $DiagnosticExe) {
+                    Write-Success "DiagnosticKit built: $DiagnosticExe"
+                } else {
+                    $DiagnosticExe = $null
+                }
+            }
+        }
+        Pop-Location
+    }
+}
+
 # Run tests if requested
 if ($Action -eq "test") {
     # Build and run Catch2 tests
@@ -166,6 +209,16 @@ if ($Action -in "publish","unsigned") {
             Copy-Item -Recurse $srcDir $destDir
             Write-Success "Copied $format artifacts"
         }
+    }
+
+    # Copy DiagnosticKit if it was built
+    if ($DiagnosticExe -and (Test-Path $DiagnosticExe)) {
+        $diagDestDir = Join-Path $artifactsDir "Diagnostics"
+        New-Item -ItemType Directory -Path $diagDestDir -Force | Out-Null
+        Copy-Item $DiagnosticExe (Join-Path $diagDestDir (Split-Path $DiagnosticExe -Leaf))
+        $diagEnvSrc = Join-Path (Split-Path $DiagnosticExe -Parent) ".env"
+        if (Test-Path $diagEnvSrc) { Copy-Item $diagEnvSrc (Join-Path $diagDestDir ".env") }
+        Write-Success "Copied DiagnosticKit artifacts"
     }
 
     # Check for Inno Setup
