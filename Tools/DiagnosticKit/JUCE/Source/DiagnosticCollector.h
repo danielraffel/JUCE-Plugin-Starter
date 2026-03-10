@@ -16,9 +16,16 @@ struct DiagnosticData
     juce::String pipelineHealth;
     juce::String securityInfo;
     juce::String userFeedback;
+    juce::String userEmail;
 
     /** Paths to crash dump files for upload. */
     juce::StringArray crashFilePaths;
+
+    /** Paths to session log files for upload. */
+    juce::StringArray sessionLogFilePaths;
+
+    /** Paths to DAW log files for upload (e.g., Ableton Log.txt). */
+    juce::StringArray dawLogFilePaths;
 };
 
 class DiagnosticCollector

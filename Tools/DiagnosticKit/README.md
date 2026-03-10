@@ -1,41 +1,52 @@
 # DiagnosticKit
 
-> ⚠️ **Work In Progress** - DiagnosticKit integration is currently under development.
+> **Work In Progress** - DiagnosticKit integration is currently under development.
 
 ## Overview
 
-DiagnosticKit is a macOS application that helps your plugin users submit diagnostic reports when they encounter issues.
+DiagnosticKit helps your plugin users submit diagnostic reports when they encounter issues. It collects system info, plugin status, crash logs, and DAW diagnostics, then uploads everything as a GitHub issue to a private repository.
+
+**Two implementations:**
+
+| Platform | Implementation | Status |
+|----------|---------------|--------|
+| **macOS** | Swift/SwiftUI native app | WIP in this template ([reference implementation](https://github.com/danielraffel/PlunderTube/tree/main/Tools/DiagnosticKit)) |
+| **Windows & Linux** | JUCE C++ cross-platform app | Tested on Windows, Linux not yet validated |
 
 **Features:**
 - One-click diagnostic collection
 - Automatic GitHub issue creation in private repository
-- System info, crash logs, and plugin status
+- System info, crash logs, DAW logs, and plugin status
+- Privacy-focused: usernames, paths, and hostnames automatically anonymized
 - No Terminal commands required for users
+- User reviews all collected data before upload
 
-## Current Status
+## Platform-Specific Details
 
-DiagnosticKit is **marked as WIP** in this template. The infrastructure is in place, but the full implementation requires:
+### macOS (Swift/SwiftUI)
 
-1. Swift/SwiftUI application code
-2. GitHub Personal Access Token (PAT) setup
-3. Private diagnostic repository configuration
-4. Build scripts and entitlements
+See the [PlunderTube DiagnosticKit](https://github.com/danielraffel/PlunderTube/tree/main/Tools/DiagnosticKit) for the complete macOS implementation including:
+- SwiftUI app with multiple views
+- macOS Keychain token storage
+- Build scripts and entitlements
+- Code signing and notarization
 
-## Reference Implementation
+### Windows & Linux (JUCE C++)
 
-For a complete working implementation, see:
-**[PlunderTube DiagnosticKit](https://github.com/danielraffel/PlunderTube/tree/main/Tools/DiagnosticKit)**
+See [`JUCE/README.md`](JUCE/README.md) for the cross-platform JUCE implementation including:
+- Windows-specific diagnostics (registry, DXGI, WASAPI)
+- Linux-specific diagnostics (ALSA, PipeWire, package managers)
+- DAW log file uploads (Ableton, Bitwig, Reaper, Studio One)
+- Automatic data anonymization
+- PowerShell fallback for GitHub API on Windows
 
-The PlunderTube implementation includes:
-- Complete Swift/SwiftUI app
-- Build scripts (`Scripts/build_app.sh`)
-- `.env.example` configuration template
-- GitHub API integration
-- Entitlements and code signing
+> **Note**: The JUCE C++ version has been tested on Windows 10/11. Linux builds compile but have not yet been validated on hardware. We'll update this when Linux testing is complete.
 
-## Setup (When Ready)
+## Development Note
 
-When DiagnosticKit is fully integrated into this template, setup will involve:
+DiagnosticKit is intended as a **development and testing tool**. The CLI diagnostic surface should not be included in production release artifacts. The GUI app can be distributed to end users, but the underlying diagnostic collection should be treated as a development-time capability.
+
+## Setup
 
 1. **Enable in project creation**:
    ```bash
@@ -55,7 +66,14 @@ When DiagnosticKit is fully integrated into this template, setup will involve:
 
 4. **Build diagnostics app**:
    ```bash
+   # macOS (Swift)
    ./scripts/build.sh diagnostics
+
+   # Windows (JUCE C++ — from Tools/DiagnosticKit/JUCE/)
+   cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && ninja -C build
+
+   # Linux (JUCE C++ — from Tools/DiagnosticKit/JUCE/)
+   cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && ninja -C build
    ```
 
 ## Integration Points
@@ -67,23 +85,7 @@ The build system already has placeholders for DiagnosticKit:
 - `scripts/uninstall_template.sh` - Handles diagnostics app removal
 - `.env` - `ENABLE_DIAGNOSTICS` flag
 
-## Contributing
+## Reference Implementation
 
-If you'd like to help complete the DiagnosticKit integration:
-
-1. Review the PlunderTube implementation
-2. Adapt the Swift app to be project-agnostic (use template placeholders)
-3. Create the `setup_diagnostic_repo.sh` script
-4. Update build.sh to build the Swift app
-5. Test the complete workflow
-6. Submit a PR!
-
-## Temporary Workaround
-
-Until DiagnosticKit is fully integrated, you can:
-
-1. Copy PlunderTube's DiagnosticKit directory structure
-2. Manually replace project-specific values
-3. Build manually with Xcode
-
-Or simply wait for the full integration in a future release.
+For the most complete working implementation, see:
+**[PlunderTube DiagnosticKit](https://github.com/danielraffel/PlunderTube/tree/main/Tools/DiagnosticKit)**

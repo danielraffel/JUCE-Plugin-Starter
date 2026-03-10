@@ -10,9 +10,9 @@ DiagnosticData DiagnosticCollector::collectAll (const juce::String& userFeedback
     data.pluginStatus     = collectPluginStatus();
     data.crashLogs        = PlatformDiagnostics::collectCrashLogs (config_.pluginName, &data.crashFilePaths);
     data.pluginValidation = PlatformDiagnostics::runPluginValidation (config_);
-    data.dawDiagnostics   = PlatformDiagnostics::collectDAWDiagnostics (config_.pluginName);
+    data.dawDiagnostics   = PlatformDiagnostics::collectDAWDiagnostics (config_.pluginName, &data.dawLogFilePaths);
     data.pythonEnvironment = PlatformDiagnostics::collectPythonEnvironment (config_);
-    data.sessionLogs      = PlatformDiagnostics::collectSessionLogs (config_.pluginName);
+    data.sessionLogs      = PlatformDiagnostics::collectSessionLogs (config_.pluginName, &data.sessionLogFilePaths);
     data.installerInfo    = PlatformDiagnostics::collectInstallerInfo (config_);
     data.dependencies     = PlatformDiagnostics::collectDependencies (config_);
     data.pipelineHealth   = PlatformDiagnostics::collectPipelineHealthCheck (config_);

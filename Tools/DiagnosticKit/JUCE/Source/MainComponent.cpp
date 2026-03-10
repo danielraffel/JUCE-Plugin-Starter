@@ -30,11 +30,50 @@ MainComponent::MainComponent (const AppConfig& config)
         addAndMakeVisible (feedbackEditor_);
     }
 
+    // Email (optional)
+    if (config_.allowUserFeedback)
+    {
+        emailLabel_.setText ("Your email (optional):", juce::dontSendNotification);
+        emailLabel_.setFont (juce::FontOptions (14.0f));
+        addAndMakeVisible (emailLabel_);
+
+        emailEditor_.setMultiLine (false);
+        emailEditor_.setInputRestrictions (200);
+        addAndMakeVisible (emailEditor_);
+    }
+
     // Preview editor (read-only, shows collected data before upload)
     previewEditor_.setMultiLine (true);
     previewEditor_.setReadOnly (true);
     previewEditor_.setScrollbarsShown (true);
     addChildComponent (previewEditor_);
+
+    // Privacy info label on Preview screen
+    privacyInfoLabel_.setFont (juce::FontOptions (11.0f));
+    privacyInfoLabel_.setColour (juce::Label::textColourId, juce::Colours::grey);
+    privacyInfoLabel_.setJustificationType (juce::Justification::centredLeft);
+    privacyInfoLabel_.setTooltip (
+        "We automatically remove personal information before submitting:\n\n"
+        "- Your Windows username is replaced with <user>\n"
+        "- Your home directory path (C:\\Users\\you) is anonymized\n"
+        "- Your computer name is replaced with <hostname>\n"
+        "- These replacements apply to all collected data including\n"
+        "  DAW logs, crash reports, registry entries, and file paths\n\n"
+        "- Your email is only included if you choose to provide it\n"
+        "- Reports are sent to a private GitHub repository");
+    privacyInfoLabel_.setText ("Hover here to learn how we protect your data", juce::dontSendNotification);
+    addChildComponent (privacyInfoLabel_);
+
+    // Trust info on Idle screen (above Collect button)
+    trustInfoLabel_.setFont (juce::FontOptions (11.0f));
+    trustInfoLabel_.setColour (juce::Label::textColourId, juce::Colours::grey);
+    trustInfoLabel_.setJustificationType (juce::Justification::centred);
+    trustInfoLabel_.setText (
+        "Nothing is uploaded without your permission. You'll review\n"
+        "everything collected before anything is sent. Personal info\n"
+        "like your username and computer name are automatically removed.",
+        juce::dontSendNotification);
+    addChildComponent (trustInfoLabel_);
 
     // Buttons
     collectButton_.onClick = [this] { onCollectClicked(); };
@@ -125,11 +164,18 @@ void MainComponent::resized()
             feedbackLabel_.setBounds (area.removeFromTop (20));
             area.removeFromTop (5);
             feedbackEditor_.setBounds (area.removeFromTop (80));
+            area.removeFromTop (10);
+
+            emailLabel_.setBounds (area.removeFromTop (20));
+            area.removeFromTop (5);
+            emailEditor_.setBounds (area.removeFromTop (28));
             area.removeFromTop (15);
         }
 
         auto buttonArea = area.removeFromBottom (40);
         collectButton_.setBounds (buttonArea);
+        area.removeFromBottom (8);
+        trustInfoLabel_.setBounds (area.removeFromBottom (45));
     }
     else if (state_ == State::Collecting || state_ == State::Submitting)
     {
@@ -141,10 +187,14 @@ void MainComponent::resized()
         area.removeFromTop (5);
 
         auto buttonArea = area.removeFromBottom (40);
-        auto thirdWidth = buttonArea.getWidth() / 2 - 5;
-        submitButton_.setBounds (buttonArea.removeFromLeft (thirdWidth));
+        auto halfWidth = buttonArea.getWidth() / 2 - 5;
+        submitButton_.setBounds (buttonArea.removeFromLeft (halfWidth));
         buttonArea.removeFromLeft (10);
         cancelButton_.setBounds (buttonArea);
+
+        area.removeFromBottom (5);
+        privacyInfoLabel_.setBounds (area.removeFromBottom (18));
+        area.removeFromBottom (5);
 
         previewEditor_.setBounds (area);
     }
@@ -184,10 +234,14 @@ void MainComponent::updateUI()
     // Hide everything first
     feedbackLabel_.setVisible (false);
     feedbackEditor_.setVisible (false);
+    emailLabel_.setVisible (false);
+    emailEditor_.setVisible (false);
     collectButton_.setVisible (false);
     submitButton_.setVisible (false);
     cancelButton_.setVisible (false);
     previewEditor_.setVisible (false);
+    privacyInfoLabel_.setVisible (false);
+    trustInfoLabel_.setVisible (false);
     statusLabel_.setVisible (false);
     copyUrlButton_.setVisible (false);
     openBrowserButton_.setVisible (false);
@@ -202,8 +256,11 @@ void MainComponent::updateUI()
             {
                 feedbackLabel_.setVisible (true);
                 feedbackEditor_.setVisible (true);
+                emailLabel_.setVisible (true);
+                emailEditor_.setVisible (true);
             }
             collectButton_.setVisible (true);
+            trustInfoLabel_.setVisible (true);
             break;
 
         case State::Collecting:
@@ -218,6 +275,7 @@ void MainComponent::updateUI()
             statusLabel_.setVisible (true);
             statusLabel_.setText ("Review the data below before submitting:", juce::dontSendNotification);
             previewEditor_.setVisible (true);
+            privacyInfoLabel_.setVisible (true);
             submitButton_.setVisible (true);
             cancelButton_.setVisible (true);
             break;
@@ -268,9 +326,11 @@ juce::String MainComponent::anonymize (const juce::String& text)
    #if JUCE_WINDOWS
     // C:\Users\daniel -> C:\Users\<user>
     result = result.replace (homePath, "C:\\Users\\<user>", true);
-    result = result.replace (username, "<user>", false);
     // Also handle forward-slash variants
     result = result.replace (homePath.replace ("\\", "/"), "C:/Users/<user>", true);
+    // Replace bare username (case-insensitive on Windows)
+    // Do this AFTER path replacement to avoid double-replacing
+    result = result.replace (username, "<user>", true);
    #else
     // /home/daniel -> /home/<user>
     result = result.replace (homePath, "/home/<user>", true);
@@ -329,6 +389,7 @@ void MainComponent::run()
 {
     // Collect diagnostics (runs on background thread)
     collectedData_ = collector_.collectAll (feedbackEditor_.getText());
+    collectedData_.userEmail = emailEditor_.getText().trim();
 
     if (threadShouldExit())
         return;

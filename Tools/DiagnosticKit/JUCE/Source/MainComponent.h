@@ -43,7 +43,11 @@ private:
     juce::Label statusLabel_;
     juce::Label feedbackLabel_;
     juce::TextEditor feedbackEditor_;
+    juce::Label emailLabel_;
+    juce::TextEditor emailEditor_;
     juce::TextEditor previewEditor_;  // Shows collected data before upload
+    juce::Label privacyInfoLabel_;    // "Learn how we protect your data" on Preview
+    juce::Label trustInfoLabel_;      // Privacy assurance on Idle screen
     juce::TextButton collectButton_ { "Collect Diagnostic" };
     juce::TextButton submitButton_ { "Submit to GitHub" };
     juce::TextButton copyUrlButton_ { "Copy URL" };

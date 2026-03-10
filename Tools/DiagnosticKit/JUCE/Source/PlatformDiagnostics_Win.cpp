@@ -74,6 +74,52 @@ juce::String collectSystemInfo()
         }
     }
 
+    // DXGI adapter details (dedicated memory, feature level — important for Visage/bgfx rendering)
+    auto dxgiInfo = runCommand (
+        "powershell -NoProfile -Command \""
+        "Get-CimInstance Win32_VideoController | Select-Object Name, AdapterRAM, VideoProcessor, CurrentRefreshRate, VideoModeDescription | Format-List"
+        "\" 2>nul", 10000);
+    if (dxgiInfo.isNotEmpty())
+    {
+        auto lines = juce::StringArray::fromLines (dxgiInfo);
+        for (auto& line : lines)
+        {
+            auto trimmed = line.trim();
+            if (trimmed.startsWith ("AdapterRAM"))
+            {
+                auto valStr = trimmed.fromFirstOccurrenceOf (":", false, false).trim();
+                auto bytes = valStr.getLargeIntValue();
+                if (bytes > 0)
+                    info << "**GPU Memory:** " << (bytes / 1024 / 1024) << " MB\n";
+            }
+            else if (trimmed.startsWith ("CurrentRefreshRate"))
+            {
+                auto val = trimmed.fromFirstOccurrenceOf (":", false, false).trim();
+                if (val.isNotEmpty() && val != "0")
+                    info << "**Refresh Rate:** " << val << " Hz\n";
+            }
+            else if (trimmed.startsWith ("VideoModeDescription"))
+            {
+                auto val = trimmed.fromFirstOccurrenceOf (":", false, false).trim();
+                if (val.isNotEmpty())
+                    info << "**Display Mode:** " << val << "\n";
+            }
+        }
+    }
+
+    // D3D11 feature level (critical for bgfx/Visage rendering)
+    auto d3dFeatureLevel = runCommand (
+        "powershell -NoProfile -Command \""
+        "$d = New-Object -ComObject WScript.Shell; "
+        "try { "
+        "  Add-Type -AssemblyName System.Runtime.InteropServices; "
+        "  $regVal = (Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Direct3D' -ErrorAction SilentlyContinue); "
+        "  if ($regVal) { $regVal } "
+        "} catch {} "
+        "\" 2>nul", 5000);
+    // Simpler approach: just report that D3D11 is the rendering backend
+    info << "**Rendering Backend:** Direct3D 11 (bgfx)\n";
+
     return info;
 }
 
@@ -317,7 +363,7 @@ juce::String runPluginValidation (const AppConfig& config)
     return result;
 }
 
-juce::String collectDAWDiagnostics (const juce::String& pluginName)
+juce::String collectDAWDiagnostics (const juce::String& pluginName, juce::StringArray* dawLogFilePaths)
 {
     juce::String info;
     info << "# DAW Diagnostics\n\n";
@@ -326,27 +372,108 @@ juce::String collectDAWDiagnostics (const juce::String& pluginName)
     auto localAppData = juce::File::getSpecialLocation (juce::File::windowsLocalAppData);
     auto programFiles = juce::File ("C:\\Program Files");
 
+    // Helper: extract lines mentioning the plugin from a log file (last N relevant lines)
+    // Prioritizes plugin-name matches; only falls back to error/crash lines if no plugin matches
+    auto extractRelevantLines = [&pluginName](const juce::File& logFile, int maxLines = 5) -> juce::String
+    {
+        juce::String result;
+        auto content = logFile.loadFileAsString();
+        auto lines = juce::StringArray::fromLines (content);
+
+        // First pass: lines mentioning the plugin
+        juce::StringArray pluginMatches;
+        for (auto& line : lines)
+        {
+            if (line.containsIgnoreCase (pluginName))
+                pluginMatches.add (line.trim());
+        }
+
+        // Use plugin matches if available, otherwise fall back to error/crash lines
+        juce::StringArray& matches = pluginMatches;
+        juce::StringArray errorMatches;
+        if (pluginMatches.isEmpty())
+        {
+            for (auto& line : lines)
+            {
+                if (line.containsIgnoreCase ("crash") || line.containsIgnoreCase ("fault")
+                    || line.containsIgnoreCase ("exception") || line.containsIgnoreCase ("failed"))
+                {
+                    errorMatches.add (line.trim());
+                }
+            }
+            matches = errorMatches;
+        }
+
+        int start = juce::jmax (0, matches.size() - maxLines);
+        for (int i = start; i < matches.size(); ++i)
+            result << "    " << matches[i] << "\n";
+        return result;
+    };
+
     // ===== Ableton Live =====
     auto abletonDir = appData.getChildFile ("Ableton");
     if (abletonDir.isDirectory())
     {
         info << "## Ableton Live\n\n";
-        info << "✓ Ableton Live data found\n";
-        for (auto& dir : juce::RangedDirectoryIterator (abletonDir, false, "Live *"))
+        info << "\xe2\x9c\x93 Ableton Live data found\n";
+
+        // Iterate all subdirectories and check for Live version dirs
+        for (auto& dir : juce::RangedDirectoryIterator (abletonDir, false, "*", juce::File::findDirectories))
         {
-            info << "  Version: " << dir.getFile().getFileName() << "\n";
+            auto dirName = dir.getFile().getFileName();
+            if (! dirName.startsWithIgnoreCase ("Live ") || dirName.startsWithIgnoreCase ("Live Reports"))
+                continue;
+
+            info << "  Version: " << dirName << "\n";
             auto logFile = dir.getFile().getChildFile ("Preferences\\Log.txt");
             if (logFile.existsAsFile())
             {
                 auto content = logFile.loadFileAsString();
                 if (content.containsIgnoreCase (pluginName))
-                    info << "  ✓ Plugin referenced in Log.txt\n";
+                {
+                    info << "  \xe2\x9c\x93 Plugin referenced in Log.txt\n";
+                    auto relevant = extractRelevantLines (logFile);
+                    if (relevant.isNotEmpty())
+                        info << "  Recent relevant log entries:\n" << relevant;
+
+                    // Attach the full log for upload
+                    if (dawLogFilePaths != nullptr)
+                        dawLogFilePaths->addIfNotAlreadyThere (logFile.getFullPathName());
+                }
                 else
+                {
                     info << "  Plugin not found in Log.txt\n";
+                }
+            }
+
+            // Check Ableton's plugin scan database
+            auto pluginScanDb = dir.getFile().getChildFile ("Preferences\\PluginScanDb.txt");
+            if (pluginScanDb.existsAsFile())
+            {
+                auto scanContent = pluginScanDb.loadFileAsString();
+                if (scanContent.containsIgnoreCase (pluginName))
+                    info << "  \xe2\x9c\x93 Plugin found in PluginScanDb\n";
+            }
+
+            // Check Ableton crash recovery data
+            auto crashDir = dir.getFile().getChildFile ("Preferences\\Crash");
+            if (crashDir.isDirectory())
+            {
+                auto weekAgo = juce::Time::getCurrentTime() - juce::RelativeTime::days (7);
+                int recentCrashes = 0;
+                for (auto& crashEntry : juce::RangedDirectoryIterator (crashDir, false, "*", juce::File::findDirectories))
+                {
+                    if (crashEntry.getFile().getLastModificationTime() > weekAgo)
+                        ++recentCrashes;
+                }
+                // Crash recovery dirs come in groups of 3 (BaseFiles, CrashRecoveryInfo, Undo)
+                recentCrashes /= 3;
+                if (recentCrashes > 0)
+                    info << "  \xe2\x9a\xa0 " << recentCrashes << " recent Ableton crash recovery session(s)\n";
             }
         }
 
-        // Check Ableton crash reports
+        // Check Ableton crash reports (zip files sent to Ableton)
         auto abletonReports = appData.getChildFile ("Ableton\\Live Reports\\Usage");
         if (abletonReports.isDirectory())
         {
@@ -359,7 +486,7 @@ juce::String collectDAWDiagnostics (const juce::String& pluginName)
                     ++recentCrashes;
             }
             if (recentCrashes > 0)
-                info << "  ⚠ " << recentCrashes << " recent Ableton crash report(s)\n";
+                info << "  \xe2\x9a\xa0 " << recentCrashes << " recent Ableton crash report(s)\n";
         }
         info << "\n";
     }
@@ -428,7 +555,23 @@ juce::String collectDAWDiagnostics (const juce::String& pluginName)
         {
             auto content = clapCache.loadFileAsString();
             if (content.containsIgnoreCase (pluginName))
-                info << "  ✓ Plugin found in CLAP scan cache\n";
+                info << "  \xe2\x9c\x93 Plugin found in CLAP scan cache\n";
+        }
+
+        // Check Reaper log for errors
+        auto reaperLog = reaperDir.getChildFile ("reaper.log");
+        if (reaperLog.existsAsFile())
+        {
+            auto content = reaperLog.loadFileAsString();
+            if (content.containsIgnoreCase (pluginName))
+            {
+                info << "  \xe2\x9c\x93 Plugin referenced in reaper.log\n";
+                auto relevant = extractRelevantLines (reaperLog);
+                if (relevant.isNotEmpty())
+                    info << "  Recent relevant log entries:\n" << relevant;
+                if (dawLogFilePaths != nullptr)
+                    dawLogFilePaths->addIfNotAlreadyThere (reaperLog.getFullPathName());
+            }
         }
         info << "\n";
     }
@@ -506,8 +649,10 @@ juce::String collectDAWDiagnostics (const juce::String& pluginName)
     auto presonusDir = appData.getChildFile ("PreSonus");
     if (presonusDir.isDirectory())
     {
-        for (auto& dir : juce::RangedDirectoryIterator (presonusDir, false, "Studio One*"))
+        for (auto& dir : juce::RangedDirectoryIterator (presonusDir, false, "*", juce::File::findDirectories))
         {
+            if (! dir.getFile().getFileName().startsWithIgnoreCase ("Studio One"))
+                continue;
             info << "## Studio One (" << dir.getFile().getFileName() << ")\n\n";
 
             auto blocklist = dir.getFile().getChildFile ("x64\\PluginBlacklist.settings");
@@ -542,9 +687,18 @@ juce::String collectDAWDiagnostics (const juce::String& pluginName)
         {
             auto content = logFile.loadFileAsString();
             if (content.containsIgnoreCase (pluginName))
-                info << "  ✓ Plugin referenced in BitwigStudio.log\n";
+            {
+                info << "  \xe2\x9c\x93 Plugin referenced in BitwigStudio.log\n";
+                auto relevant = extractRelevantLines (logFile);
+                if (relevant.isNotEmpty())
+                    info << "  Recent relevant log entries:\n" << relevant;
+                if (dawLogFilePaths != nullptr)
+                    dawLogFilePaths->addIfNotAlreadyThere (logFile.getFullPathName());
+            }
             else
+            {
                 info << "  Plugin not found in BitwigStudio.log\n";
+            }
         }
         info << "\n";
     }
@@ -701,7 +855,7 @@ juce::String collectPythonEnvironment (const AppConfig& config)
     if (installResources.isDirectory())
         resourcesDir = installResources;
 
-    juce::StringArray scripts = { "sonicgarbage.py", "essentia_analyzer.py", "words.txt" };
+    juce::StringArray scripts = { "words.txt" };
     info << "\n**Installed scripts:**\n";
 
     for (auto& script : scripts)
@@ -714,10 +868,25 @@ juce::String collectPythonEnvironment (const AppConfig& config)
 
             if (script == "words.txt")
             {
+                info << " (" << sizeKB << " KB)";
                 if (scriptFile.getSize() < 1000)
-                    info << " ⚠ CORRUPTED (only " << scriptFile.getSize() << " bytes)";
-                else
-                    info << " (" << sizeKB << " KB)";
+                    info << " \xe2\x9a\xa0 CORRUPTED (only " << scriptFile.getSize() << " bytes)";
+                else if (sizeKB > 400)
+                    info << " \xe2\x9a\xa0 unusually large (legacy version?)";
+
+                // Check for NULL bytes (corruption indicator)
+                juce::MemoryBlock mb;
+                if (scriptFile.loadFileAsData (mb))
+                {
+                    auto* bytes = static_cast<const char*> (mb.getData());
+                    bool hasNulls = false;
+                    for (size_t idx = 0; idx < mb.getSize(); ++idx)
+                    {
+                        if (bytes[idx] == '\0') { hasNulls = true; break; }
+                    }
+                    if (hasNulls)
+                        info << " \xe2\x9c\x97 CORRUPTED (contains NULL bytes)";
+                }
             }
             info << "\n";
         }
@@ -754,21 +923,25 @@ juce::String collectPythonEnvironment (const AppConfig& config)
             "    p['requests'] = requests.__version__\n"
             "except: pass\n"
             "try:\n"
-            "    import essentia\n"
-            "    p['essentia'] = 'installed'\n"
-            "except: pass\n"
-            "try:\n"
             "    import numpy\n"
             "    p['numpy'] = numpy.__version__\n"
             "except: pass\n"
-            "try:\n"
-            "    import soundfile\n"
-            "    p['soundfile'] = soundfile.__version__\n"
-            "except: pass\n"
             "print(json.dumps(p))\n");
 
-        auto result = runCommand ("\"" + pythonExe.getFullPathName() + "\" \"" + tempScript.getFullPathName() + "\"", 20000);
+        auto pkgBatch = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                            .getChildFile ("diag_pkg_check.bat");
+        auto pkgResult = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                             .getChildFile ("diag_pkg_result.txt");
+        juce::String batchStr;
+        batchStr << "@echo off\n"
+                 << "\"" << pythonExe.getFullPathName() << "\" \"" << tempScript.getFullPathName()
+                 << "\" > \"" << pkgResult.getFullPathName() << "\" 2>nul\n";
+        pkgBatch.replaceWithText (batchStr);
+        runCommand ("\"" + pkgBatch.getFullPathName() + "\"", 20000);
+        auto result = pkgResult.loadFileAsString().trim();
         tempScript.deleteFile();
+        pkgBatch.deleteFile();
+        pkgResult.deleteFile();
 
         if (result.isNotEmpty() && result.startsWith ("{"))
         {
@@ -777,7 +950,7 @@ juce::String collectPythonEnvironment (const AppConfig& config)
             {
                 auto props = obj->getProperties();
                 juce::StringArray criticalPkgs = { "yt-dlp", "pydub" };
-                juce::StringArray optionalPkgs = { "requests", "essentia", "numpy", "soundfile" };
+                juce::StringArray optionalPkgs = { "requests", "numpy" };
 
                 for (auto& pkg : criticalPkgs)
                 {
@@ -888,7 +1061,7 @@ juce::String collectPythonEnvironment (const AppConfig& config)
     return info;
 }
 
-juce::String collectSessionLogs (const juce::String& pluginName)
+juce::String collectSessionLogs (const juce::String& pluginName, juce::StringArray* sessionLogFilePaths)
 {
     juce::String info;
     info << "# Recent Session Logs\n\n";
@@ -912,9 +1085,9 @@ juce::String collectSessionLogs (const juce::String& pluginName)
 
     // Find most recent Session-* directories
     juce::Array<juce::File> sessionDirs;
-    for (auto& dir : juce::RangedDirectoryIterator (instancesDir, false, "Session-*"))
+    for (auto& dir : juce::RangedDirectoryIterator (instancesDir, false, "*", juce::File::findDirectories))
     {
-        if (dir.getFile().isDirectory())
+        if (dir.getFile().getFileName().startsWithIgnoreCase ("Session-"))
             sessionDirs.add (dir.getFile());
     }
 
@@ -950,9 +1123,18 @@ juce::String collectSessionLogs (const juce::String& pluginName)
         auto logFile = dir.getChildFile ("session.log");
         if (logFile.existsAsFile())
         {
+            // Collect the file path for upload
+            if (sessionLogFilePaths != nullptr)
+                sessionLogFilePaths->add (logFile.getFullPathName());
+
             auto content = logFile.loadFileAsString();
             auto lines = juce::StringArray::fromLines (content);
-            // Show last 10 lines
+            info << "  Log entries: " << lines.size() << " lines";
+            if (sessionLogFilePaths != nullptr)
+                info << " (full log will be attached)";
+            info << "\n";
+
+            // Show last 10 lines as preview
             info << "  Recent log entries:\n";
             for (int j = juce::jmax (0, lines.size() - 10); j < lines.size(); ++j)
             {
@@ -1136,15 +1318,31 @@ juce::String collectPipelineHealthCheck (const AppConfig& config)
         info << "  ✗ yt-dlp failed to respond\n";
     }
 
-    // Test pydub import (use temp file to avoid cmd.exe quoting issues)
+    // Test pydub import via batch file to avoid cmd.exe quoting/stderr issues
     info << "**pydub test:**\n";
     {
         auto tempPydub = juce::File::getSpecialLocation (juce::File::tempDirectory)
                              .getChildFile ("diag_pydub_test.py");
         tempPydub.replaceWithText ("import pydub\nprint('OK')\n");
-        auto pydubTest = runCommand (
-            "\"" + pythonExe.getFullPathName() + "\" \"" + tempPydub.getFullPathName() + "\"", 10000);
+
+        auto batchFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                             .getChildFile ("diag_pydub_test.bat");
+        auto resultFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                              .getChildFile ("diag_pydub_result.txt");
+
+        juce::String batch;
+        batch << "@echo off\n"
+              << "\"" << pythonExe.getFullPathName() << "\" \"" << tempPydub.getFullPathName()
+              << "\" > \"" << resultFile.getFullPathName() << "\" 2>&1\n";
+        batchFile.replaceWithText (batch);
+
+        runCommand ("\"" + batchFile.getFullPathName() + "\"", 10000);
+        auto pydubTest = resultFile.loadFileAsString().trim();
+
         tempPydub.deleteFile();
+        batchFile.deleteFile();
+        resultFile.deleteFile();
+
         if (pydubTest.contains ("OK"))
             info << "  \xe2\x9c\x93 pydub imports successfully\n";
         else
@@ -1198,14 +1396,99 @@ juce::String collectPipelineHealthCheck (const AppConfig& config)
     {
         auto denoTest = runCommand ("\"" + denoExe.getFullPathName() + "\" --version", 5000);
         if (denoTest.containsIgnoreCase ("deno"))
-            info << "  ✓ Deno executes successfully\n";
+            info << "  \xe2\x9c\x93 Deno executes successfully\n";
         else
-            info << "  ✗ Deno failed to execute\n";
+            info << "  \xe2\x9c\x97 Deno failed to execute\n";
     }
     else
     {
-        info << "  ✗ Deno not found\n";
+        info << "  \xe2\x9c\x97 Deno not found\n";
     }
+
+    // End-to-end pipeline test: download 5 seconds of audio, process with pydub
+    info << "\n**End-to-end pipeline test:**\n";
+    info << "  Test: Rick Astley - Never Gonna Give You Up (first 5 seconds)\n";
+
+    auto tempDir = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                       .getChildFile ("diag_pipeline_test");
+    tempDir.createDirectory();
+
+    // Step 1: yt-dlp download (use batch file to avoid cmd.exe quoting issues with *)
+    info << "  1. yt-dlp download: ";
+    juce::String ytdlpError;
+    {
+        auto dlBatch = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                           .getChildFile ("diag_ytdlp_test.bat");
+        auto dlResultFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                                .getChildFile ("diag_ytdlp_result.txt");
+        juce::String batch;
+        auto scriptsDir = venvDir.getChildFile ("Scripts").getFullPathName();
+        batch << "@echo off\n"
+              << "set PATH=" << scriptsDir << ";%PATH%\n"
+              << "\"" << pythonExe.getFullPathName() << "\" -m yt_dlp --extract-audio --audio-format wav"
+              << " --download-sections \"*0-5\" -o \"" << tempDir.getFullPathName() << "\\test.%%(ext)s\""
+              << " --no-playlist --quiet --no-warnings"
+              << " https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+              << " > \"" << dlResultFile.getFullPathName() << "\" 2>&1\n";
+        dlBatch.replaceWithText (batch);
+        runCommand ("\"" + dlBatch.getFullPathName() + "\"", 30000);
+        ytdlpError = dlResultFile.loadFileAsString().trim();
+        dlBatch.deleteFile();
+        dlResultFile.deleteFile();
+    }
+
+    auto testWav = tempDir.getChildFile ("test.wav");
+    bool downloadOk = testWav.existsAsFile();
+    if (downloadOk)
+    {
+        auto sizeKB = testWav.getSize() / 1024;
+        info << "\xe2\x9c\x93 downloaded (" << sizeKB << " KB)\n";
+    }
+    else
+    {
+        info << "\xe2\x9c\x97 failed";
+        if (ytdlpError.isNotEmpty())
+            info << " (" << ytdlpError.substring (0, 150) << ")";
+        info << "\n";
+    }
+
+    // Step 2: pydub processing (only if download succeeded)
+    if (downloadOk)
+    {
+        info << "  2. pydub processing: ";
+        auto tempPy = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                          .getChildFile ("diag_pydub_pipeline.py");
+        auto pydubResultFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                                   .getChildFile ("diag_pydub_pipeline_result.txt");
+        auto pydubBatch = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                              .getChildFile ("diag_pydub_pipeline.bat");
+        juce::String pyScript;
+        pyScript << "from pydub import AudioSegment\n"
+                 << "audio = AudioSegment.from_wav(r'" << testWav.getFullPathName() << "')\n"
+                 << "normalized = audio.normalize()\n"
+                 << "normalized.export(r'" << tempDir.getChildFile ("processed.wav").getFullPathName() << "', format='wav')\n"
+                 << "print('OK')\n";
+        tempPy.replaceWithText (pyScript);
+
+        juce::String pydubBatchStr;
+        pydubBatchStr << "@echo off\n"
+                      << "\"" << pythonExe.getFullPathName() << "\" \"" << tempPy.getFullPathName()
+                      << "\" > \"" << pydubResultFile.getFullPathName() << "\" 2>&1\n";
+        pydubBatch.replaceWithText (pydubBatchStr);
+        runCommand ("\"" + pydubBatch.getFullPathName() + "\"", 10000);
+        auto pydubResult = pydubResultFile.loadFileAsString().trim();
+        tempPy.deleteFile();
+        pydubBatch.deleteFile();
+        pydubResultFile.deleteFile();
+
+        if (pydubResult.contains ("OK"))
+            info << "\xe2\x9c\x93 audio processed successfully\n";
+        else
+            info << "\xe2\x9c\x97 processing failed (" << pydubResult.substring (0, 150) << ")\n";
+    }
+
+    // Cleanup
+    tempDir.deleteRecursively();
 
     return info;
 }
@@ -1260,6 +1543,24 @@ juce::String collectSecurityInfo (const AppConfig& config)
         info << "**UAC:** Default (prompt for consent)\n";
     else
         info << "**UAC:** Enabled\n";
+
+    // Build type detection
+    if (standaloneExe.existsAsFile())
+    {
+        // Check for debug symbols (PDB file alongside exe)
+        auto pdbFile = standaloneExe.withFileExtension (".pdb");
+        if (pdbFile.existsAsFile())
+            info << "**Build type:** Debug (PDB present)\n";
+        else
+        {
+            // Check file size as heuristic — debug builds are typically much larger
+            auto sizeMB = standaloneExe.getSize() / 1024 / 1024;
+            if (sizeMB > 50)
+                info << "**Build type:** Likely Debug (unusually large: " << sizeMB << " MB)\n";
+            else
+                info << "**Build type:** Release\n";
+        }
+    }
 
     return info;
 }

@@ -2,6 +2,17 @@ cmake_minimum_required(VERSION 3.22)
 project(DiagnosticKit VERSION 1.0.0)
 
 # ============================================================================
+# Development-only guard: DiagnosticKit is NOT a production release artifact.
+# It must be explicitly opted in via -DBUILD_DIAGNOSTICS=ON.
+# This prevents accidental inclusion in production installers.
+# ============================================================================
+option(BUILD_DIAGNOSTICS "Build DiagnosticKit (development/testing only)" OFF)
+if(NOT BUILD_DIAGNOSTICS)
+    message(STATUS "DiagnosticKit: Skipped (pass -DBUILD_DIAGNOSTICS=ON to build)")
+    return()
+endif()
+
+# ============================================================================
 # macOS uses the native Swift DiagnosticKit — this JUCE app is Windows/Linux only
 # ============================================================================
 if(APPLE)

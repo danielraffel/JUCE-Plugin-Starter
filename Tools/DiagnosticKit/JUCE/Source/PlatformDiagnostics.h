@@ -32,8 +32,8 @@ namespace PlatformDiagnostics
     /** Run plugin validation (auval on macOS, pluginval on others). Returns output or empty. */
     juce::String runPluginValidation (const AppConfig& config);
 
-    /** Collect DAW-specific diagnostic info (scan caches, blacklists, logs). */
-    juce::String collectDAWDiagnostics (const juce::String& pluginName);
+    /** Collect DAW-specific diagnostic info (scan caches, blacklists, logs). Populates dawLogFilePaths if provided. */
+    juce::String collectDAWDiagnostics (const juce::String& pluginName, juce::StringArray* dawLogFilePaths = nullptr);
 
     /** Get standard plugin install paths for the current platform. */
     juce::StringArray getPluginPaths (const juce::String& format);
@@ -41,8 +41,8 @@ namespace PlatformDiagnostics
     /** Collect Python/venv environment info (packages, scripts, binaries). */
     juce::String collectPythonEnvironment (const AppConfig& config);
 
-    /** Collect recent session logs from the plugin's working directory. */
-    juce::String collectSessionLogs (const juce::String& pluginName);
+    /** Collect recent session logs from the plugin's working directory. Populates sessionLogFilePaths if provided. */
+    juce::String collectSessionLogs (const juce::String& pluginName, juce::StringArray* sessionLogFilePaths = nullptr);
 
     /** Collect installer/registry info. */
     juce::String collectInstallerInfo (const AppConfig& config);
