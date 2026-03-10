@@ -8,13 +8,323 @@ juce::String GitHubUploader::submit (const DiagnosticData& data, juce::String& e
         return {};
     }
 
-    auto title = "Diagnostic Report - " + juce::Time::getCurrentTime().toString (true, true, false);
-    auto body = formatIssueBody (data);
+    // Generate timestamp folder for this submission
+    auto now = juce::Time::getCurrentTime();
+    auto dateString = now.formatted ("%Y%m%d_%H%M%S");
+    auto folderPath = "diagnostics/" + dateString;
 
+    // Build the full report
+    auto fullReport = buildFullReport (data);
+
+    // Try to upload the report file
+    juce::String reportUrl;
+    juce::String uploadError;
+    reportUrl = uploadFile (folderPath + "/diagnostic_report.txt", fullReport, uploadError);
+
+    bool uploadSucceeded = reportUrl.isNotEmpty();
+
+    // Upload crash log files
+    juce::StringPairArray crashLogUrls;
+    if (uploadSucceeded && data.crashFilePaths.size() > 0)
+    {
+        for (int i = 0; i < juce::jmin (5, data.crashFilePaths.size()); ++i)
+        {
+            juce::File crashFile (data.crashFilePaths[i]);
+            if (crashFile.existsAsFile())
+            {
+                auto fileName = crashFile.getFileName().replace (" ", "_");
+                auto crashUrl = uploadBinaryFile (folderPath + "/crash_" + juce::String (i) + "_" + fileName,
+                                                  crashFile, uploadError);
+                if (crashUrl.isNotEmpty())
+                    crashLogUrls.set (crashFile.getFileName(), crashUrl);
+            }
+        }
+    }
+
+    // Create the issue with platform tag
+   #if JUCE_WINDOWS
+    auto platformTag = "[Win] ";
+   #elif JUCE_MAC
+    auto platformTag = "[Mac] ";
+   #elif JUCE_LINUX
+    auto platformTag = "[Linux] ";
+   #else
+    auto platformTag = "";
+   #endif
+    auto title = platformTag + juce::String ("Diagnostic Report - ") + now.toString (true, true, false);
+    juce::String body;
+
+    if (uploadSucceeded)
+        body = formatIssueBody (data, reportUrl, crashLogUrls);
+    else
+        body = formatInlineIssueBody (data);
+
+    return createIssue (title, body, errorOut);
+}
+
+juce::String GitHubUploader::uploadFile (const juce::String& path, const juce::String& content, juce::String& errorOut)
+{
+    auto urlStr = "https://api.github.com/repos/" + config_.githubRepo + "/contents/" + path;
+
+    // Base64 encode the content
+    juce::MemoryBlock mb (content.toRawUTF8(), (size_t) content.getNumBytesAsUTF8());
+    auto base64 = mb.toBase64Encoding();
+
+    // Build JSON payload
+    juce::String payload = "{\"message\":\"Add diagnostic files\",\"content\":"
+                         + juce::JSON::toString (base64)
+                         + ",\"branch\":\"main\"}";
+
+    // Use JUCE URL with POST data and PUT override
+    juce::URL url (urlStr);
+    url = url.withPOSTData (payload);
+
+    int statusCode = 0;
+    auto options = juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inPostData)
+                       .withExtraHeaders ("Accept: application/vnd.github+json\r\n"
+                                          "Authorization: Bearer " + config_.githubPAT + "\r\n"
+                                          "X-GitHub-Api-Version: 2022-11-28\r\n"
+                                          "Content-Type: application/json\r\n")
+                       .withHttpRequestCmd ("PUT")
+                       .withConnectionTimeoutMs (30000)
+                       .withStatusCode (&statusCode);
+
+    auto stream = url.createInputStream (options);
+
+    if (stream != nullptr && (statusCode == 200 || statusCode == 201))
+        return "https://github.com/" + config_.githubRepo + "/raw/main/" + path;
+
+    // If HTTP upload fails, try via PowerShell with temp file (avoids command line length limits)
+    auto tempFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                        .getChildFile ("diag_upload_" + juce::String (juce::Random::getSystemRandom().nextInt()) + ".json");
+    tempFile.replaceWithText (payload);
+
+    juce::ChildProcess proc;
+    auto psCmd = "powershell -NoProfile -Command \""
+                 "try { $body = Get-Content -Raw '" + tempFile.getFullPathName() + "'; "
+                 "$r = Invoke-RestMethod -Method PUT -Uri '" + urlStr + "' "
+                 "-Headers @{'Authorization'='Bearer " + config_.githubPAT + "'; "
+                 "'Accept'='application/vnd.github+json'; "
+                 "'X-GitHub-Api-Version'='2022-11-28'} "
+                 "-ContentType 'application/json' "
+                 "-Body $body; "
+                 "Write-Output 'OK' } catch { Write-Output $_.Exception.Message }\"";
+
+    juce::String result;
+    if (proc.start (psCmd))
+    {
+        if (proc.waitForProcessToFinish (30000))
+            result = proc.readAllProcessOutput().trim();
+        else
+            proc.kill();
+    }
+
+    tempFile.deleteFile();
+
+    if (result == "OK")
+        return "https://github.com/" + config_.githubRepo + "/raw/main/" + path;
+
+    errorOut = "File upload failed (HTTP " + juce::String (statusCode) + ", PS: " + result.substring (0, 200) + ")";
+    return {};
+}
+
+juce::String GitHubUploader::uploadBinaryFile (const juce::String& path, const juce::File& file, juce::String& errorOut)
+{
+    auto urlStr = "https://api.github.com/repos/" + config_.githubRepo + "/contents/" + path;
+
+    juce::MemoryBlock mb;
+    if (! file.loadFileAsData (mb))
+    {
+        errorOut = "Could not read file: " + file.getFileName();
+        return {};
+    }
+
+    auto base64 = mb.toBase64Encoding();
+
+    juce::String payload = "{\"message\":\"Add diagnostic files\",\"content\":"
+                         + juce::JSON::toString (base64)
+                         + ",\"branch\":\"main\"}";
+
+    // Try JUCE HTTP first
+    juce::URL url (urlStr);
+    url = url.withPOSTData (payload);
+
+    int statusCode = 0;
+    auto options = juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inPostData)
+                       .withExtraHeaders ("Accept: application/vnd.github+json\r\n"
+                                          "Authorization: Bearer " + config_.githubPAT + "\r\n"
+                                          "X-GitHub-Api-Version: 2022-11-28\r\n"
+                                          "Content-Type: application/json\r\n")
+                       .withHttpRequestCmd ("PUT")
+                       .withConnectionTimeoutMs (30000)
+                       .withStatusCode (&statusCode);
+
+    auto stream = url.createInputStream (options);
+
+    if (stream != nullptr && (statusCode == 200 || statusCode == 201))
+        return "https://github.com/" + config_.githubRepo + "/raw/main/" + path;
+
+    // Fallback to PowerShell
+    // Write payload to temp file since it may be large
+    auto tempFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                        .getChildFile ("diag_upload_" + juce::String (juce::Random::getSystemRandom().nextInt()) + ".json");
+    tempFile.replaceWithText (payload);
+
+    juce::ChildProcess proc;
+    auto psCmd = "powershell -NoProfile -Command \""
+                 "try { $body = Get-Content -Raw '" + tempFile.getFullPathName() + "'; "
+                 "$r = Invoke-RestMethod -Method PUT -Uri '" + urlStr + "' "
+                 "-Headers @{'Authorization'='Bearer " + config_.githubPAT + "'; "
+                 "'Accept'='application/vnd.github+json'; "
+                 "'X-GitHub-Api-Version'='2022-11-28'} "
+                 "-ContentType 'application/json' "
+                 "-Body $body; "
+                 "Write-Output 'OK' } catch { Write-Output $_.Exception.Message }\"";
+
+    juce::String result;
+    if (proc.start (psCmd))
+    {
+        if (proc.waitForProcessToFinish (60000))
+            result = proc.readAllProcessOutput().trim();
+        else
+            proc.kill();
+    }
+
+    tempFile.deleteFile();
+
+    if (result == "OK")
+        return "https://github.com/" + config_.githubRepo + "/raw/main/" + path;
+
+    errorOut = "Binary upload failed (HTTP " + juce::String (statusCode) + ")";
+    return {};
+}
+
+juce::String GitHubUploader::buildFullReport (const DiagnosticData& data)
+{
+    juce::String report;
+
+    if (data.userFeedback.isNotEmpty())
+        report << "USER FEEDBACK\n=============\n\n" << data.userFeedback << "\n\n";
+
+    report << data.systemInfo << "\n\n";
+    report << data.pluginStatus << "\n\n";
+    report << data.dependencies << "\n\n";
+    report << data.pythonEnvironment << "\n\n";
+    report << data.pipelineHealth << "\n\n";
+    report << data.sessionLogs << "\n\n";
+    report << data.crashLogs << "\n\n";
+    report << data.pluginValidation << "\n\n";
+    report << data.dawDiagnostics << "\n\n";
+    report << data.installerInfo << "\n\n";
+    report << data.securityInfo << "\n\n";
+
+    report << "---\nReport generated by " << config_.appName << " v" << config_.appVersion << "\n";
+
+    return report;
+}
+
+juce::String GitHubUploader::formatIssueBody (const DiagnosticData& data,
+                                               const juce::String& reportUrl,
+                                               const juce::StringPairArray& crashLogUrls)
+{
+    juce::String body;
+
+    // User feedback section
+    body << "## User Feedback\n\n";
+    if (data.userFeedback.isNotEmpty())
+        body << data.userFeedback << "\n\n";
+    else
+        body << "_No description provided_\n\n";
+
+    // Links to uploaded files
+    body << "## \xF0\x9F\x93\x81 Full Diagnostic Data\n\n";
+    body << "### \xF0\x9F\x93\x8B [Full Diagnostic Report](" << reportUrl << ")\n\n";
+
+    if (crashLogUrls.size() > 0)
+    {
+        body << "### \xF0\x9F\x92\xA5 Crash Logs\n\n";
+        for (int i = 0; i < crashLogUrls.size(); ++i)
+        {
+            auto key = crashLogUrls.getAllKeys()[i];
+            auto val = crashLogUrls.getAllValues()[i];
+            body << "- [" << key << "](" << val << ")\n";
+        }
+        body << "\n";
+    }
+
+    // Quick summary with status indicators
+    body << "## Quick Summary\n\n```\n";
+
+    // Extract key status lines from each section
+    auto extractStatus = [](const juce::String& section)
+    {
+        juce::String result;
+        auto lines = juce::StringArray::fromLines (section);
+        for (auto& line : lines)
+        {
+            auto trimmed = line.trim();
+            if (trimmed.startsWith ("**") || trimmed.contains ("\xe2\x9c\x93") // ✓
+                || trimmed.contains ("\xe2\x9c\x97") // ✗
+                || trimmed.contains ("\xe2\x9a\xa0")) // ⚠
+            {
+                result << trimmed << "\n";
+            }
+        }
+        return result;
+    };
+
+    body << extractStatus (data.pluginStatus);
+    body << extractStatus (data.dependencies);
+    body << extractStatus (data.pythonEnvironment);
+    body << extractStatus (data.pipelineHealth);
+    body << extractStatus (data.securityInfo);
+    body << "```\n\n";
+
+    body << "---\n_Generated by " << config_.appName << " v" << config_.appVersion << "_\n";
+
+    return body;
+}
+
+juce::String GitHubUploader::formatInlineIssueBody (const DiagnosticData& data)
+{
+    juce::String body;
+
+    if (data.userFeedback.isNotEmpty())
+        body << "## User Feedback\n\n" << data.userFeedback << "\n\n---\n\n";
+
+    body << "_Note: File upload failed, including inline report (may be truncated)_\n\n";
+
+    body << data.systemInfo << "\n\n---\n\n";
+    body << data.pluginStatus << "\n\n---\n\n";
+    body << data.dependencies << "\n\n---\n\n";
+    body << data.pythonEnvironment << "\n\n---\n\n";
+    body << data.pipelineHealth << "\n\n---\n\n";
+    body << data.sessionLogs << "\n\n---\n\n";
+    body << data.crashLogs << "\n\n---\n\n";
+    body << data.pluginValidation << "\n\n---\n\n";
+    body << data.dawDiagnostics << "\n\n---\n\n";
+    body << data.installerInfo << "\n\n---\n\n";
+    body << data.securityInfo << "\n\n---\n\n";
+
+    body << "_Report generated by " << config_.appName << " v" << config_.appVersion << "_\n";
+
+    return body;
+}
+
+juce::String GitHubUploader::createIssue (const juce::String& title, const juce::String& body, juce::String& errorOut)
+{
     auto url = juce::URL ("https://api.github.com/repos/" + config_.githubRepo + "/issues")
                    .withPOSTData ("{\"title\":" + juce::JSON::toString (title)
                                   + ",\"body\":" + juce::JSON::toString (body)
-                                  + ",\"labels\":[\"diagnostic-report\",\"automated\"]}");
+                                  + ",\"labels\":[\"diagnostic-report\",\"automated\","
+                                 #if JUCE_WINDOWS
+                                  "\"windows\""
+                                 #elif JUCE_MAC
+                                  "\"macos\""
+                                 #elif JUCE_LINUX
+                                  "\"linux\""
+                                 #endif
+                                  "]}");
 
     int statusCode = 0;
 
@@ -36,7 +346,6 @@ juce::String GitHubUploader::submit (const DiagnosticData& data, juce::String& e
 
             if (statusCode == 201)
             {
-                // Parse issue URL from response
                 auto json = juce::JSON::parse (responseBody);
                 if (auto* obj = json.getDynamicObject())
                 {
@@ -60,7 +369,6 @@ juce::String GitHubUploader::submit (const DiagnosticData& data, juce::String& e
             else
             {
                 errorOut = "HTTP " + juce::String (statusCode) + ": " + responseBody.substring (0, 200);
-                // Retry on server errors
                 if (statusCode >= 500 && attempt < config_.githubAPIRetries - 1)
                 {
                     juce::Thread::sleep ((attempt + 1) * 2000);
@@ -82,24 +390,4 @@ juce::String GitHubUploader::submit (const DiagnosticData& data, juce::String& e
     }
 
     return {};
-}
-
-juce::String GitHubUploader::formatIssueBody (const DiagnosticData& data)
-{
-    juce::String body;
-
-    if (data.userFeedback.isNotEmpty())
-    {
-        body << "## User Feedback\n\n" << data.userFeedback << "\n\n---\n\n";
-    }
-
-    body << data.systemInfo << "\n\n---\n\n";
-    body << data.pluginStatus << "\n\n---\n\n";
-    body << data.crashLogs << "\n\n---\n\n";
-    body << data.pluginValidation << "\n\n---\n\n";
-    body << data.dawDiagnostics << "\n\n---\n\n";
-
-    body << "_Report generated by " << config_.appName << " v" << config_.appVersion << "_\n";
-
-    return body;
 }

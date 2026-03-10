@@ -39,14 +39,15 @@ set(FETCHCONTENT_BASE_DIR "${JUCE_CACHE_DIR}")
 # Read JUCE_TAG from parent project .env if available
 if(EXISTS "${CMAKE_SOURCE_DIR}/../../../.env")
     file(READ "${CMAKE_SOURCE_DIR}/../../../.env" ENV_CONTENT)
-    string(REGEX MATCH "JUCE_TAG=([^\n]+)" _ "${ENV_CONTENT}")
+    # Match only uncommented JUCE_TAG lines
+    string(REGEX MATCH "\nJUCE_TAG=([A-Za-z0-9._-]+)" _ "${ENV_CONTENT}")
     if(CMAKE_MATCH_1)
         string(STRIP "${CMAKE_MATCH_1}" JUCE_TAG)
         string(REPLACE "\"" "" JUCE_TAG "${JUCE_TAG}")
     endif()
 endif()
 if(NOT JUCE_TAG)
-    set(JUCE_TAG "8.0.6")
+    set(JUCE_TAG "8.0.12")
 endif()
 
 FetchContent_Declare(
@@ -64,19 +65,34 @@ FetchContent_MakeAvailable(juce)
 if(EXISTS "${CMAKE_SOURCE_DIR}/../.env")
     file(READ "${CMAKE_SOURCE_DIR}/../.env" DIAG_ENV_CONTENT)
 
+    # Normalize line endings for cross-platform regex
+    string(REPLACE "\r\n" "\n" DIAG_ENV_CONTENT "${DIAG_ENV_CONTENT}")
+    string(REPLACE "\r" "\n" DIAG_ENV_CONTENT "${DIAG_ENV_CONTENT}")
+
     # Extract values
-    string(REGEX MATCH "APP_NAME=\"?([^\"\\n]+)\"?" _ "${DIAG_ENV_CONTENT}")
+    string(REGEX MATCH "\nAPP_NAME=\"([^\"\n]+)\"" _ "${DIAG_ENV_CONTENT}")
     if(CMAKE_MATCH_1)
         set(DIAG_APP_NAME "${CMAKE_MATCH_1}")
     else()
-        set(DIAG_APP_NAME "Diagnostics")
+        # Try without quotes
+        string(REGEX MATCH "\nAPP_NAME=([^\n]+)" _ "${DIAG_ENV_CONTENT}")
+        if(CMAKE_MATCH_1)
+            string(STRIP "${CMAKE_MATCH_1}" DIAG_APP_NAME)
+        else()
+            set(DIAG_APP_NAME "Diagnostics")
+        endif()
     endif()
 
-    string(REGEX MATCH "APP_IDENTIFIER=\"?([^\"\\n]+)\"?" _ "${DIAG_ENV_CONTENT}")
+    string(REGEX MATCH "\nAPP_IDENTIFIER=\"([^\"\n]+)\"" _ "${DIAG_ENV_CONTENT}")
     if(CMAKE_MATCH_1)
         set(DIAG_BUNDLE_ID "${CMAKE_MATCH_1}")
     else()
-        set(DIAG_BUNDLE_ID "com.unknown.diagnostics")
+        string(REGEX MATCH "\nAPP_IDENTIFIER=([^\n]+)" _ "${DIAG_ENV_CONTENT}")
+        if(CMAKE_MATCH_1)
+            string(STRIP "${CMAKE_MATCH_1}" DIAG_BUNDLE_ID)
+        else()
+            set(DIAG_BUNDLE_ID "com.unknown.diagnostics")
+        endif()
     endif()
 else()
     set(DIAG_APP_NAME "Diagnostics")
@@ -128,6 +144,7 @@ target_compile_definitions(DiagnosticKit PRIVATE
 target_link_libraries(DiagnosticKit PRIVATE
     juce::juce_gui_extra
     juce::juce_core
+    juce::juce_audio_devices
 )
 
 # Copy .env next to the executable (Windows/Linux)

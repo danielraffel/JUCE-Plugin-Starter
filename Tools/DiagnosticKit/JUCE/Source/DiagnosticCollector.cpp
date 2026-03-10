@@ -8,9 +8,15 @@ DiagnosticData DiagnosticCollector::collectAll (const juce::String& userFeedback
     data.systemInfo       = PlatformDiagnostics::collectSystemInfo()
                           + PlatformDiagnostics::collectAudioDevices();
     data.pluginStatus     = collectPluginStatus();
-    data.crashLogs        = PlatformDiagnostics::collectCrashLogs (config_.pluginName);
+    data.crashLogs        = PlatformDiagnostics::collectCrashLogs (config_.pluginName, &data.crashFilePaths);
     data.pluginValidation = PlatformDiagnostics::runPluginValidation (config_);
     data.dawDiagnostics   = PlatformDiagnostics::collectDAWDiagnostics (config_.pluginName);
+    data.pythonEnvironment = PlatformDiagnostics::collectPythonEnvironment (config_);
+    data.sessionLogs      = PlatformDiagnostics::collectSessionLogs (config_.pluginName);
+    data.installerInfo    = PlatformDiagnostics::collectInstallerInfo (config_);
+    data.dependencies     = PlatformDiagnostics::collectDependencies (config_);
+    data.pipelineHealth   = PlatformDiagnostics::collectPipelineHealthCheck (config_);
+    data.securityInfo     = PlatformDiagnostics::collectSecurityInfo (config_);
     data.userFeedback     = userFeedback;
 
     return data;
@@ -22,7 +28,6 @@ juce::String DiagnosticCollector::collectPluginStatus()
     status << "# Plugin Status\n\n";
 
    #if JUCE_MAC
-    // macOS checks AU — but this code won't run on macOS (Swift app handles it)
     if (config_.checkAU)
     {
         auto info = PlatformDiagnostics::checkPluginInstalled (config_.pluginName, "AU");
@@ -30,6 +35,7 @@ juce::String DiagnosticCollector::collectPluginStatus()
         if (info.installed)
         {
             status << "  - Path: " << info.path << "\n";
+            status << "  - Size: " << (info.sizeBytes / 1024) << " KB\n";
             status << "  - Modified: " << info.modifiedTime.toString (true, true, false) << "\n";
         }
         status << "\n";
@@ -43,6 +49,7 @@ juce::String DiagnosticCollector::collectPluginStatus()
         if (info.installed)
         {
             status << "  - Path: " << info.path << "\n";
+            status << "  - Size: " << (info.sizeBytes / 1024) << " KB\n";
             status << "  - Modified: " << info.modifiedTime.toString (true, true, false) << "\n";
         }
         status << "\n";
@@ -55,6 +62,7 @@ juce::String DiagnosticCollector::collectPluginStatus()
         if (info.installed)
         {
             status << "  - Path: " << info.path << "\n";
+            status << "  - Size: " << (info.sizeBytes / 1024) << " KB\n";
             status << "  - Modified: " << info.modifiedTime.toString (true, true, false) << "\n";
         }
         status << "\n";
@@ -67,6 +75,7 @@ juce::String DiagnosticCollector::collectPluginStatus()
         if (info.installed)
         {
             status << "  - Path: " << info.path << "\n";
+            status << "  - Size: " << (info.sizeBytes / 1024 / 1024) << " MB\n";
             status << "  - Modified: " << info.modifiedTime.toString (true, true, false) << "\n";
         }
         status << "\n";

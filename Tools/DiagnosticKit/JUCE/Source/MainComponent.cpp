@@ -83,7 +83,21 @@ MainComponent::MainComponent (const AppConfig& config)
 
 MainComponent::~MainComponent()
 {
+    stopTimer();
     stopThread (5000);
+}
+
+void MainComponent::timerCallback()
+{
+    progressDots_ = (progressDots_ + 1) % 4;
+    juce::String dots;
+    for (int i = 0; i < progressDots_; ++i)
+        dots << ".";
+
+    if (state_ == State::Collecting)
+        statusLabel_.setText ("Collecting diagnostic information" + dots + "\n\nThis may take up to 30 seconds", juce::dontSendNotification);
+    else if (state_ == State::Submitting)
+        statusLabel_.setText ("Submitting to GitHub" + dots, juce::dontSendNotification);
 }
 
 void MainComponent::paint (juce::Graphics& g)
@@ -179,10 +193,13 @@ void MainComponent::updateUI()
 
         case State::Collecting:
             statusLabel_.setVisible (true);
-            statusLabel_.setText ("Collecting diagnostic information...", juce::dontSendNotification);
+            statusLabel_.setText ("Collecting diagnostic information...\n\nThis may take up to 30 seconds", juce::dontSendNotification);
+            progressDots_ = 0;
+            startTimer (500);
             break;
 
         case State::Preview:
+            stopTimer();
             statusLabel_.setVisible (true);
             statusLabel_.setText ("Review the data below before submitting:", juce::dontSendNotification);
             previewEditor_.setVisible (true);
@@ -193,9 +210,12 @@ void MainComponent::updateUI()
         case State::Submitting:
             statusLabel_.setVisible (true);
             statusLabel_.setText ("Submitting to GitHub...", juce::dontSendNotification);
+            progressDots_ = 0;
+            startTimer (500);
             break;
 
         case State::Success:
+            stopTimer();
             statusLabel_.setVisible (true);
             statusLabel_.setText ("Report submitted successfully!\n\n" + issueUrl_, juce::dontSendNotification);
             openBrowserButton_.setVisible (true);
@@ -203,6 +223,7 @@ void MainComponent::updateUI()
             break;
 
         case State::Error:
+            stopTimer();
             statusLabel_.setVisible (true);
             statusLabel_.setText ("Submission failed:\n\n" + errorMessage_, juce::dontSendNotification);
             tryAgainButton_.setVisible (true);
@@ -292,11 +313,17 @@ void MainComponent::run()
         return;
 
     // Anonymize all collected data
-    collectedData_.systemInfo       = anonymize (collectedData_.systemInfo);
-    collectedData_.pluginStatus     = anonymize (collectedData_.pluginStatus);
-    collectedData_.crashLogs        = anonymize (collectedData_.crashLogs);
-    collectedData_.pluginValidation = anonymize (collectedData_.pluginValidation);
-    collectedData_.dawDiagnostics   = anonymize (collectedData_.dawDiagnostics);
+    collectedData_.systemInfo        = anonymize (collectedData_.systemInfo);
+    collectedData_.pluginStatus      = anonymize (collectedData_.pluginStatus);
+    collectedData_.crashLogs         = anonymize (collectedData_.crashLogs);
+    collectedData_.pluginValidation  = anonymize (collectedData_.pluginValidation);
+    collectedData_.dawDiagnostics    = anonymize (collectedData_.dawDiagnostics);
+    collectedData_.pythonEnvironment = anonymize (collectedData_.pythonEnvironment);
+    collectedData_.sessionLogs       = anonymize (collectedData_.sessionLogs);
+    collectedData_.installerInfo     = anonymize (collectedData_.installerInfo);
+    collectedData_.dependencies      = anonymize (collectedData_.dependencies);
+    collectedData_.pipelineHealth    = anonymize (collectedData_.pipelineHealth);
+    collectedData_.securityInfo      = anonymize (collectedData_.securityInfo);
 
     // Build preview text
     juce::String preview;
@@ -304,9 +331,15 @@ void MainComponent::run()
         preview << "== User Feedback ==\n" << collectedData_.userFeedback << "\n\n";
     preview << collectedData_.systemInfo << "\n";
     preview << collectedData_.pluginStatus << "\n";
+    preview << collectedData_.dependencies << "\n";
+    preview << collectedData_.pythonEnvironment << "\n";
+    preview << collectedData_.pipelineHealth << "\n";
+    preview << collectedData_.sessionLogs << "\n";
     preview << collectedData_.crashLogs << "\n";
     preview << collectedData_.pluginValidation << "\n";
-    preview << collectedData_.dawDiagnostics;
+    preview << collectedData_.dawDiagnostics << "\n";
+    preview << collectedData_.installerInfo << "\n";
+    preview << collectedData_.securityInfo;
 
     // Switch to preview state on message thread
     juce::MessageManager::callAsync ([this, preview]

@@ -9,7 +9,16 @@ struct DiagnosticData
     juce::String crashLogs;
     juce::String pluginValidation;
     juce::String dawDiagnostics;
+    juce::String pythonEnvironment;
+    juce::String sessionLogs;
+    juce::String installerInfo;
+    juce::String dependencies;
+    juce::String pipelineHealth;
+    juce::String securityInfo;
     juce::String userFeedback;
+
+    /** Paths to crash dump files for upload. */
+    juce::StringArray crashFilePaths;
 };
 
 class DiagnosticCollector

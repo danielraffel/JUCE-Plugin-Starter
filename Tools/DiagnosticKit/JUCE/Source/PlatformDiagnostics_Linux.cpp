@@ -5,6 +5,18 @@
 namespace PlatformDiagnostics
 {
 
+// Helper: calculate total size of a directory recursively
+static juce::int64 getDirectorySize (const juce::File& dir)
+{
+    juce::int64 total = 0;
+    for (auto& entry : juce::RangedDirectoryIterator (dir, true))
+    {
+        if (entry.getFile().existsAsFile())
+            total += entry.getFile().getSize();
+    }
+    return total;
+}
+
 juce::String collectSystemInfo()
 {
     juce::String info;
@@ -120,14 +132,17 @@ PluginInstallInfo checkPluginInstalled (const juce::String& pluginName, const ju
 
     if (result.installed)
     {
-        result.sizeBytes = pluginFile.getSize();
+        if (pluginFile.isDirectory())
+            result.sizeBytes = getDirectorySize (pluginFile);
+        else
+            result.sizeBytes = pluginFile.getSize();
         result.modifiedTime = pluginFile.getLastModificationTime();
     }
 
     return result;
 }
 
-juce::String collectCrashLogs (const juce::String& pluginName)
+juce::String collectCrashLogs (const juce::String& pluginName, juce::StringArray* /*crashFilePaths*/)
 {
     juce::String logs;
     logs << "# Recent Crash Logs\n\n";
@@ -346,6 +361,13 @@ juce::StringArray getPluginPaths (const juce::String& format)
 
     return paths;
 }
+
+juce::String collectPythonEnvironment (const AppConfig&) { return "# Python Environment\n\n_Not yet implemented for Linux_\n"; }
+juce::String collectSessionLogs (const juce::String&) { return "# Session Logs\n\n_Not yet implemented for Linux_\n"; }
+juce::String collectInstallerInfo (const AppConfig&) { return "# Installation Info\n\n_Not yet implemented for Linux_\n"; }
+juce::String collectDependencies (const AppConfig&) { return "# Dependencies\n\n_Not yet implemented for Linux_\n"; }
+juce::String collectPipelineHealthCheck (const AppConfig&) { return "# Pipeline Health\n\n_Not yet implemented for Linux_\n"; }
+juce::String collectSecurityInfo (const AppConfig&) { return "# Security Info\n\n_Not yet implemented for Linux_\n"; }
 
 } // namespace PlatformDiagnostics
 

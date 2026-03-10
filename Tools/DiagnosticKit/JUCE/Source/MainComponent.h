@@ -5,7 +5,8 @@
 #include "GitHubUploader.h"
 
 class MainComponent : public juce::Component,
-                      private juce::Thread
+                      private juce::Thread,
+                      private juce::Timer
 {
 public:
     MainComponent (const AppConfig& config);
@@ -18,6 +19,7 @@ private:
     enum class State { Idle, Collecting, Preview, Submitting, Success, Error };
 
     void run() override; // Background thread for collection + upload
+    void timerCallback() override; // Animate progress indicator
     void updateUI();
     void onCollectClicked();
     void onSubmitClicked();
@@ -34,6 +36,7 @@ private:
     juce::String issueUrl_;
     juce::String errorMessage_;
     DiagnosticData collectedData_;
+    int progressDots_ = 0;
 
     // UI Components
     juce::Label titleLabel_;
