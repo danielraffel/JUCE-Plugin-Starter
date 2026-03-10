@@ -190,26 +190,83 @@ juce::String collectCrashLogs (const juce::String& pluginName, juce::StringArray
     return logs;
 }
 
-juce::String runPluginValidation (const AppConfig& config)
+/** Download pluginval if not already cached. Returns the path to the executable, or empty on failure. */
+static juce::File ensurePluginVal()
 {
-    juce::String result;
-    result << "# Plugin Validation\n\n";
-
-    // Look for pluginval
-    juce::File pluginval;
+    // Check if already in PATH
     juce::ChildProcess which;
     if (which.start ("which pluginval"))
     {
         auto path = which.readAllProcessOutput().trim();
         if (path.isNotEmpty())
-            pluginval = juce::File (path);
+        {
+            juce::File found (path);
+            if (found.existsAsFile())
+                return found;
+        }
     }
+
+    // Cache location: ~/.local/bin/pluginval
+    auto cacheDir = juce::File::getSpecialLocation (juce::File::userHomeDirectory)
+                        .getChildFile (".local/bin");
+    auto cachedExe = cacheDir.getChildFile ("pluginval");
+
+    if (cachedExe.existsAsFile())
+        return cachedExe;
+
+    // Auto-download from GitHub
+    cacheDir.createDirectory();
+    auto zipFile = cacheDir.getChildFile ("pluginval_Linux.zip");
+
+    juce::String downloadUrl = "https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Linux.zip";
+
+    // Use curl or wget to download
+    juce::ChildProcess dlProc;
+    juce::String dlCmd = "curl -fsSL -o '" + zipFile.getFullPathName() + "' '" + downloadUrl + "'";
+    if (dlProc.start (dlCmd))
+        dlProc.waitForProcessToFinish (60000);
+
+    if (! zipFile.existsAsFile() || zipFile.getSize() < 1000)
+    {
+        zipFile.deleteFile();
+        return {};
+    }
+
+    // Extract
+    juce::ChildProcess extractProc;
+    juce::String extractCmd = "unzip -o '" + zipFile.getFullPathName() + "' -d '" + cacheDir.getFullPathName() + "'";
+    if (extractProc.start (extractCmd))
+        extractProc.waitForProcessToFinish (30000);
+
+    zipFile.deleteFile();
+
+    // Make executable
+    if (cachedExe.existsAsFile())
+    {
+        juce::ChildProcess chmod;
+        chmod.start ("chmod +x '" + cachedExe.getFullPathName() + "'");
+        chmod.waitForProcessToFinish (5000);
+        return cachedExe;
+    }
+
+    return {};
+}
+
+juce::String runPluginValidation (const AppConfig& config)
+{
+    juce::String result;
+    result << "# Plugin Validation\n\n";
+
+    auto pluginval = ensurePluginVal();
 
     if (! pluginval.existsAsFile())
     {
-        result << "_pluginval not found. Install from https://github.com/Tracktion/pluginval_\n";
+        result << "_Could not find or download pluginval. "
+               << "Manual install: https://github.com/Tracktion/pluginval/releases_\n";
         return result;
     }
+
+    result << "Using pluginval: " << pluginval.getFullPathName() << "\n\n";
 
     // Find VST3 to validate
     auto home = juce::File::getSpecialLocation (juce::File::userHomeDirectory);
@@ -223,21 +280,36 @@ juce::String runPluginValidation (const AppConfig& config)
         return result;
     }
 
+    result << "Running pluginval on " << config.pluginName << ".vst3...\n\n";
+
     juce::ChildProcess proc;
-    juce::String cmd = pluginval.getFullPathName() + " --validate " + vst3Path.getFullPathName() + " --strictness-level 5";
+    juce::String cmd = pluginval.getFullPathName() + " --validate-in-process "
+                     + vst3Path.getFullPathName() + " --strictness-level 5";
 
     if (proc.start (cmd))
     {
-        if (proc.waitForProcessToFinish (config.diagnosticTimeout * 1000))
+        int timeoutMs = juce::jmax (120000, config.diagnosticTimeout * 1000);
+        if (proc.waitForProcessToFinish (timeoutMs))
         {
             auto output = proc.readAllProcessOutput();
-            result << "```\n" << output.getLastCharacters (1500) << "\n```\n";
+            auto exitCode = proc.getExitCode();
+
+            if (exitCode == 0)
+                result << "**Result: PASS**\n\n";
+            else
+                result << "**Result: FAIL** (exit code " << exitCode << ")\n\n";
+
+            result << "```\n" << output.getLastCharacters (3000) << "\n```\n";
         }
         else
         {
             proc.kill();
-            result << "_Validation timed out after " << config.diagnosticTimeout << " seconds_\n";
+            result << "_Validation timed out after " << (timeoutMs / 1000) << " seconds_\n";
         }
+    }
+    else
+    {
+        result << "_Could not run pluginval_\n";
     }
 
     return result;

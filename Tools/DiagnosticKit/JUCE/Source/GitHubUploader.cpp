@@ -419,6 +419,16 @@ juce::String GitHubUploader::formatIssueBody (const DiagnosticData& data,
             addCheck ("fail", "End-to-end pipeline test");
     }
 
+    // Plugin validation (pluginval / auval)
+    if (data.pluginValidation.contains ("PASS"))
+        addCheck ("pass", "Plugin validation (pluginval)");
+    else if (data.pluginValidation.contains ("FAIL"))
+        addCheck ("fail", "Plugin validation (pluginval) — see report for details");
+    else if (data.pluginValidation.contains ("timed out"))
+        addCheck ("warn", "Plugin validation timed out");
+    else if (data.pluginValidation.contains ("not found") || data.pluginValidation.contains ("Could not"))
+        addCheck ("warn", "Plugin validation skipped (pluginval not available)");
+
     // DAW crashes
     if (data.dawDiagnostics.contains ("crash recovery") || data.dawDiagnostics.contains ("crash report")
         || data.dawDiagnostics.contains ("crash dump") || data.dawDiagnostics.contains ("crash log"))

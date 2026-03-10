@@ -303,30 +303,86 @@ juce::String collectCrashLogs (const juce::String& pluginName, juce::StringArray
     return logs;
 }
 
+/** Find pluginval.exe. Checks next to the diagnostic exe first (bundled by installer),
+    then common locations, then falls back to auto-download if needed. */
+static juce::File ensurePluginVal()
+{
+    // 1. Check next to the diagnostic executable (bundled by installer into {app}\Diagnostics\)
+    auto exeDir = juce::File::getSpecialLocation (juce::File::currentExecutableFile).getParentDirectory();
+    auto bundled = exeDir.getChildFile ("pluginval.exe");
+    if (bundled.existsAsFile())
+        return bundled;
+
+    // 2. Check common pre-installed locations
+    auto programFiles = juce::File ("C:\\Program Files\\pluginval\\pluginval.exe");
+    if (programFiles.existsAsFile())
+        return programFiles;
+
+    auto pathResult = runCommand ("where pluginval.exe 2>nul");
+    if (pathResult.isNotEmpty())
+    {
+        auto found = juce::File (pathResult.upToFirstOccurrenceOf ("\n", false, false).trim());
+        if (found.existsAsFile())
+            return found;
+    }
+
+    // 3. Check local cache (%LOCALAPPDATA%\pluginval\pluginval.exe)
+    auto cacheDir = juce::File::getSpecialLocation (juce::File::windowsLocalAppData)
+                        .getChildFile ("pluginval");
+    auto cachedExe = cacheDir.getChildFile ("pluginval.exe");
+    if (cachedExe.existsAsFile())
+        return cachedExe;
+
+    // 4. Auto-download as last resort (for dev machines without installer)
+    cacheDir.createDirectory();
+    auto zipFile = cacheDir.getChildFile ("pluginval_Windows.zip");
+
+    juce::String downloadUrl = "https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip";
+
+    auto psCmd = "powershell -NoProfile -Command \"Invoke-WebRequest -Uri '"
+               + downloadUrl + "' -OutFile '" + zipFile.getFullPathName() + "'\"";
+
+    juce::ChildProcess dlProc;
+    if (dlProc.start (psCmd))
+        dlProc.waitForProcessToFinish (60000);
+
+    if (! zipFile.existsAsFile() || zipFile.getSize() < 1000)
+    {
+        zipFile.deleteFile();
+        return {};
+    }
+
+    auto extractCmd = "powershell -NoProfile -Command \"Expand-Archive -Path '"
+                    + zipFile.getFullPathName() + "' -DestinationPath '"
+                    + cacheDir.getFullPathName() + "' -Force\"";
+
+    juce::ChildProcess extractProc;
+    if (extractProc.start (extractCmd))
+        extractProc.waitForProcessToFinish (30000);
+
+    zipFile.deleteFile();
+
+    if (cachedExe.existsAsFile())
+        return cachedExe;
+
+    return {};
+}
+
 juce::String runPluginValidation (const AppConfig& config)
 {
     juce::String result;
     result << "# Plugin Validation\n\n";
 
-    // Look for pluginval in common locations
-    juce::File pluginval;
-    auto programFiles = juce::File ("C:\\Program Files\\pluginval\\pluginval.exe");
-    auto localBin = juce::File::getSpecialLocation (juce::File::userHomeDirectory)
-                        .getChildFile ("pluginval.exe");
-    auto pathResult = runCommand ("where pluginval.exe 2>nul");
-
-    if (programFiles.existsAsFile())
-        pluginval = programFiles;
-    else if (localBin.existsAsFile())
-        pluginval = localBin;
-    else if (pathResult.isNotEmpty())
-        pluginval = juce::File (pathResult.upToFirstOccurrenceOf ("\n", false, false).trim());
+    auto pluginval = ensurePluginVal();
 
     if (! pluginval.existsAsFile())
     {
-        result << "_pluginval not found. Install from https://github.com/Tracktion/pluginval/releases_\n";
+        result << "_Could not find or download pluginval. "
+               << "Manual install: https://github.com/Tracktion/pluginval/releases_\n";
         return result;
     }
+
+    result << "Using pluginval: " << pluginval.getFullPathName() << "\n\n";
 
     // Find the VST3 to validate
     auto vst3Path = juce::File ("C:\\Program Files\\Common Files\\VST3\\" + config.pluginName + ".vst3");
@@ -339,20 +395,29 @@ juce::String runPluginValidation (const AppConfig& config)
     result << "Running pluginval on " << config.pluginName << ".vst3...\n\n";
 
     juce::ChildProcess proc;
-    juce::String cmd = "\"" + pluginval.getFullPathName() + "\" --validate \""
+    juce::String cmd = "\"" + pluginval.getFullPathName() + "\" --validate-in-process \""
                       + vst3Path.getFullPathName() + "\" --strictness-level 5";
 
     if (proc.start (cmd))
     {
-        if (proc.waitForProcessToFinish (config.diagnosticTimeout * 1000))
+        // PluginVal can take a while — use a longer timeout (120 seconds)
+        int timeoutMs = juce::jmax (120000, config.diagnosticTimeout * 1000);
+        if (proc.waitForProcessToFinish (timeoutMs))
         {
             auto output = proc.readAllProcessOutput();
-            result << "```\n" << output.getLastCharacters (2000) << "\n```\n";
+            auto exitCode = proc.getExitCode();
+
+            if (exitCode == 0)
+                result << "**Result: PASS**\n\n";
+            else
+                result << "**Result: FAIL** (exit code " << exitCode << ")\n\n";
+
+            result << "```\n" << output.getLastCharacters (3000) << "\n```\n";
         }
         else
         {
             proc.kill();
-            result << "_Validation timed out after " << config.diagnosticTimeout << " seconds_\n";
+            result << "_Validation timed out after " << (timeoutMs / 1000) << " seconds_\n";
         }
     }
     else
