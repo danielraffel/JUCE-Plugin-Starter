@@ -6,13 +6,7 @@ MainComponent::MainComponent (const AppConfig& config)
       collector_ (config),
       uploader_ (config)
 {
-    // Title
-    titleLabel_.setText (config_.appName, juce::dontSendNotification);
-    titleLabel_.setFont (juce::FontOptions (22.0f, juce::Font::bold));
-    titleLabel_.setJustificationType (juce::Justification::centred);
-    addAndMakeVisible (titleLabel_);
-
-    // Subtitle
+    // Subtitle (title is shown in native title bar)
     subtitleLabel_.setText ("Submit a diagnostic report to help us troubleshoot issues",
                            juce::dontSendNotification);
     subtitleLabel_.setJustificationType (juce::Justification::centred);
@@ -109,10 +103,8 @@ void MainComponent::resized()
 {
     auto area = getLocalBounds().reduced (20);
 
-    titleLabel_.setBounds (area.removeFromTop (30));
-    area.removeFromTop (5);
     subtitleLabel_.setBounds (area.removeFromTop (20));
-    area.removeFromTop (15);
+    area.removeFromTop (10);
 
     if (state_ == State::Idle)
     {

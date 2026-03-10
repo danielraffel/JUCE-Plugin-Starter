@@ -62,20 +62,71 @@ juce::String GitHubUploader::submit (const DiagnosticData& data, juce::String& e
     return createIssue (title, body, errorOut);
 }
 
+juce::String GitHubUploader::stripBase64Whitespace (const juce::String& base64)
+{
+    juce::String clean;
+    clean.preallocateBytes ((size_t) base64.length());
+    for (auto c : base64)
+    {
+        if (c != '\r' && c != '\n' && c != ' ')
+            clean += c;
+    }
+    return clean;
+}
+
+juce::String GitHubUploader::uploadViaCurl (const juce::String& urlStr, const juce::File& payloadFile, juce::String& errorOut)
+{
+    // curl.exe is available on Windows 10 1803+ in System32
+    juce::ChildProcess proc;
+    auto curlCmd = "curl.exe -s -o NUL -w \"%{http_code}\" -X PUT"
+                   " -H \"Authorization: Bearer " + config_.githubPAT + "\""
+                   " -H \"Accept: application/vnd.github+json\""
+                   " -H \"X-GitHub-Api-Version: 2022-11-28\""
+                   " -H \"Content-Type: application/json\""
+                   " -d @\"" + payloadFile.getFullPathName() + "\""
+                   " \"" + urlStr + "\"";
+
+    juce::String result;
+    if (proc.start (curlCmd))
+    {
+        if (proc.waitForProcessToFinish (60000))
+            result = proc.readAllProcessOutput().trim();
+        else
+            proc.kill();
+    }
+
+    if (result == "200" || result == "201")
+        return "OK";
+
+    errorOut = "curl returned HTTP " + result;
+    return {};
+}
+
 juce::String GitHubUploader::uploadFile (const juce::String& path, const juce::String& content, juce::String& errorOut)
 {
     auto urlStr = "https://api.github.com/repos/" + config_.githubRepo + "/contents/" + path;
 
-    // Base64 encode the content
+    // Base64 encode the content, strip whitespace (JUCE adds MIME line breaks)
     juce::MemoryBlock mb (content.toRawUTF8(), (size_t) content.getNumBytesAsUTF8());
-    auto base64 = mb.toBase64Encoding();
+    auto base64 = stripBase64Whitespace (mb.toBase64Encoding());
 
-    // Build JSON payload
-    juce::String payload = "{\"message\":\"Add diagnostic files\",\"content\":"
-                         + juce::JSON::toString (base64)
-                         + ",\"branch\":\"main\"}";
+    // Build JSON payload — use manual escaping since base64 is already clean alphanumeric+/+=
+    juce::String payload = "{\"message\":\"Add diagnostic files\",\"content\":\"" + base64 + "\",\"branch\":\"main\"}";
 
-    // Use JUCE URL with POST data and PUT override
+    // Write payload to temp file (avoids command-line length limits)
+    auto tempFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                        .getChildFile ("diag_upload_" + juce::String (juce::Random::getSystemRandom().nextInt()) + ".json");
+    tempFile.replaceWithText (payload);
+
+    // Try curl.exe first (most reliable on Windows 10+)
+    auto curlResult = uploadViaCurl (urlStr, tempFile, errorOut);
+    if (curlResult == "OK")
+    {
+        tempFile.deleteFile();
+        return "https://github.com/" + config_.githubRepo + "/raw/main/" + path;
+    }
+
+    // Try JUCE HTTP as fallback
     juce::URL url (urlStr);
     url = url.withPOSTData (payload);
 
@@ -91,40 +142,12 @@ juce::String GitHubUploader::uploadFile (const juce::String& path, const juce::S
 
     auto stream = url.createInputStream (options);
 
+    tempFile.deleteFile();
+
     if (stream != nullptr && (statusCode == 200 || statusCode == 201))
         return "https://github.com/" + config_.githubRepo + "/raw/main/" + path;
 
-    // If HTTP upload fails, try via PowerShell with temp file (avoids command line length limits)
-    auto tempFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
-                        .getChildFile ("diag_upload_" + juce::String (juce::Random::getSystemRandom().nextInt()) + ".json");
-    tempFile.replaceWithText (payload);
-
-    juce::ChildProcess proc;
-    auto psCmd = "powershell -NoProfile -Command \""
-                 "try { $body = Get-Content -Raw '" + tempFile.getFullPathName() + "'; "
-                 "$r = Invoke-RestMethod -Method PUT -Uri '" + urlStr + "' "
-                 "-Headers @{'Authorization'='Bearer " + config_.githubPAT + "'; "
-                 "'Accept'='application/vnd.github+json'; "
-                 "'X-GitHub-Api-Version'='2022-11-28'} "
-                 "-ContentType 'application/json' "
-                 "-Body $body; "
-                 "Write-Output 'OK' } catch { Write-Output $_.Exception.Message }\"";
-
-    juce::String result;
-    if (proc.start (psCmd))
-    {
-        if (proc.waitForProcessToFinish (30000))
-            result = proc.readAllProcessOutput().trim();
-        else
-            proc.kill();
-    }
-
-    tempFile.deleteFile();
-
-    if (result == "OK")
-        return "https://github.com/" + config_.githubRepo + "/raw/main/" + path;
-
-    errorOut = "File upload failed (HTTP " + juce::String (statusCode) + ", PS: " + result.substring (0, 200) + ")";
+    errorOut = "File upload failed (curl: " + errorOut + ", JUCE HTTP " + juce::String (statusCode) + ")";
     return {};
 }
 
@@ -139,13 +162,24 @@ juce::String GitHubUploader::uploadBinaryFile (const juce::String& path, const j
         return {};
     }
 
-    auto base64 = mb.toBase64Encoding();
+    auto base64 = stripBase64Whitespace (mb.toBase64Encoding());
 
-    juce::String payload = "{\"message\":\"Add diagnostic files\",\"content\":"
-                         + juce::JSON::toString (base64)
-                         + ",\"branch\":\"main\"}";
+    juce::String payload = "{\"message\":\"Add diagnostic files\",\"content\":\"" + base64 + "\",\"branch\":\"main\"}";
 
-    // Try JUCE HTTP first
+    // Write payload to temp file
+    auto tempFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                        .getChildFile ("diag_upload_" + juce::String (juce::Random::getSystemRandom().nextInt()) + ".json");
+    tempFile.replaceWithText (payload);
+
+    // Try curl.exe first
+    auto curlResult = uploadViaCurl (urlStr, tempFile, errorOut);
+    if (curlResult == "OK")
+    {
+        tempFile.deleteFile();
+        return "https://github.com/" + config_.githubRepo + "/raw/main/" + path;
+    }
+
+    // Fallback to JUCE HTTP
     juce::URL url (urlStr);
     url = url.withPOSTData (payload);
 
@@ -161,41 +195,12 @@ juce::String GitHubUploader::uploadBinaryFile (const juce::String& path, const j
 
     auto stream = url.createInputStream (options);
 
+    tempFile.deleteFile();
+
     if (stream != nullptr && (statusCode == 200 || statusCode == 201))
         return "https://github.com/" + config_.githubRepo + "/raw/main/" + path;
 
-    // Fallback to PowerShell
-    // Write payload to temp file since it may be large
-    auto tempFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
-                        .getChildFile ("diag_upload_" + juce::String (juce::Random::getSystemRandom().nextInt()) + ".json");
-    tempFile.replaceWithText (payload);
-
-    juce::ChildProcess proc;
-    auto psCmd = "powershell -NoProfile -Command \""
-                 "try { $body = Get-Content -Raw '" + tempFile.getFullPathName() + "'; "
-                 "$r = Invoke-RestMethod -Method PUT -Uri '" + urlStr + "' "
-                 "-Headers @{'Authorization'='Bearer " + config_.githubPAT + "'; "
-                 "'Accept'='application/vnd.github+json'; "
-                 "'X-GitHub-Api-Version'='2022-11-28'} "
-                 "-ContentType 'application/json' "
-                 "-Body $body; "
-                 "Write-Output 'OK' } catch { Write-Output $_.Exception.Message }\"";
-
-    juce::String result;
-    if (proc.start (psCmd))
-    {
-        if (proc.waitForProcessToFinish (60000))
-            result = proc.readAllProcessOutput().trim();
-        else
-            proc.kill();
-    }
-
-    tempFile.deleteFile();
-
-    if (result == "OK")
-        return "https://github.com/" + config_.githubRepo + "/raw/main/" + path;
-
-    errorOut = "Binary upload failed (HTTP " + juce::String (statusCode) + ")";
+    errorOut = "Binary upload failed (curl: " + errorOut + ", JUCE HTTP " + juce::String (statusCode) + ")";
     return {};
 }
 

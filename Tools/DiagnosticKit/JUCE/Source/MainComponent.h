@@ -39,7 +39,6 @@ private:
     int progressDots_ = 0;
 
     // UI Components
-    juce::Label titleLabel_;
     juce::Label subtitleLabel_;
     juce::Label statusLabel_;
     juce::Label feedbackLabel_;

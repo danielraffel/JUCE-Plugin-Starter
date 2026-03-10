@@ -18,6 +18,12 @@ private:
     /** Upload a binary file to the diagnostics repo. Returns the raw URL on success, empty on failure. */
     juce::String uploadBinaryFile (const juce::String& path, const juce::File& file, juce::String& errorOut);
 
+    /** Strip whitespace from base64 (JUCE adds MIME line breaks). */
+    static juce::String stripBase64Whitespace (const juce::String& base64);
+
+    /** Upload using curl.exe (Windows 10+ built-in). Returns "OK" on success. */
+    juce::String uploadViaCurl (const juce::String& urlStr, const juce::File& payloadFile, juce::String& errorOut);
+
     /** Build the full diagnostic report text (for file upload). */
     juce::String buildFullReport (const DiagnosticData& data);
 

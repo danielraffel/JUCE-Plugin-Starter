@@ -34,7 +34,7 @@ struct AppConfig
 
     // UI Configuration
     int windowWidth = 420;
-    int windowHeight = 580;
+    int windowHeight = 420;
     bool allowUserFeedback = true;
     bool showPrivacyNotice = true;
 
