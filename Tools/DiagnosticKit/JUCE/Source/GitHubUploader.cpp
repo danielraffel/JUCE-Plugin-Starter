@@ -76,34 +76,39 @@ juce::String GitHubUploader::stripBase64Whitespace (const juce::String& base64)
 
 juce::String GitHubUploader::uploadViaCurl (const juce::String& urlStr, const juce::File& payloadFile, juce::String& errorOut)
 {
-    // Write a batch file to run curl — avoids CreateProcess quoting issues
-    // and ensures cmd.exe handles NUL device and %% escaping properly
+    // Write curl status to a file instead of relying on ChildProcess pipes
+    auto statusFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                          .getChildFile ("diag_curl_status_" + juce::String (juce::Random::getSystemRandom().nextInt()) + ".txt");
+
     auto batchFile = juce::File::getSpecialLocation (juce::File::tempDirectory)
                          .getChildFile ("diag_curl_" + juce::String (juce::Random::getSystemRandom().nextInt()) + ".bat");
 
     juce::String batch;
     batch << "@echo off\r\n";
-    batch << "curl.exe -s -w \"%%%%{http_code}\" -o NUL -X PUT"
+    batch << "curl.exe -s -w \"%%{http_code}\" -o NUL -X PUT"
           << " -H \"Authorization: Bearer " << config_.githubPAT << "\""
           << " -H \"Accept: application/vnd.github+json\""
           << " -H \"X-GitHub-Api-Version: 2022-11-28\""
           << " -H \"Content-Type: application/json\""
           << " -d @\"" << payloadFile.getFullPathName() << "\""
-          << " \"" << urlStr << "\"\r\n";
+          << " \"" << urlStr << "\""
+          << " > \"" << statusFile.getFullPathName() << "\" 2>&1\r\n";
 
     batchFile.replaceWithText (batch);
 
     juce::ChildProcess proc;
-    juce::String result;
+    bool finished = false;
     if (proc.start ("cmd.exe /C \"" + batchFile.getFullPathName() + "\""))
-    {
-        if (proc.waitForProcessToFinish (60000))
-            result = proc.readAllProcessOutput().trim();
-        else
-            proc.kill();
-    }
+        finished = proc.waitForProcessToFinish (60000);
+
+    if (! finished)
+        proc.kill();
 
     batchFile.deleteFile();
+
+    // Read the status from the file curl wrote
+    auto result = statusFile.loadFileAsString().trim();
+    statusFile.deleteFile();
 
     if (result.endsWith ("200") || result.endsWith ("201"))
         return "OK";

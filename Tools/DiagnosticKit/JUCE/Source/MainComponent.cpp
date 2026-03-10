@@ -237,7 +237,7 @@ void MainComponent::updateUI()
             openBrowserButton_.setVisible (true);
             privacyNoteLabel_.setVisible (true);
             privacyNoteLabel_.setText ("This report was sent to a private repository.\n"
-                                       "The link above may show a 404 page — that's normal.\n"
+                                       "The link above may show a 404 page and that's normal.\n"
                                        "The developer has been automatically notified.",
                                        juce::dontSendNotification);
             doneButton_.setVisible (true);
