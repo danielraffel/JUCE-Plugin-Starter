@@ -121,15 +121,13 @@ if ($env:ENABLE_DIAGNOSTICS -eq "true") {
         if (-not (Test-Path $diagEnvFile)) {
             $GithubUser = $env:GITHUB_USER
             $diagRepo = if ($env:DIAGNOSTIC_GITHUB_REPO) { $env:DIAGNOSTIC_GITHUB_REPO } else { "$GithubUser/$ProjectName-diagnostics" }
-            $diagEnvContent = @"
-APP_NAME="$ProjectName Diagnostics"
-APP_IDENTIFIER="$BundleId.diagnostics"
-PRODUCT_NAME="$ProjectName"
-PLUGIN_NAME="$ProjectName"
-GITHUB_REPO="$diagRepo"
-GITHUB_TOKEN="$($env:DIAGNOSTIC_GITHUB_PAT)"
-SUPPORT_EMAIL="$($env:DIAGNOSTIC_SUPPORT_EMAIL)"
-"@
+            $diagEnvContent = "APP_NAME=`"$ProjectName Diagnostics`"`n" +
+                "APP_IDENTIFIER=`"$BundleId.diagnostics`"`n" +
+                "PRODUCT_NAME=`"$ProjectName`"`n" +
+                "PLUGIN_NAME=`"$ProjectName`"`n" +
+                "GITHUB_REPO=`"$diagRepo`"`n" +
+                "GITHUB_TOKEN=`"$($env:DIAGNOSTIC_GITHUB_PAT)`"`n" +
+                "SUPPORT_EMAIL=`"$($env:DIAGNOSTIC_SUPPORT_EMAIL)`""
             Set-Content -Path $diagEnvFile -Value $diagEnvContent -Encoding UTF8
         }
 
@@ -139,7 +137,7 @@ SUPPORT_EMAIL="$($env:DIAGNOSTIC_SUPPORT_EMAIL)"
             ninja -C $diagBuildDir
             if ($LASTEXITCODE -eq 0) {
                 $diagAppName = "$ProjectName Diagnostics"
-                $DiagnosticExe = Join-Path $diagBuildDir "DiagnosticKit_artefacts\$BuildConfig\Standalone\$diagAppName.exe"
+                $DiagnosticExe = Join-Path $diagBuildDir "DiagnosticKit_artefacts\$BuildConfig\$diagAppName.exe"
                 if (Test-Path $DiagnosticExe) {
                     Write-Success "DiagnosticKit built: $DiagnosticExe"
                 } else {
