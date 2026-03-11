@@ -372,7 +372,7 @@ juce::String runPluginValidation (const AppConfig& config)
 
     juce::String psScript =
         "$p = Start-Process -FilePath '" + pluginval.getFullPathName() + "' "
-        "-ArgumentList '--validate-in-process','" + vst3Path.getFullPathName() + "','--strictness-level','5' "
+        "-ArgumentList '--validate','--validate-in-process','--skip-gui-tests','--strictness-level','5','" + vst3Path.getFullPathName() + "' "
         "-WindowStyle Hidden -Wait -PassThru "
         "-RedirectStandardOutput '" + outputFile.getFullPathName() + "'; "
         "$p.ExitCode | Out-File -FilePath '" + exitCodeFile.getFullPathName() + "' -Encoding ascii";

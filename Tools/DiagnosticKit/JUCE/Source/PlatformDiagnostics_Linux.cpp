@@ -253,8 +253,8 @@ juce::String runPluginValidation (const AppConfig& config)
     result << "Running pluginval on " << config.pluginName << ".vst3...\n\n";
 
     juce::ChildProcess proc;
-    juce::String cmd = pluginval.getFullPathName() + " --validate-in-process "
-                     + vst3Path.getFullPathName() + " --strictness-level 5";
+    juce::String cmd = pluginval.getFullPathName() + " --validate --validate-in-process --skip-gui-tests --strictness-level 5 "
+                     + vst3Path.getFullPathName();
 
     if (proc.start (cmd))
     {
