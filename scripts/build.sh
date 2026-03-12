@@ -2,7 +2,7 @@
 
 # Unified Build System for JUCE Audio Plugins
 # Reads all configuration from .env file - completely project-agnostic
-# Supports: AU, VST3, Standalone (no CLAP)
+# Supports: AU, VST3, CLAP, Standalone
 
 set -e  # Exit on error
 
@@ -43,6 +43,13 @@ if [[ -z "$COMPANY_NAME" ]]; then
     COMPANY_NAME="${DEVELOPER_NAME:-Unknown Company}"
 fi
 
+# Detect platform
+case "$(uname -s)" in
+    Darwin)  BUILD_PLATFORM="macOS" ;;
+    Linux)   BUILD_PLATFORM="Linux" ;;
+    *)       echo -e "${RED}Unsupported platform: $(uname -s). Use build.ps1 on Windows.${NC}"; exit 1 ;;
+esac
+
 # Default values
 BUILD_DIR="${BUILD_DIR:-build}"
 CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-Release}"
@@ -64,8 +71,10 @@ Usage: $0 [TARGET(s)] [ACTION] [OPTIONS]
 
 TARGETS (can specify multiple):
   all         Build all formats (default)
-  au          Build Audio Unit only
+  au          Build Audio Unit v2 (AU) only
+  auv3        Build Audio Unit v3 (AUv3) only
   vst3        Build VST3 only
+  clap        Build CLAP only
   standalone  Build Standalone only
 
 ACTIONS:
@@ -112,7 +121,7 @@ EOF
 # Process arguments - now supports multiple targets
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        all|au|vst3|standalone)
+        all|au|auv3|vst3|clap|standalone)
             TARGETS+=("$1")
             shift
             ;;
@@ -147,16 +156,34 @@ BUILD_FORMATS=""
 for TARGET in "${TARGETS[@]}"; do
     case "$TARGET" in
         all)
-            BUILD_FORMATS="AU VST3 Standalone"
+            if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                BUILD_FORMATS="VST3 CLAP Standalone"
+            else
+                BUILD_FORMATS="AU AUv3 VST3 CLAP Standalone"
+            fi
             ;;
         au)
-            if [[ ! $BUILD_FORMATS =~ "AU" ]]; then
+            if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                echo -e "${YELLOW}Warning: AU format is not available on Linux, skipping${NC}"
+            elif [[ ! $BUILD_FORMATS =~ "AU" ]]; then
                 BUILD_FORMATS="$BUILD_FORMATS AU"
             fi
             ;;
         vst3)
             if [[ ! $BUILD_FORMATS =~ "VST3" ]]; then
                 BUILD_FORMATS="$BUILD_FORMATS VST3"
+            fi
+            ;;
+        clap)
+            if [[ ! $BUILD_FORMATS =~ "CLAP" ]]; then
+                BUILD_FORMATS="$BUILD_FORMATS CLAP"
+            fi
+            ;;
+        auv3)
+            if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                echo -e "${YELLOW}Warning: AUv3 format is not available on Linux, skipping${NC}"
+            elif [[ ! $BUILD_FORMATS =~ "AUv3" ]]; then
+                BUILD_FORMATS="$BUILD_FORMATS AUv3"
             fi
             ;;
         standalone)
@@ -245,8 +272,15 @@ configure_cmake() {
         CMAKE_FORMATS="$CMAKE_FORMATS -D${format}=ON"
     done
 
+    # Platform-specific generator
+    if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+        CMAKE_GENERATOR="Ninja"
+    else
+        CMAKE_GENERATOR="Xcode"
+    fi
+
     cmake -B "$BUILD_DIR" \
-        -G Xcode \
+        -G "$CMAKE_GENERATOR" \
         -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
         -DPROJECT_NAME="$PROJECT_NAME" \
         -DPROJECT_BUNDLE_ID="$PROJECT_BUNDLE_ID" \
@@ -275,6 +309,12 @@ get_schemes_for_format() {
         VST3)
             echo "$all_schemes" | grep "_VST3$"
             ;;
+        CLAP)
+            echo "$all_schemes" | grep "_CLAP$"
+            ;;
+        AUv3)
+            echo "$all_schemes" | grep "_AUv3$"
+            ;;
         Standalone)
             echo "$all_schemes" | grep "_Standalone$"
             ;;
@@ -300,15 +340,23 @@ build_xcode() {
 
             # Extract plugin name from scheme (remove format suffix)
             local plugin_name="${scheme%_AU}"
+            plugin_name="${plugin_name%_AUv3}"
             plugin_name="${plugin_name%_VST3}"
+            plugin_name="${plugin_name%_CLAP}"
             plugin_name="${plugin_name%_Standalone}"
 
             case "$format" in
                 AU)
-                    echo "Building Audio Unit: $scheme"
+                    echo "Building Audio Unit v2 (AU): $scheme"
+                    ;;
+                AUv3)
+                    echo "Building Audio Unit v3 (AUv3): $scheme"
                     ;;
                 VST3)
                     echo "Building VST3: $scheme"
+                    ;;
+                CLAP)
+                    echo "Building CLAP: $scheme"
                     ;;
                 Standalone)
                     echo "Building Standalone: $scheme"
@@ -326,6 +374,29 @@ build_xcode() {
     done
 }
 
+# Function to build with CMake/Ninja (Linux)
+build_cmake() {
+    echo -e "${GREEN}Building with CMake (Ninja)...${NC}"
+
+    for format in $BUILD_FORMATS; do
+        # Map format to CMake target name
+        local target=""
+        case "$format" in
+            VST3)       target="${PROJECT_NAME}_VST3" ;;
+            CLAP)       target="${PROJECT_NAME}_CLAP" ;;
+            Standalone) target="${PROJECT_NAME}_Standalone" ;;
+            *)
+                echo -e "${YELLOW}Warning: Unknown format $format, skipping${NC}"
+                continue
+                ;;
+        esac
+
+        echo "Building $format: $target"
+        cmake --build "$BUILD_DIR" --config "$CMAKE_BUILD_TYPE" --target "$target"
+        BUILT_PLUGINS+=("$format:$PROJECT_NAME")
+    done
+}
+
 # Function to launch standalone app
 launch_standalone() {
     local standalone_dir="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone"
@@ -335,45 +406,92 @@ launch_standalone() {
         return 1
     fi
 
-    # Find all .app files in standalone directory
-    local apps=()
-    while IFS= read -r -d '' app; do
-        apps+=("$app")
-    done < <(find "$standalone_dir" -maxdepth 1 -name "*.app" -print0)
+    if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+        # Linux: find executable binary (no .app bundle)
+        local binary=$(find "$standalone_dir" -maxdepth 1 -type f -executable ! -name "*.so" 2>/dev/null | head -1)
+        if [[ -z "$binary" ]]; then
+            echo -e "${YELLOW}Warning: No standalone executable found${NC}"
+            return 1
+        fi
 
-    if [[ ${#apps[@]} -eq 0 ]]; then
-        echo -e "${YELLOW}Warning: No standalone apps found${NC}"
-        return 1
-    fi
-
-    echo -e "${GREEN}Launching standalone app(s)...${NC}"
-
-    # Launch each app
-    for app_path in "${apps[@]}"; do
-        local app_name=$(basename "$app_path" .app)
-
-        # Check if app is already running and kill it
+        local app_name=$(basename "$binary")
         if pgrep -x "$app_name" > /dev/null; then
             echo "Killing existing $app_name instance..."
             pkill -x "$app_name" || true
-            sleep 1  # Give it time to exit
+            sleep 1
         fi
 
-        # Launch the app in background
-        open "$app_path"
-        echo "Launched: $app_path"
-    done
+        echo -e "${GREEN}Launching standalone app...${NC}"
+        "$binary" &
+        echo "Launched: $binary"
+    else
+        # macOS: find .app bundles
+        local apps=()
+        while IFS= read -r -d '' app; do
+            apps+=("$app")
+        done < <(find "$standalone_dir" -maxdepth 1 -name "*.app" -print0)
+
+        if [[ ${#apps[@]} -eq 0 ]]; then
+            echo -e "${YELLOW}Warning: No standalone apps found${NC}"
+            return 1
+        fi
+
+        echo -e "${GREEN}Launching standalone app(s)...${NC}"
+
+        for app_path in "${apps[@]}"; do
+            local app_name=$(basename "$app_path" .app)
+
+            if pgrep -x "$app_name" > /dev/null; then
+                echo "Killing existing $app_name instance..."
+                pkill -x "$app_name" || true
+                sleep 1
+            fi
+
+            open "$app_path"
+            echo "Launched: $app_path"
+        done
+    fi
 }
 
 # Function to run tests with PluginVal
 run_tests() {
+    echo -e "${GREEN}Running tests...${NC}"
+
+    # --- Catch2 Unit Tests ---
+    local catch2_binary="$BUILD_DIR/Tests_artefacts/$CMAKE_BUILD_TYPE/Tests"
+    if [[ -f "$catch2_binary" ]]; then
+        echo -e "${GREEN}Running Catch2 unit tests...${NC}"
+        "$catch2_binary" --reporter console || {
+            echo -e "${RED}Catch2 tests failed!${NC}"
+            return 1
+        }
+        echo -e "${GREEN}Catch2 tests passed.${NC}"
+    else
+        echo -e "${YELLOW}Note: Catch2 test binary not found at $catch2_binary${NC}"
+        echo "Build the Tests target first: cmake --build build --target Tests"
+    fi
+
+    echo ""
+
+    # --- PluginVal Tests ---
     echo -e "${GREEN}Running PluginVal tests...${NC}"
 
     local has_pluginval=true
     if ! command -v pluginval &> /dev/null; then
-        echo -e "${YELLOW}Warning: PluginVal not installed${NC}"
-        echo "Install with: brew install --cask pluginval"
-        has_pluginval=false
+        # Check for local pluginval binary (CI downloads it)
+        if [[ -x "./pluginval" ]]; then
+            PLUGINVAL_CMD="./pluginval"
+        else
+            echo -e "${YELLOW}Warning: PluginVal not installed${NC}"
+            if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                echo "Download from: https://github.com/Tracktion/pluginval/releases"
+            else
+                echo "Install with: brew install --cask pluginval"
+            fi
+            has_pluginval=false
+        fi
+    else
+        PLUGINVAL_CMD="pluginval"
     fi
 
     local tested_something=false
@@ -381,29 +499,61 @@ run_tests() {
     for format in $BUILD_FORMATS; do
         case "$format" in
             AU)
-                # Find all AU plugins in Components directory
-                local au_dir="$HOME/Library/Audio/Plug-Ins/Components"
-                if [[ -d "$au_dir" ]]; then
-                    while IFS= read -r -d '' plugin; do
-                        if [[ "$has_pluginval" == "true" ]]; then
-                            echo "Testing AU: $plugin"
-                            pluginval --validate-in-process --validate "$plugin" || true
-                            tested_something=true
-                        fi
-                    done < <(find "$au_dir" -maxdepth 1 -name "*.component" -print0 2>/dev/null)
+                # AU is macOS-only
+                if [[ "$BUILD_PLATFORM" != "Linux" ]]; then
+                    local au_dir="$HOME/Library/Audio/Plug-Ins/Components"
+                    if [[ -d "$au_dir" ]]; then
+                        while IFS= read -r -d '' plugin; do
+                            if [[ "$has_pluginval" == "true" ]]; then
+                                echo "Testing AU: $plugin"
+                                $PLUGINVAL_CMD --validate-in-process --validate "$plugin" || true
+                                tested_something=true
+                            fi
+                        done < <(find "$au_dir" -maxdepth 1 -name "*.component" -print0 2>/dev/null)
+                    fi
                 fi
                 ;;
             VST3)
-                # Find all VST3 plugins in VST3 directory
-                local vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
+                # Find all VST3 plugins — path differs by platform
+                local vst3_dir
+                if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                    vst3_dir="$HOME/.vst3"
+                else
+                    vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
+                fi
                 if [[ -d "$vst3_dir" ]]; then
                     while IFS= read -r -d '' plugin; do
                         if [[ "$has_pluginval" == "true" ]]; then
                             echo "Testing VST3: $plugin"
-                            pluginval --validate-in-process --validate "$plugin" || true
+                            $PLUGINVAL_CMD --validate-in-process --validate "$plugin" || true
                             tested_something=true
                         fi
                     done < <(find "$vst3_dir" -maxdepth 1 -name "*.vst3" -print0 2>/dev/null)
+                fi
+                ;;
+            CLAP)
+                # Find all CLAP plugins — path differs by platform
+                local clap_dir
+                if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                    clap_dir="$HOME/.clap"
+                else
+                    clap_dir="$HOME/Library/Audio/Plug-Ins/CLAP"
+                fi
+                if [[ -d "$clap_dir" ]]; then
+                    while IFS= read -r -d '' plugin; do
+                        echo "Testing CLAP: $plugin"
+                        echo -e "${YELLOW}Note: PluginVal does not validate CLAP format directly${NC}"
+                        tested_something=true
+                    done < <(find "$clap_dir" -maxdepth 1 -name "*.clap" -print0 2>/dev/null)
+                fi
+                ;;
+            AUv3)
+                # AUv3 is an app extension (.appex) - PluginVal doesn't validate AUv3 directly
+                local auv3_path="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/AUv3/${PROJECT_NAME}.appex"
+                if [[ -d "$auv3_path" ]]; then
+                    echo "AUv3 built: $auv3_path"
+                    echo -e "${YELLOW}Note: PluginVal does not validate AUv3 format directly. Test in a DAW or AUM on iOS.${NC}"
+                    tested_something=true
                 fi
                 ;;
             Standalone)
@@ -454,6 +604,32 @@ sign_plugins() {
                         "$plugin"
                 else
                     echo -e "${YELLOW}Warning: VST3 plugin not found at $plugin${NC}"
+                fi
+                ;;
+            CLAP)
+                # Sign only the current project's CLAP plugin
+                local plugin="$HOME/Library/Audio/Plug-Ins/CLAP/${PROJECT_NAME}.clap"
+                if [[ -d "$plugin" ]]; then
+                    echo "Signing CLAP: $plugin"
+                    codesign --force --deep --strict --timestamp \
+                        --sign "$APP_CERT" \
+                        --options runtime \
+                        "$plugin"
+                else
+                    echo -e "${YELLOW}Warning: CLAP plugin not found at $plugin${NC}"
+                fi
+                ;;
+            AUv3)
+                # Sign the AUv3 app extension
+                local plugin="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/AUv3/${PROJECT_NAME}.appex"
+                if [[ -d "$plugin" ]]; then
+                    echo "Signing AUv3: $plugin"
+                    codesign --force --deep --strict --timestamp \
+                        --sign "$APP_CERT" \
+                        --options runtime \
+                        "$plugin"
+                else
+                    echo -e "${YELLOW}Warning: AUv3 plugin not found at $plugin${NC}"
                 fi
                 ;;
             Standalone)
@@ -525,6 +701,46 @@ notarize_plugins() {
                     rm "$zip_path"
                 else
                     echo -e "${YELLOW}Warning: VST3 plugin not found at $plugin${NC}"
+                fi
+                ;;
+            CLAP)
+                # Notarize only the current project's CLAP plugin
+                local plugin="$HOME/Library/Audio/Plug-Ins/CLAP/${PROJECT_NAME}.clap"
+                if [[ -d "$plugin" ]]; then
+                    echo "Notarizing CLAP: ${PROJECT_NAME}..."
+                    local zip_path="/tmp/${PROJECT_NAME}_CLAP.zip"
+                    ditto -c -k --keepParent "$plugin" "$zip_path"
+
+                    xcrun notarytool submit "$zip_path" \
+                        --apple-id "$APPLE_ID" \
+                        --password "$NOTARY_PASSWORD" \
+                        --team-id "$TEAM_ID" \
+                        --wait
+
+                    xcrun stapler staple "$plugin"
+                    rm "$zip_path"
+                else
+                    echo -e "${YELLOW}Warning: CLAP plugin not found at $plugin${NC}"
+                fi
+                ;;
+            AUv3)
+                # Notarize the AUv3 app extension
+                local plugin="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/AUv3/${PROJECT_NAME}.appex"
+                if [[ -d "$plugin" ]]; then
+                    echo "Notarizing AUv3: ${PROJECT_NAME}..."
+                    local zip_path="/tmp/${PROJECT_NAME}_AUv3.zip"
+                    ditto -c -k --keepParent "$plugin" "$zip_path"
+
+                    xcrun notarytool submit "$zip_path" \
+                        --apple-id "$APPLE_ID" \
+                        --password "$NOTARY_PASSWORD" \
+                        --team-id "$TEAM_ID" \
+                        --wait
+
+                    xcrun stapler staple "$plugin"
+                    rm "$zip_path"
+                else
+                    echo -e "${YELLOW}Warning: AUv3 plugin not found at $plugin${NC}"
                 fi
                 ;;
         esac
@@ -615,7 +831,11 @@ check_diagnostic_setup() {
                     echo "Disabling DiagnosticKit permanently..."
                     # Update .env file
                     if [[ -f .env ]]; then
-                        sed -i '' 's/^ENABLE_DIAGNOSTICS=.*/ENABLE_DIAGNOSTICS=false/' .env
+                        if [[ "$BUILD_PLATFORM" == "macOS" ]]; then
+                            sed -i '' 's/^ENABLE_DIAGNOSTICS=.*/ENABLE_DIAGNOSTICS=false/' .env
+                        else
+                            sed -i 's/^ENABLE_DIAGNOSTICS=.*/ENABLE_DIAGNOSTICS=false/' .env
+                        fi
                         echo "✅ Updated .env: ENABLE_DIAGNOSTICS=false"
                         echo "   (You can re-enable it later by editing .env)"
                         ENABLE_DIAGNOSTICS="false"  # Also disable for current run
@@ -639,6 +859,12 @@ check_diagnostic_setup() {
 # Function to build DiagnosticKit app
 build_diagnostics() {
     if [[ "${ENABLE_DIAGNOSTICS:-false}" != "true" ]]; then
+        return 0
+    fi
+
+    # DiagnosticKit is currently macOS-only (Swift/SwiftUI)
+    if [[ "$BUILD_PLATFORM" != "macOS" ]]; then
+        echo -e "${YELLOW}Warning: DiagnosticKit is currently macOS-only. Skipping on $BUILD_PLATFORM.${NC}"
         return 0
     fi
 
@@ -727,6 +953,22 @@ create_installer() {
                 if [[ -d "$PLUGIN_PATH" ]]; then
                     mkdir -p "$PKG_ROOT/Library/Audio/Plug-Ins/VST3"
                     cp -R "$PLUGIN_PATH" "$PKG_ROOT/Library/Audio/Plug-Ins/VST3/"
+                fi
+                ;;
+            CLAP)
+                PLUGIN_PATH="$HOME/Library/Audio/Plug-Ins/CLAP/${PROJECT_NAME}.clap"
+                if [[ -d "$PLUGIN_PATH" ]]; then
+                    mkdir -p "$PKG_ROOT/Library/Audio/Plug-Ins/CLAP"
+                    cp -R "$PLUGIN_PATH" "$PKG_ROOT/Library/Audio/Plug-Ins/CLAP/"
+                fi
+                ;;
+            AUv3)
+                # AUv3 is an app extension - typically bundled inside the standalone app
+                # For standalone distribution, include it in the package
+                local APPEX_PATH="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/AUv3/${PROJECT_NAME}.appex"
+                if [[ -d "$APPEX_PATH" ]]; then
+                    mkdir -p "$PKG_ROOT/Library/Audio/Plug-Ins/Components"
+                    cp -R "$APPEX_PATH" "$PKG_ROOT/Library/Audio/Plug-Ins/Components/"
                 fi
                 ;;
         esac
@@ -1363,6 +1605,49 @@ create_github_release() {
     fi
 }
 
+# Function to create Linux package (tar.gz with plugins)
+create_linux_package() {
+    echo -e "${GREEN}Creating Linux package...${NC}"
+
+    local artifacts_dir="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE"
+    local package_name="${PROJECT_NAME}-${VERSION}-linux"
+    local staging_dir="$BUILD_DIR/$package_name"
+    local desktop="$HOME/Desktop"
+
+    # Create staging directory
+    rm -rf "$staging_dir"
+    mkdir -p "$staging_dir"
+
+    # Copy VST3
+    local vst3_path="$artifacts_dir/VST3/${PROJECT_NAME}.vst3"
+    if [[ -d "$vst3_path" ]]; then
+        cp -r "$vst3_path" "$staging_dir/"
+        echo "  Added VST3"
+    fi
+
+    # Copy CLAP
+    local clap_path="$artifacts_dir/CLAP/${PROJECT_NAME}.clap"
+    if [[ -e "$clap_path" ]]; then
+        cp -r "$clap_path" "$staging_dir/"
+        echo "  Added CLAP"
+    fi
+
+    # Copy Standalone
+    local standalone_dir="$artifacts_dir/Standalone"
+    if [[ -d "$standalone_dir" ]]; then
+        local binary=$(find "$standalone_dir" -maxdepth 1 -type f -executable ! -name "*.so" 2>/dev/null | head -1)
+        if [[ -n "$binary" ]]; then
+            cp "$binary" "$staging_dir/"
+            echo "  Added Standalone"
+        fi
+    fi
+
+    # Create tar.gz
+    mkdir -p "$desktop"
+    tar -czf "$desktop/$package_name.tar.gz" -C "$BUILD_DIR" "$package_name"
+    echo -e "${GREEN}Package created: $desktop/$package_name.tar.gz${NC}"
+}
+
 # Main build process
 main() {
     # Always bump version (even for local builds to ensure proper versioning)
@@ -1373,7 +1658,11 @@ main() {
 
     # Configure and build
     configure_cmake
-    build_xcode
+    if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+        build_cmake
+    else
+        build_xcode
+    fi
 
     # Build DiagnosticKit if enabled (after main plugins are built)
     build_diagnostics
@@ -1387,33 +1676,66 @@ main() {
             fi
             ;;
         test)
+            # Build Catch2 test target
+            if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                echo -e "${GREEN}Building Catch2 test target...${NC}"
+                cmake --build "$BUILD_DIR" --config "$CMAKE_BUILD_TYPE" --target Tests 2>&1 | tail -10 || true
+            else
+                if xcodebuild -project "$BUILD_DIR/${PROJECT_NAME}.xcodeproj" -list 2>/dev/null | grep -q "Tests"; then
+                    echo -e "${GREEN}Building Catch2 test target...${NC}"
+                    xcodebuild -project "$BUILD_DIR/${PROJECT_NAME}.xcodeproj" \
+                        -scheme "Tests" \
+                        -configuration "$CMAKE_BUILD_TYPE" \
+                        build 2>&1 | tail -5
+                fi
+            fi
             run_tests
             ;;
         sign)
-            sign_plugins
+            if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                echo -e "${YELLOW}Code signing is not supported on Linux${NC}"
+            else
+                sign_plugins
+            fi
             ;;
         notarize)
-            sign_plugins
-            notarize_plugins
+            if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                echo -e "${YELLOW}Notarization is not supported on Linux${NC}"
+            else
+                sign_plugins
+                notarize_plugins
+            fi
             ;;
         unsigned)
-            # Create unsigned package for fast testing
-            create_installer false
+            if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                # Create tar.gz archive on Linux
+                create_linux_package
+            else
+                create_installer false
+            fi
             ;;
         pkg)
-            # Build, sign, notarize, and package (no GitHub release)
-            sign_plugins
-            notarize_plugins
-            create_installer true
+            if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                create_linux_package
+            else
+                sign_plugins
+                notarize_plugins
+                create_installer true
+            fi
             ;;
         publish)
-            sign_plugins
-            notarize_plugins
-            create_installer true
-            create_github_release
-            enable_github_pages
-            generate_and_publish_landing_page
-            show_release_urls
+            if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                create_linux_package
+                create_github_release
+            else
+                sign_plugins
+                notarize_plugins
+                create_installer true
+                create_github_release
+                enable_github_pages
+                generate_and_publish_landing_page
+                show_release_urls
+            fi
             ;;
     esac
 
@@ -1452,7 +1774,12 @@ main() {
                     ;;
                 VST3)
                     # Search for VST3 files matching the plugin name
-                    local vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
+                    local vst3_dir
+                    if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                        vst3_dir="$HOME/.vst3"
+                    else
+                        vst3_dir="$HOME/Library/Audio/Plug-Ins/VST3"
+                    fi
                     if [[ -d "$vst3_dir" ]]; then
                         while IFS= read -r -d '' plugin_path; do
                             local basename=$(basename "$plugin_path" .vst3)
@@ -1465,17 +1792,24 @@ main() {
                     fi
                     ;;
                 Standalone)
-                    # Search for app files in build directory
+                    # Search for app/executable in build directory
                     local standalone_dir="$BUILD_DIR/${PROJECT_NAME}_artefacts/$CMAKE_BUILD_TYPE/Standalone"
                     if [[ -d "$standalone_dir" ]]; then
-                        while IFS= read -r -d '' app_path; do
-                            local basename=$(basename "$app_path" .app)
-                            local normalized_basename=$(echo "$basename" | tr -d ' -')
-                            local normalized_plugin=$(echo "$plugin_name" | tr -d ' -')
-                            if [[ "$normalized_basename" == "$normalized_plugin" ]]; then
-                                echo "  App: $app_path"
+                        if [[ "$BUILD_PLATFORM" == "Linux" ]]; then
+                            local binary=$(find "$standalone_dir" -maxdepth 1 -type f -executable ! -name "*.so" 2>/dev/null | head -1)
+                            if [[ -n "$binary" ]]; then
+                                echo "  App: $binary"
                             fi
-                        done < <(find "$standalone_dir" -maxdepth 1 -name "*.app" -print0 2>/dev/null)
+                        else
+                            while IFS= read -r -d '' app_path; do
+                                local basename=$(basename "$app_path" .app)
+                                local normalized_basename=$(echo "$basename" | tr -d ' -')
+                                local normalized_plugin=$(echo "$plugin_name" | tr -d ' -')
+                                if [[ "$normalized_basename" == "$normalized_plugin" ]]; then
+                                    echo "  App: $app_path"
+                                fi
+                            done < <(find "$standalone_dir" -maxdepth 1 -name "*.app" -print0 2>/dev/null)
+                        fi
                     fi
                     ;;
             esac

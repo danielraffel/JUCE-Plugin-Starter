@@ -2,7 +2,12 @@
 
 ## ℹ️ Overview
 
-This is a JUCE plugin starter template using CMake and environment-based configuration for folks new to audio plugin development on macOS. It allows you to create standalone apps and audio plugins (AU/VST3) for macOS using Xcode. It’s designed for quick setup, ease of customization, and modern JUCE development workflows.
+This is a cross-platform JUCE plugin starter template using CMake and environment-based configuration for folks new to audio plugin development. It allows you to create standalone apps and audio plugins for macOS, Windows, and Linux. It’s designed for quick setup, ease of customization, and modern JUCE development workflows.
+
+**Supported platforms:**
+- **macOS**: AU, AUv3, VST3, CLAP, Standalone (Xcode or Ninja)
+- **Windows**: VST3, CLAP, Standalone (MSVC + Ninja)
+- **Linux**: VST3, CLAP, Standalone (Clang + Ninja)
 
 ---
 
@@ -91,6 +96,8 @@ cd JUCE-Plugin-Starter
     - [✅ Set Minimum macOS Deployment Target](#-set-minimum-macos-deployment-target)
 - [📦 Project File Structure](#-project-file-structure)
   - [About the JUCE cache location](#about-the-juce-cache-location)
+- [🧪 Unit Testing with Catch2](#-unit-testing-with-catch2)
+- [🎨 Code Style](#-code-style)
 - [💡 Tips](#-tips)
   - [🔁 Building with AI Tools](#-building-with-ai-tools)
     - [Using with Cursor](#using-with-cursor)
@@ -120,9 +127,21 @@ cd JUCE-Plugin-Starter
 To build and develop plugins with this template, you’ll need:
 
 ### System Requirements
+
+**macOS:**
 - macOS 15.0 or later
 - [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12) (latest version)
 - Recommended: Additional IDE with Support for 3rd Party AI Models ([Alex Sidebar](http://alexcodes.app), [Cursor](http://cursor.com), [Windsurf](http://windsurf.com), [Trae](http://trae.ai), or [VSCode](https://code.visualstudio.com))
+
+**Windows:**
+- Windows 10/11
+- [Visual Studio 2022](https://visualstudio.microsoft.com/) (Community or Build Tools) with C++ workload
+- CMake and Ninja (installable via winget)
+
+**Linux (Ubuntu/Debian):**
+- Ubuntu 22.04+ or Debian-based distribution
+- Clang (or GCC), CMake, Ninja
+- JUCE dependencies: `libasound2-dev libx11-dev libxinerama-dev libxext-dev libxrandr-dev libxcursor-dev libfreetype6-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev libcurl4-openssl-dev pkg-config`
 
 ---
 
@@ -145,18 +164,13 @@ Use the included [`dependencies.sh`](./scripts/dependencies.sh) script. It **che
 bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/scripts/dependencies.sh)
 ```
 
-The script handles:
+The script auto-detects your platform and handles:
 
-* ✅ **Xcode Command Line Tools**
-* ✅ **Homebrew**
-* ✅ **CMake**
-* ✅ **PluginVal**
+**macOS:** Xcode CLI Tools, Homebrew, CMake, Ninja, PluginVal
 
-It also includes **optional installs**, commented out by default:
+**Windows:** Git, CMake, Ninja, Visual Studio Build Tools (via winget)
 
-* **Faust** – DSP prototyping compiler
-* **GoogleTest** – C++ unit testing
-* **Python 3**, **pip3**, and **behave** – for behavior-driven development (BDD)
+**Linux:** CMake, Ninja, Clang, Git, pkg-config, and all JUCE library dependencies (via apt)
 
 > ✏️ When you run `dependencies.sh` software like Homebrew may ask you to do additonal configurations to complete your setup:
 ```
@@ -180,9 +194,9 @@ If you prefer, you can install all required tools manually:
 | **Homebrew**                              | macOS package manager            | `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"` |
 | **PluginVal**                             | Plugin validation & testing      | `brew install --cask pluginval`                                                                   |
 | **Faust** *(optional)*                    | DSP prototyping compiler         | `brew install faust`                                                                              |
-| **GoogleTest** or **Catch2** *(optional)* | C++ unit testing                 | `brew install googletest` or `brew install catch2`                                                |
+| **Catch2** *(built-in)*                   | C++ unit testing (included via FetchContent) | No install needed — fetched automatically by CMake                                                |
 | **Python 3 + behave** *(optional)*        | Natural language test automation | `brew install python && pip3 install behave`                                                      |
-| **[JUCE](https://juce.com)**              | Audio plugin framework (AU/VST3) | `git clone https://github.com/juce-framework/JUCE.git`                                                          |
+| **[JUCE](https://juce.com)**              | Audio plugin framework (AU/AUv3/VST3/CLAP) | No install needed — fetched automatically by CMake                                                          |
 
 ---
 
@@ -291,24 +305,37 @@ Want to pre-configure your developer settings?
 
 ## 🧱 Build Targets
 
-Once the project is open in Xcode, you can build:
-
+**macOS** (via Xcode or command line):
 * ✅ **Standalone App**
-* ✅ **AudioUnit Plugin (AU)** – for Logic Pro, GarageBand
+* ✅ **Audio Unit v2 (AU)** – for Logic Pro, GarageBand
+* ✅ **Audio Unit v3 (AUv3)** – app extension format, also works on iOS
 * ✅ **VST3 Plugin** – for Reaper, Ableton Live, etc.
+* ✅ **CLAP Plugin** – for Bitwig, Reaper, and other CLAP-compatible DAWs
 
-> Switch targets using the Xcode scheme selector.
-> 
+**Windows** (via PowerShell + MSVC):
+* ✅ **Standalone App (.exe)**
+* ✅ **VST3 Plugin** – installs to `C:\Program Files\Common Files\VST3\`
+* ✅ **CLAP Plugin**
+
+**Linux** (via Clang + Ninja):
+* ✅ **Standalone App** – binary executable
+* ✅ **VST3 Plugin** – installs to `~/.vst3/`
+* ✅ **CLAP Plugin** – installs to `~/.clap/`
+
+> On macOS, switch targets using the Xcode scheme selector.
+>
 <img width="352" alt="image" src="https://github.com/user-attachments/assets/4c3c3ac7-0613-46dc-a6b0-286743b858be" />
 
-> Make sure the `FORMATS AU VST3 Standalone` line is present in `CMakeLists.txt`.
+> On macOS, the `FORMATS AU AUv3 VST3 Standalone` line is in `CMakeLists.txt`. On Windows and Linux, only `VST3 Standalone` are used (AU/AUv3 are macOS-only). CLAP is added separately via `clap-juce-extensions`.
 
 ---
 ## Where Files Are Generated (Plugins + App)
 
 ### Where Plugin Files Are Installed
 
-When you build your plugin from Xcode, the following file types are generated and installed in the standard macOS plugin locations:
+When you build your plugin, files are installed to platform-standard locations:
+
+**macOS:**
 - Audio Unit (AU) Component:
 ```
 ~/Library/Audio/Plug-Ins/Components/YourPlugin.component
@@ -317,12 +344,30 @@ When you build your plugin from Xcode, the following file types are generated an
 ```
 ~/Library/Audio/Plug-Ins/VST3/YourPlugin.vst3
 ```
+- CLAP Plugin:
+```
+~/Library/Audio/Plug-Ins/CLAP/YourPlugin.clap
+```
+- AUv3 App Extension:
+```
+Found inside your build folder in PROJECT_NAME_artefacts/AUv3/YourPlugin.appex
+```
 - Standalone App:
 ```
 Found inside your build folder in your `PROJECT_NAME_artefacts` debug or release folder.
 ```
 
-These paths are standard for macOS plugin development and are used by DAWs like Logic Pro, Ableton Live, Reaper, etc.
+**Linux:**
+- VST3: `~/.vst3/YourPlugin.vst3`
+- CLAP: `~/.clap/YourPlugin.clap`
+- Standalone: `build/PROJECT_NAME_artefacts/Release/Standalone/YourPlugin`
+
+**Windows:**
+- VST3: `C:\Program Files\Common Files\VST3\YourPlugin.vst3`
+- CLAP: `build\PROJECT_NAME_artefacts\Release\CLAP\YourPlugin.clap`
+- Standalone: `build\PROJECT_NAME_artefacts\Release\Standalone\YourPlugin.exe`
+
+These paths are standard for plugin development and are used by DAWs like Logic Pro, Ableton Live, Reaper, Bitwig, etc.
 
 ---
 
@@ -436,10 +481,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 #### ✅ Change Output Formats
 
 ```cmake
-FORMATS AU VST3 Standalone
+FORMATS AU AUv3 VST3 Standalone
 ```
 
-To skip AU, just remove it:
+> **Note:** CLAP format is added separately via `clap-juce-extensions` (already configured in CMakeLists.txt).
+
+To skip a format, just remove it:
 
 ```cmake
 FORMATS VST3 Standalone
@@ -485,20 +532,30 @@ JUCE-Plugin-Starter/
 ├── scripts/                       ← Automation / helper scripts
 │   ├── about/                     ← Documentation
 │   │   └── build_system.md        ← Comprehensive build system documentation
-│   ├── build.sh                   ← Unified build system (local, test, sign, notarize, publish)
+│   ├── build.sh                   ← macOS build system (local, test, sign, notarize, publish)
+│   ├── build.ps1                  ← Windows build system (local, test, publish via Inno Setup)
 │   ├── bump_version.py            ← Semantic version management
-│   ├── dependencies.sh            ← Automated dependency setup
+│   ├── dependencies.sh            ← Cross-platform dependency setup (macOS/Windows/Linux)
 │   ├── diagnose_plugin.sh         ← Plugin diagnostic tool
 │   ├── generate_and_open_xcode.sh ← Script that loads `.env`, runs CMake, and opens Xcode
 │   ├── generate_release_notes.py  ← AI-powered release notes generator
 │   ├── init_plugin_project.sh     ← Script that reinitializes this repo to make it yours
 │   ├── post_build.sh              ← Enhanced version handling with semantic versioning
 │   └── validate_plugin.sh         ← Plugin validation tool
+├── .clang-format                  ← JUCE-style code formatting rules
 ├── Source/                        ← Your plugin source code
 │   ├── PluginProcessor.cpp/.h
 │   └── PluginEditor.cpp/.h
+├── tests/                         ← Catch2 unit tests
+│   ├── Catch2Main.cpp             ← Custom main with JUCE init
+│   ├── PluginBasics.cpp           ← Example plugin tests
+│   └── helpers/test_helpers.h     ← Test utilities
+├── templates/
+│   └── installer.iss              ← Windows Inno Setup installer template
+├── .github/
+│   └── workflows/build.yml       ← CI/CD: macOS + Linux + Windows matrix build
 └── build/                         ← Generated by CMake (can be deleted anytime)
-    └── YourPlugin.xcodeproj       ← Generated Xcode project
+    └── YourPlugin.xcodeproj       ← Generated Xcode project (macOS)
 
 ~/.juce_cache/                     ← Shared JUCE location (outside project)
 └── juce-src/                      ← JUCE framework (shared across all projects)
@@ -517,17 +574,23 @@ JUCE-Plugin-Starter/
 
 ## 🔨 Enhanced Build System
 
-This template now includes a unified build system (`scripts/build.sh`) that provides comprehensive functionality:
+This template includes platform-specific build scripts:
+- **macOS**: `scripts/build.sh` — full-featured (build, test, sign, notarize, publish)
+- **Linux**: `scripts/build.sh` — build, test, and package as tar.gz (auto-detects platform)
+- **Windows**: `scripts/build.ps1` — build, test, and package with Inno Setup
 
 ### Quick Build Commands
 
+**macOS:**
 ```bash
 # Quick local build (all formats)
 ./scripts/build.sh
 
 # Build specific format
-./scripts/build.sh au          # Audio Unit only
+./scripts/build.sh au          # Audio Unit v2 only
+./scripts/build.sh auv3        # Audio Unit v3 only
 ./scripts/build.sh vst3        # VST3 only
+./scripts/build.sh clap        # CLAP only
 ./scripts/build.sh standalone  # Standalone app only
 
 # Build multiple formats in one command
@@ -535,8 +598,8 @@ This template now includes a unified build system (`scripts/build.sh`) that prov
 ./scripts/build.sh au standalone        # Build AU and Standalone
 ./scripts/build.sh au vst3 test         # Build AU and VST3, then test both
 
-# Build with testing
-./scripts/build.sh all test    # Build and run PluginVal tests
+# Build with testing (Catch2 unit tests + PluginVal validation)
+./scripts/build.sh all test    # Build and run all tests
 
 # Fast development workflow
 ./scripts/build.sh uninstall            # Uninstall all plugin components
@@ -549,6 +612,29 @@ This template now includes a unified build system (`scripts/build.sh`) that prov
 ./scripts/build.sh all pkg      # Build, sign, notarize PKG (no GitHub release)
 ./scripts/build.sh all publish  # Full release with installer and GitHub publishing
 ```
+
+**Linux:**
+```bash
+./scripts/build.sh                     # Build all formats (VST3, CLAP, Standalone)
+./scripts/build.sh vst3               # Build VST3 only
+./scripts/build.sh standalone         # Build Standalone only
+./scripts/build.sh all test           # Build and run Catch2 + PluginVal tests
+./scripts/build.sh all unsigned       # Create tar.gz package
+```
+
+> **Note:** On Linux, `build.sh` auto-detects the platform and uses Ninja instead of Xcode. AU/AUv3 formats are skipped automatically. Code signing and notarization are macOS-only.
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\build.ps1                    # Build all formats (VST3, CLAP, Standalone)
+.\scripts\build.ps1 vst3              # Build VST3 only
+.\scripts\build.ps1 standalone        # Build Standalone only
+.\scripts\build.ps1 all test          # Build and run Catch2 + PluginVal tests
+.\scripts\build.ps1 all publish       # Build and create Inno Setup installer
+.\scripts\build.ps1 all unsigned      # Unsigned installer (fast testing)
+```
+
+> **Note:** On Windows, you must load the Visual Studio developer environment before building. See [Windows Prerequisites](#system-requirements).
 
 ### New Build Actions
 
@@ -596,9 +682,92 @@ python3 scripts/bump_version.py major  # 0.1.0 → 1.0.0
 - **Diagnostic Tool**: `./scripts/diagnose_plugin.sh` - Troubleshoot plugin issues
 - **AI Release Notes**: `./scripts/generate_release_notes.py` - Generate release notes from git history
 
+### CI/CD with GitHub Actions
+
+The template includes a GitHub Actions workflow (`.github/workflows/build.yml`) that:
+- Builds on **macOS** (arm64 + x86_64 universal binary), **Linux** (Ubuntu 22.04, Clang), and **Windows**
+- Uses **sccache** for build caching
+- Runs **Catch2** unit tests via CTest
+- Validates **VST3** with PluginVal
+- Uploads build artifacts
+
+The workflow triggers on pushes to `main` and `feature/**` branches, plus pull requests.
+
 ### Complete Documentation
 
 For comprehensive build system documentation, see [`scripts/about/build_system.md`](scripts/about/build_system.md).
+
+---
+
+## 🧪 Unit Testing with Catch2
+
+This template includes [Catch2 v3](https://github.com/catchorg/Catch2) for unit testing, fetched automatically via CMake's FetchContent.
+
+### Test Structure
+
+```
+tests/
+├── Catch2Main.cpp          # Custom main with JUCE MessageManager initialization
+├── PluginBasics.cpp        # Example plugin tests
+└── helpers/
+    └── test_helpers.h      # Helper for running tests with an active plugin editor
+```
+
+### Running Tests
+
+```bash
+# Run all tests (Catch2 unit tests + PluginVal validation)
+./scripts/build.sh all test
+
+# This will:
+# 1. Build all plugin formats
+# 2. Build the Catch2 Tests target
+# 3. Run Catch2 unit tests
+# 4. Run PluginVal validation on AU and VST3
+```
+
+### Writing Tests
+
+Add new test files to `tests/`. They're automatically discovered via CMake's `GLOB_RECURSE`.
+
+```cpp
+#include <PluginProcessor.h>
+#include <catch2/catch_test_macros.hpp>
+
+TEST_CASE ("My feature works", "[feature]")
+{
+    PluginProcessor plugin;
+    // Test your plugin logic
+    CHECK (plugin.getName().isNotEmpty());
+}
+```
+
+For tests that need the plugin editor, use the helper:
+
+```cpp
+#include "helpers/test_helpers.h"
+
+TEST_CASE ("Editor renders", "[editor]")
+{
+    runWithinPluginEditor ([] (PluginProcessor& plugin) {
+        REQUIRE (plugin.getActiveEditor() != nullptr);
+    });
+}
+```
+
+---
+
+## 🎨 Code Style
+
+This template includes a `.clang-format` file with JUCE-style conventions:
+
+- **Brace style**: Allman (opening brace on new line), except for lambdas
+- **Indent**: 4 spaces, no tabs
+- **Column limit**: None (no line wrapping)
+- **Standard**: C++17
+- **ObjC**: Separate section for Objective-C++ files
+
+Most IDEs (Xcode, VS Code, CLion) will automatically pick up `.clang-format` for code formatting.
 
 ---
 
@@ -955,7 +1124,9 @@ The build system will automatically detect and package the following plugin form
 | Format | Extension    | Path |
 |--------|--------------|------|
 | AU     | `.component` | `~/Library/Audio/Plug-Ins/Components/` |
+| AUv3   | `.appex`     | Bundled in build artefacts |
 | VST3   | `.vst3`      | `~/Library/Audio/Plug-Ins/VST3/` |
+| CLAP   | `.clap`      | `~/Library/Audio/Plug-Ins/CLAP/` |
 | AAX    | `.aaxplugin` | `/Library/Application Support/Avid/Audio/Plug-Ins/` |
 
 - The script signs, notarizes, and staples each format (if found)

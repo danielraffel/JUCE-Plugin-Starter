@@ -70,6 +70,8 @@ USER_AU_PATH="$HOME/Library/Audio/Plug-Ins/Components/{{PROJECT_NAME}}.component
 SYSTEM_AU_PATH="/Library/Audio/Plug-Ins/Components/{{PROJECT_NAME}}.component"
 USER_VST3_PATH="$HOME/Library/Audio/Plug-Ins/VST3/{{PROJECT_NAME}}.vst3"
 SYSTEM_VST3_PATH="/Library/Audio/Plug-Ins/VST3/{{PROJECT_NAME}}.vst3"
+USER_CLAP_PATH="$HOME/Library/Audio/Plug-Ins/CLAP/{{PROJECT_NAME}}.clap"
+SYSTEM_CLAP_PATH="/Library/Audio/Plug-Ins/CLAP/{{PROJECT_NAME}}.clap"
 
 # Check for folder-based or direct app installation
 if [ -d "/Applications/{{PROJECT_NAME}}" ]; then
@@ -128,6 +130,20 @@ remove_plugins() {
         rm -rf "$SYSTEM_VST3_PATH" && echo "  ✅ Removed: $SYSTEM_VST3_PATH" && ((removed++))
     else
         echo "  ➖ Not found: $SYSTEM_VST3_PATH"
+    fi
+
+    # User CLAP
+    if [ -e "$USER_CLAP_PATH" ]; then
+        rm -rf "$USER_CLAP_PATH" && echo "  ✅ Removed: $USER_CLAP_PATH" && ((removed++))
+    else
+        echo "  ➖ Not found: $USER_CLAP_PATH"
+    fi
+
+    # System CLAP
+    if [ -e "$SYSTEM_CLAP_PATH" ]; then
+        rm -rf "$SYSTEM_CLAP_PATH" && echo "  ✅ Removed: $SYSTEM_CLAP_PATH" && ((removed++))
+    else
+        echo "  ➖ Not found: $SYSTEM_CLAP_PATH"
     fi
 
     # Standalone app
@@ -200,6 +216,8 @@ verify_plugins_removed() {
         "$SYSTEM_AU_PATH"
         "$USER_VST3_PATH"
         "$SYSTEM_VST3_PATH"
+        "$USER_CLAP_PATH"
+        "$SYSTEM_CLAP_PATH"
         "$STANDALONE_PATH"
         "$DIAGNOSTICS_PATH"
     )
@@ -285,7 +303,7 @@ mode_repair() {
     echo "╚════════════════════════════════════════════════════════════════════════╝"
     echo ""
     echo "This mode will:"
-    echo "  ✓ Remove all {{PROJECT_NAME}} plugins (AU, VST3, Standalone, Diagnostics)"
+    echo "  ✓ Remove all {{PROJECT_NAME}} plugins (AU, VST3, CLAP, Standalone, Diagnostics)"
     echo "  ✓ Clear Audio Unit cache and restart audio services"
     echo "  ✓ Verify clean state"
     echo "  ✓ KEEP package receipts (pkgutil still tracks installation)"
@@ -401,7 +419,7 @@ mode_uninstall() {
     echo "╚════════════════════════════════════════════════════════════════════════╝"
     echo ""
     echo "This mode will:"
-    echo "  ✓ Remove all {{PROJECT_NAME}} plugins (AU, VST3, Standalone, Diagnostics)"
+    echo "  ✓ Remove all {{PROJECT_NAME}} plugins (AU, VST3, CLAP, Standalone, Diagnostics)"
     echo "  ✓ Remove all user data (settings, presets, preferences)"
     echo "  ✓ Clear Audio Unit cache and restart audio services"
     echo "  ✓ Forget all package receipts (system returns to pre-install state)"
@@ -627,7 +645,7 @@ for receipt in "${RECEIPTS[@]}"; do
     pkgutil --pkg-info "$receipt" &>/dev/null && ((FOUND_COMPONENTS++))
 done
 
-for path in "$USER_AU_PATH" "$SYSTEM_AU_PATH" "$USER_VST3_PATH" "$SYSTEM_VST3_PATH" "$STANDALONE_PATH" "$DIAGNOSTICS_PATH"; do
+for path in "$USER_AU_PATH" "$SYSTEM_AU_PATH" "$USER_VST3_PATH" "$SYSTEM_VST3_PATH" "$USER_CLAP_PATH" "$SYSTEM_CLAP_PATH" "$STANDALONE_PATH" "$DIAGNOSTICS_PATH"; do
     [ -e "$path" ] && ((FOUND_COMPONENTS++))
 done
 
@@ -687,7 +705,7 @@ fi
 echo "Choose an option:"
 echo ""
 echo "  1) Repair/Reinstall Mode"
-echo "     • Remove plugins only (AU, VST3, Standalone, Diagnostics)"
+echo "     • Remove plugins only (AU, VST3, CLAP, Standalone, Diagnostics)"
 echo "     • Clear Audio Unit cache & restart audio services"
 echo "     • KEEP package receipts (pkgutil tracking preserved)"
 echo "     • KEEP all user data (settings, presets, preferences)"

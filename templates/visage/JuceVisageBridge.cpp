@@ -81,7 +81,7 @@ void JuceVisageBridge::shutdownRendering()
 
 void JuceVisageBridge::paint (juce::Graphics&)
 {
-    // Visage handles all rendering via Metal — nothing to paint
+    // Visage handles all rendering via GPU (Metal/D3D11/Vulkan) — nothing to paint
 }
 
 void JuceVisageBridge::resized()
@@ -147,7 +147,7 @@ void JuceVisageBridge::createEmbeddedWindow()
         rootFrame_->setBounds (0, 0, w, h);
     }
 
-    // Flush first Metal frame to prevent pink flash
+    // Flush first frame to prevent flash on window creation
     visageWindow->drawWindow();
 }
 
@@ -236,7 +236,7 @@ bool JuceVisageBridge::keyPressed (const juce::KeyPress& key)
     return rootFrame_->keyPress (visEvent);
 }
 
-// --- Mouse events (macOS only) ---
+// --- Mouse events (desktop only — iOS uses native touch) ---
 
 #if !JUCE_IOS
 
