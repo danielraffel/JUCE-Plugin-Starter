@@ -2,8 +2,14 @@ name: Build & Test
 
 on:
   workflow_dispatch:
+    inputs:
+      platforms:
+        description: "Platforms to build (comma-separated: macos,windows,linux or 'all')"
+        required: false
+        default: ""
+        type: string
   push:
-    branches: [main, "feature/**"]
+    branches: [main, "feature/**", "integrate/**"]
   pull_request:
 
 concurrency:
@@ -22,23 +28,83 @@ defaults:
     shell: bash
 
 jobs:
+  # Determine which platforms to build
+  detect_platforms:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect platforms
+        id: set-matrix
+        run: |
+          # Priority: workflow_dispatch input > CI_PLATFORMS from .env > auto-detect
+
+          # 1. Check workflow_dispatch input
+          INPUT_PLATFORMS="${{ github.event.inputs.platforms }}"
+
+          # 2. If no input, try CI_PLATFORMS from .env
+          if [ -z "$INPUT_PLATFORMS" ] && [ -f .env ]; then
+            INPUT_PLATFORMS=$(grep '^CI_PLATFORMS=' .env | sed 's/^CI_PLATFORMS=//' | sed 's/^["'\'']//' | sed 's/["'\'']*$//')
+          fi
+
+          # 3. If still empty or "all", auto-detect from project files
+          if [ -z "$INPUT_PLATFORMS" ] || [ "$INPUT_PLATFORMS" = "all" ]; then
+            PLATFORMS=""
+
+            # macOS: always supported (JUCE-Plugin-Starter is macOS-first)
+            PLATFORMS="macos"
+
+            # Windows: detect build.ps1 or MSVC blocks in CMakeLists.txt
+            if [ -f scripts/build.ps1 ] || grep -q 'if(MSVC\|if(WIN32' CMakeLists.txt 2>/dev/null; then
+              PLATFORMS="$PLATFORMS,windows"
+            fi
+
+            # Linux: detect UNIX blocks in CMakeLists.txt or Linux steps in workflow
+            if grep -q 'UNIX AND NOT APPLE' CMakeLists.txt 2>/dev/null; then
+              PLATFORMS="$PLATFORMS,linux"
+            fi
+
+            INPUT_PLATFORMS="$PLATFORMS"
+          fi
+
+          # Build the matrix JSON
+          MATRIX='{"include":['
+          FIRST=true
+
+          if echo "$INPUT_PLATFORMS" | grep -qi 'macos'; then
+            [ "$FIRST" = true ] || MATRIX="$MATRIX,"
+            MATRIX="$MATRIX"'{"name":"macOS","os":"macos-14","cmake-flags":"-G Ninja -DCMAKE_OSX_ARCHITECTURES=\"arm64;x86_64\""}'
+            FIRST=false
+          fi
+
+          if echo "$INPUT_PLATFORMS" | grep -qi 'windows'; then
+            [ "$FIRST" = true ] || MATRIX="$MATRIX,"
+            MATRIX="$MATRIX"'{"name":"Windows","os":"windows-latest","cmake-flags":"-G Ninja"}'
+            FIRST=false
+          fi
+
+          if echo "$INPUT_PLATFORMS" | grep -qi 'linux'; then
+            [ "$FIRST" = true ] || MATRIX="$MATRIX,"
+            MATRIX="$MATRIX"'{"name":"Linux","os":"ubuntu-22.04","cmake-flags":"-G Ninja"}'
+            FIRST=false
+          fi
+
+          MATRIX="$MATRIX]}"
+
+          echo "Detected platforms: $INPUT_PLATFORMS"
+          echo "Matrix: $MATRIX"
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
   build_and_test:
+    needs: detect_platforms
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: Linux
-            os: ubuntu-22.04
-            cmake-flags: -G Ninja
-          - name: macOS
-            os: macos-14
-            cmake-flags: -G Ninja -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
-          - name: Windows
-            os: windows-latest
-            cmake-flags: -G Ninja
+      matrix: ${{ fromJson(needs.detect_platforms.outputs.matrix) }}
 
     steps:
       - uses: ilammy/msvc-dev-cmd@v1
