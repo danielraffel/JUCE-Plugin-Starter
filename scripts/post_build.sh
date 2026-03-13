@@ -121,6 +121,40 @@ if [ $update_status_bundle -ne 0 ]; then
 fi
 echo "✅ CFBundleVersion updated to $VERSION_BUNDLE successfully."
 
+# --- Sparkle Auto-Update Info.plist Entries (Standalone only) ---
+# Only add Sparkle keys if auto-update is enabled and this is a Standalone app bundle
+if [ "${ENABLE_AUTO_UPDATE:-false}" = "true" ]; then
+  # Check if this looks like a Standalone app (has a MacOS executable, not a plugin)
+  if [ -d "$component_path/Contents/MacOS" ] && [[ "$component_path" != *".component"* ]] && [[ "$component_path" != *".vst3"* ]]; then
+    echo "🔄 Adding Sparkle auto-update entries to Info.plist..."
+
+    # SUFeedURL — appcast feed URL for macOS
+    FEED_URL="${AUTO_UPDATE_FEED_URL_MACOS:-}"
+    if [ -n "$FEED_URL" ]; then
+      /usr/libexec/PlistBuddy -c "Add :SUFeedURL string $FEED_URL" "$info_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Set :SUFeedURL $FEED_URL" "$info_plist"
+      echo "  ✅ SUFeedURL = $FEED_URL"
+    else
+      echo "  ⚠️ AUTO_UPDATE_FEED_URL_MACOS not set — SUFeedURL skipped"
+    fi
+
+    # SUPublicEDKey — EdDSA public key for signature verification
+    EDDSA_KEY="${AUTO_UPDATE_EDDSA_PUBLIC_KEY:-}"
+    if [ -n "$EDDSA_KEY" ]; then
+      /usr/libexec/PlistBuddy -c "Add :SUPublicEDKey string $EDDSA_KEY" "$info_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Set :SUPublicEDKey $EDDSA_KEY" "$info_plist"
+      echo "  ✅ SUPublicEDKey set"
+    else
+      echo "  ⚠️ AUTO_UPDATE_EDDSA_PUBLIC_KEY not set — SUPublicEDKey skipped"
+    fi
+
+    # SUEnableAutomaticChecks — enable automatic background checks
+    /usr/libexec/PlistBuddy -c "Add :SUEnableAutomaticChecks bool true" "$info_plist" 2>/dev/null || \
+    /usr/libexec/PlistBuddy -c "Set :SUEnableAutomaticChecks true" "$info_plist"
+    echo "  ✅ SUEnableAutomaticChecks = true"
+  fi
+fi
+
 echo "🎉 Post-build script finished successfully."
 echo "📛 Project name: $project_name"
 echo "🔍 Final Info.plist version strings:"
