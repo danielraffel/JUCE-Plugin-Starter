@@ -29,6 +29,8 @@ SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
 DisableProgramGroupPage=yes
+CloseApplications=yes
+RestartApplications=yes
 
 [Files]
 ; VST3 plugin
@@ -37,6 +39,8 @@ Source: "artifacts\VST3\{#AppName}.vst3\*"; DestDir: "{commoncf}\VST3\{#AppName}
 Source: "artifacts\CLAP\{#AppName}.clap\*"; DestDir: "{commoncf}\CLAP\{#AppName}.clap"; Flags: recursesubdirs; Check: ShouldInstallCLAP
 ; Standalone app
 Source: "artifacts\Standalone\{#AppName}.exe"; DestDir: "{app}"; Flags: ignoreversion; Check: ShouldInstallStandalone
+; WinSparkle DLL for auto-updates (bundled alongside standalone)
+Source: "artifacts\Standalone\WinSparkle.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Check: ShouldInstallStandalone
 ; DiagnosticKit (optional troubleshooting tool)
 Source: "artifacts\Diagnostics\{#AppName} Diagnostics.exe"; DestDir: "{app}\Diagnostics"; Flags: ignoreversion skipifsourcedoesntexist; Tasks: diagnostics
 Source: "artifacts\Diagnostics\.env"; DestDir: "{app}\Diagnostics"; Flags: ignoreversion skipifsourcedoesntexist; Tasks: diagnostics

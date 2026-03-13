@@ -185,6 +185,128 @@ clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
     CLAP_FEATURES audio-effect)
 
 # ==============================================================================
+# Auto-Update Support (Standalone target only)
+# ==============================================================================
+# Enabled via ENABLE_AUTO_UPDATE=true in .env
+# macOS: Sparkle 2.x framework (downloaded by scripts/setup_sparkle.sh)
+# Windows: WinSparkle (downloaded by scripts/setup_winsparkle.sh)
+
+if(DEFINED ENV{ENABLE_AUTO_UPDATE} AND "$ENV{ENABLE_AUTO_UPDATE}" STREQUAL "true")
+    if(TARGET ${PROJECT_NAME}_Standalone)
+        target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE
+            ENABLE_AUTO_UPDATE=1
+            JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1
+        )
+
+        # Custom standalone app with "Check for Updates..." menu
+        target_sources(${PROJECT_NAME}_Standalone PRIVATE
+            Source/AutoUpdater.h
+            Source/StandaloneApp.cpp
+        )
+
+        if(APPLE)
+            set(SPARKLE_FRAMEWORK_PATH "${CMAKE_SOURCE_DIR}/external/Sparkle.framework")
+            if(EXISTS "${SPARKLE_FRAMEWORK_PATH}")
+                target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE ENABLE_SPARKLE=1)
+
+                # Add macOS Sparkle implementation
+                target_sources(${PROJECT_NAME}_Standalone PRIVATE
+                    Source/AutoUpdater_Mac.mm
+                )
+
+                target_include_directories(${PROJECT_NAME}_Standalone PRIVATE
+                    "${CMAKE_SOURCE_DIR}/external"
+                )
+
+                target_link_libraries(${PROJECT_NAME}_Standalone PRIVATE
+                    "${SPARKLE_FRAMEWORK_PATH}"
+                )
+
+                # Embed Sparkle.framework in the Standalone app bundle
+                add_custom_command(TARGET ${PROJECT_NAME}_Standalone POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E make_directory
+                        "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_Standalone>/Contents/Frameworks"
+                    COMMAND ditto
+                        "${SPARKLE_FRAMEWORK_PATH}"
+                        "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_Standalone>/Contents/Frameworks/Sparkle.framework"
+                    COMMAND ${CMAKE_COMMAND} -E remove_directory
+                        "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_Standalone>/Contents/Frameworks/Sparkle.framework/Headers"
+                    COMMENT "Embedding Sparkle.framework in ${PROJECT_NAME} Standalone"
+                    VERBATIM
+                )
+
+                # Run post_build.sh on Standalone to set Sparkle Info.plist entries
+                add_custom_command(TARGET ${PROJECT_NAME}_Standalone POST_BUILD
+                    COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh"
+                        "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_Standalone>"
+                    COMMENT "Updating Info.plist (version + Sparkle) for ${PROJECT_NAME}_Standalone"
+                    VERBATIM
+                )
+            else()
+                message(WARNING "ENABLE_AUTO_UPDATE is true but Sparkle.framework not found at ${SPARKLE_FRAMEWORK_PATH}. Run scripts/setup_sparkle.sh first.")
+            endif()
+        elseif(WIN32)
+            set(WINSPARKLE_DIR "${CMAKE_SOURCE_DIR}/external/WinSparkle")
+
+            # Auto-detect architecture for WinSparkle lib path
+            if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+                if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|aarch64")
+                    set(WINSPARKLE_ARCH "arm64")
+                else()
+                    set(WINSPARKLE_ARCH "x64")
+                endif()
+            else()
+                set(WINSPARKLE_ARCH "x64")
+            endif()
+
+            set(WINSPARKLE_LIB "${WINSPARKLE_DIR}/${WINSPARKLE_ARCH}/WinSparkle.lib")
+
+            if(EXISTS "${WINSPARKLE_LIB}")
+                message(STATUS "Found WinSparkle at ${WINSPARKLE_DIR} (${WINSPARKLE_ARCH})")
+
+                target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE ENABLE_WINSPARKLE=1)
+
+                # Pass auto-update config as compile definitions (Windows has no Info.plist)
+                if(DEFINED ENV{AUTO_UPDATE_FEED_URL_WINDOWS})
+                    target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE
+                        AUTO_UPDATE_FEED_URL="$ENV{AUTO_UPDATE_FEED_URL_WINDOWS}"
+                    )
+                endif()
+                if(DEFINED ENV{AUTO_UPDATE_EDDSA_PUBLIC_KEY})
+                    target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE
+                        AUTO_UPDATE_EDDSA_KEY="$ENV{AUTO_UPDATE_EDDSA_PUBLIC_KEY}"
+                    )
+                endif()
+
+                # Add Windows WinSparkle implementation
+                target_sources(${PROJECT_NAME}_Standalone PRIVATE
+                    Source/AutoUpdater_Win.cpp
+                )
+
+                target_include_directories(${PROJECT_NAME}_Standalone PRIVATE
+                    "${WINSPARKLE_DIR}/include"
+                )
+
+                target_link_libraries(${PROJECT_NAME}_Standalone PRIVATE
+                    "${WINSPARKLE_LIB}"
+                )
+
+                # Copy WinSparkle.dll to standalone output directory
+                add_custom_command(TARGET ${PROJECT_NAME}_Standalone POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${WINSPARKLE_DIR}/${WINSPARKLE_ARCH}/WinSparkle.dll"
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_Standalone>/WinSparkle.dll"
+                    COMMENT "Copying WinSparkle.dll to ${PROJECT_NAME} Standalone output"
+                    VERBATIM
+                )
+            else()
+                message(WARNING "ENABLE_AUTO_UPDATE is true but WinSparkle not found at ${WINSPARKLE_LIB}. Run scripts/setup_winsparkle.sh first.")
+            endif()
+        endif()
+    endif()
+endif()
+
+# ==============================================================================
 # Standard macOS Paths (no permission prompts)
 # ==============================================================================
 # This plugin uses Apple-recommended Application Support paths:

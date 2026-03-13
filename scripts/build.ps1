@@ -245,4 +245,165 @@ if ($Action -in "publish","unsigned") {
     }
 }
 
+# EdDSA-sign the installer for auto-updates
+if ($Action -eq "publish" -and $env:ENABLE_AUTO_UPDATE -eq "true") {
+    $desktop = [Environment]::GetFolderPath('Desktop')
+    $installer = Get-ChildItem "$desktop\${ProjectName}*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+
+    if ($installer) {
+        Write-Success "Signing installer with EdDSA for auto-updates..."
+
+        # WinSparkle's winsparkle-tool.exe for EdDSA signing
+        $signTool = Join-Path $ProjectRoot "external\WinSparkle\bin\winsparkle-tool.exe"
+
+        # EdDSA key file location (generate with: winsparkle-tool.exe generate-key -f eddsa_key)
+        $keyFile = $null
+        if ($env:EDDSA_KEY_FILE -and (Test-Path $env:EDDSA_KEY_FILE)) {
+            $keyFile = $env:EDDSA_KEY_FILE
+        } elseif (Test-Path (Join-Path $ProjectRoot "eddsa_key")) {
+            $keyFile = Join-Path $ProjectRoot "eddsa_key"
+        }
+
+        $signOutput = $null
+        if ((Test-Path $signTool) -and $keyFile) {
+            # winsparkle-tool.exe sign -f KEYFILE FILENAME
+            $signOutput = & $signTool sign -f $keyFile $installer.FullName 2>&1
+        } elseif (-not (Test-Path $signTool)) {
+            Write-Warn "winsparkle-tool.exe not found. Run scripts/setup_winsparkle.sh first."
+        } elseif (-not $keyFile) {
+            Write-Warn "EdDSA key file not found. Generate with: external\WinSparkle\bin\winsparkle-tool.exe generate-key -f eddsa_key"
+            Write-Host "Or set EDDSA_KEY_FILE environment variable to the key file path."
+        }
+
+        if ($signOutput -match 'edSignature="([^"]+)"') {
+            $script:EddsaSignature = $matches[1]
+            Write-Success "EdDSA signature generated"
+        } elseif ($signOutput) {
+            # winsparkle-tool may output signature differently
+            $script:EddsaSignature = ($signOutput | Out-String).Trim()
+            if ($script:EddsaSignature) {
+                Write-Success "EdDSA signature captured"
+            } else {
+                Write-Warn "EdDSA signing produced empty output"
+            }
+        } else {
+            Write-Warn "EdDSA signing skipped"
+        }
+
+        if ($signOutput -match 'length="([^"]+)"') {
+            $script:EddsaLength = $matches[1]
+        } else {
+            $script:EddsaLength = $installer.Length
+        }
+    }
+}
+
+# Create GitHub release if publish action
+if ($Action -eq "publish") {
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+        Write-Err "GitHub CLI (gh) not installed. Install with: winget install GitHub.cli"
+    } elseif (-not (gh auth status 2>&1 | Select-String "Logged in")) {
+        Write-Err "GitHub CLI not authenticated. Run: gh auth login"
+    } else {
+        Write-Success "Creating GitHub release..."
+        $ReleaseTag = "v$Version"
+        $desktop = [Environment]::GetFolderPath('Desktop')
+        $artifacts = @()
+
+        # Find installer on Desktop
+        $exeFile = Get-ChildItem "$desktop\${ProjectName}*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($exeFile) { $artifacts += $exeFile.FullName }
+
+        $zipFile = Get-ChildItem "$desktop\${ProjectName}*.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($zipFile) { $artifacts += $zipFile.FullName }
+
+        if ($artifacts.Count -gt 0) {
+            $ghUser = $env:GITHUB_USER
+            $ghRepo = $env:GITHUB_REPO
+            $releaseTitle = "$ProjectName $Version"
+
+            $ghArgs = @("release", "create", $ReleaseTag, "--repo", "$ghUser/$ghRepo", "--title", $releaseTitle, "--notes", "Release $Version")
+            $ghArgs += $artifacts
+
+            gh @ghArgs
+
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "GitHub release created: $ReleaseTag"
+            } else {
+                Write-Err "Failed to create GitHub release"
+            }
+        } else {
+            Write-Warn "No artifacts found on Desktop"
+        }
+    }
+}
+
+# Generate appcast for auto-updates (last step in publish)
+if ($Action -eq "publish" -and $env:ENABLE_AUTO_UPDATE -eq "true" -and $script:EddsaSignature) {
+    Write-Success "Generating Windows appcast XML..."
+
+    $appcastFile = Join-Path $ProjectRoot "appcast-windows.xml"
+    $ghUser = $env:GITHUB_USER
+    $ghRepo = $env:GITHUB_REPO
+    $desktop = [Environment]::GetFolderPath('Desktop')
+    $installer = Get-ChildItem "$desktop\${ProjectName}*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    $installerName = if ($installer) { $installer.Name } else { "${ProjectName}_${Version}.exe" }
+    $downloadUrl = "https://github.com/$ghUser/$ghRepo/releases/download/v$Version/$installerName"
+    $pubDate = (Get-Date).ToString("ddd, dd MMM yyyy HH:mm:ss zzz")
+    $feedUrl = if ($env:AUTO_UPDATE_FEED_URL_WINDOWS) { $env:AUTO_UPDATE_FEED_URL_WINDOWS } else { "https://raw.githubusercontent.com/$ghUser/$ghRepo/main/appcast-windows.xml" }
+
+    $sparkleNotes = "<h2>Version $Version</h2><p>Bug fixes and improvements.</p>"
+
+    $newItem = @"
+        <item>
+            <title>Version $Version</title>
+            <description><![CDATA[
+$sparkleNotes
+            ]]></description>
+            <pubDate>$pubDate</pubDate>
+            <enclosure
+                url="$downloadUrl"
+                sparkle:version="$Version"
+                sparkle:shortVersionString="$Version"
+                sparkle:os="windows"
+                sparkle:edSignature="$($script:EddsaSignature)"
+                length="$($script:EddsaLength)"
+                type="application/octet-stream"/>
+        </item>
+"@
+
+    if (Test-Path $appcastFile) {
+        $content = Get-Content $appcastFile -Raw
+        $content = $content -replace '</channel>', "$newItem`n    </channel>"
+        Set-Content -Path $appcastFile -Value $content -NoNewline
+    } else {
+        $appcast = @"
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>$ProjectName Changelog</title>
+        <link>$feedUrl</link>
+        <language>en</language>
+$newItem
+    </channel>
+</rss>
+"@
+        Set-Content -Path $appcastFile -Value $appcast -NoNewline
+    }
+
+    Write-Success "Appcast generated: $appcastFile"
+
+    # Commit and push appcast
+    git add $appcastFile
+    $diffResult = git diff --cached --quiet $appcastFile 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        git commit -m "Update Windows appcast for v$Version"
+        $currentBranch = git rev-parse --abbrev-ref HEAD
+        git push origin $currentBranch
+        Write-Success "Appcast published"
+    } else {
+        Write-Host "Appcast unchanged, skipping commit"
+    }
+}
+
 Write-Success "Build complete!"
