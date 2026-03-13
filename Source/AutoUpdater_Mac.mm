@@ -1,6 +1,6 @@
-#if JUCE_MAC && ENABLE_AUTO_UPDATE && ENABLE_SPARKLE
-
 #include "AutoUpdater.h"
+
+#if JUCE_MAC && ENABLE_AUTO_UPDATE && ENABLE_SPARKLE
 
 // Avoid conflicts between JUCE and macOS types
 #define Component AppleComponent

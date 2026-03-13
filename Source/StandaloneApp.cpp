@@ -18,7 +18,7 @@
 #endif
 
 //==============================================================================
-class StandaloneMenuBarModel : public juce::MenuBarModel
+class UpdateMenuBarModel : public juce::MenuBarModel
 {
 public:
     enum MenuIDs
@@ -78,16 +78,16 @@ public:
             getApplicationName(),
             juce::LookAndFeel::getDefaultLookAndFeel().findColour (
                 juce::ResizableWindow::backgroundColourId),
-            nullptr, true, {}, nullptr, true, {}, {}));
+            nullptr, true));
 
         mainWindow->setVisible (true);
 
        #if ENABLE_AUTO_UPDATE
-        menuBarModel = std::make_unique<StandaloneMenuBarModel>();
+        menuBarModel = std::make_unique<UpdateMenuBarModel>();
 
        #if JUCE_MAC
         appleMenuItems = std::make_unique<juce::PopupMenu>();
-        appleMenuItems->addItem (StandaloneMenuBarModel::checkForUpdatesID,
+        appleMenuItems->addItem (UpdateMenuBarModel::checkForUpdatesID,
                                  "Check for Updates...");
         appleMenuItems->addSeparator();
         juce::MenuBarModel::setMacMainMenu (menuBarModel.get(), appleMenuItems.get());
@@ -127,11 +127,11 @@ private:
     std::unique_ptr<juce::StandaloneFilterWindow> mainWindow;
 
    #if ENABLE_AUTO_UPDATE
-    std::unique_ptr<StandaloneMenuBarModel> menuBarModel;
+    std::unique_ptr<UpdateMenuBarModel> menuBarModel;
    #if JUCE_MAC
     std::unique_ptr<juce::PopupMenu> appleMenuItems;
    #endif
    #endif
 };
 
-START_JUCE_APPLICATION (StandaloneApp)
+START_JUCE_APPLICATION (StandaloneFilterApp)

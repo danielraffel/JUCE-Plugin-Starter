@@ -26,3 +26,11 @@
 - On Windows, use a "Help" menu (no file menu in standalone)
 - Initialize AutoUpdater via Timer::callAfterDelay(500) — NOT during static init
 - StandaloneApp.cpp is always compiled for Standalone but guards with #if ENABLE_AUTO_UPDATE
+
+## Build Issues
+- AutoUpdater_Mac.mm must #include "AutoUpdater.h" BEFORE the #if JUCE_MAC guard,
+  because JUCE_MAC is defined by JuceHeader.h (included via AutoUpdater.h)
+- StandaloneFilterWindow constructor in JUCE 8.x takes 4 args (title, colour, settings, takeOwnership)
+- Environment vars must be exported when invoking cmake --build for post_build.sh to see them
+- The shared JUCE cache (~/.juce_cache) can have stale generator state from Xcode builds —
+  delete it if switching between Xcode and Ninja generators
