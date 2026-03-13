@@ -1384,7 +1384,23 @@ This is useful for re-running builds without making code changes.
 
 ### What are the build artifacts?
 
-After each CI run, you can download the compiled plugin from the **Actions** tab > click a run > **Artifacts** section. Each platform uploads its build artifacts (Standalone app, VST3, AU, CLAP — whatever your project builds).
+After each CI run, you can download the compiled plugin from the **Actions** tab > click a run > **Artifacts** section at the bottom. Each platform uploads its build output (Standalone app, VST3, AU, CLAP — whatever your project builds). These are real compiled binaries you can run and test.
+
+**Current limitations:** The default CI workflow builds unsigned, unpackaged artifacts — they're meant for verifying that your plugin compiles and passes tests on each platform. They are **not** code-signed, notarized, or packaged into installers (no `.pkg`, `.dmg`, or Inno Setup `.exe`). Artifacts also expire after 90 days by default.
+
+For signed, notarized distribution builds, use `./scripts/build.sh all publish` on your local machine (see [How to Distribute Your Plugin](#-how-to-distribute-your-plugin)).
+
+### Can CI create production-ready, signed builds?
+
+Not out of the box, but yes — it's absolutely possible to extend the workflow to produce full release artifacts in the cloud. The approach:
+
+1. **Store credentials as [GitHub Secrets](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions)** — Your Apple Developer certificates (base64-encoded), `APP_SPECIFIC_PASSWORD`, `TEAM_ID`, signing identities, and any other sensitive `.env` values go into your repo's Settings > Secrets and variables > Actions.
+
+2. **Import certificates during CI** — A workflow step decodes the certificate from the secret, imports it into a temporary macOS keychain, and makes it available for code signing. This is a [well-documented pattern](https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development) for macOS CI.
+
+3. **Run the full build pipeline** — Instead of just `cmake --build`, the workflow would call `./scripts/build.sh all publish` (or `notarize`, `pkg`, etc.), which handles signing, notarization, installer creation, and GitHub release publishing.
+
+This is a future enhancement — the current workflow focuses on build verification across platforms. When you're ready for cloud-based releases, the existing `build.sh` and `build.ps1` scripts already support the full pipeline; they just need the right credentials injected via GitHub Secrets.
 
 ### Can I use CI with Claude Code?
 
@@ -1399,15 +1415,18 @@ All without leaving your terminal.
 
 ### What's the difference between local builds and CI?
 
-| | Local Build | CI Build |
-|---|---|---|
-| **Where** | Your machine | GitHub's cloud VMs |
-| **When** | On demand (`./scripts/build.sh`) | On push, PR, or manual trigger |
-| **Platforms** | Only your current OS | Any/all configured platforms |
-| **Speed** | Faster (no VM startup) | Slower (~5-10 min per platform) |
-| **Use case** | Development iteration | Cross-platform verification |
+| | Local Build | CI Build (current) | CI Build (future, with Secrets) |
+|---|---|---|---|
+| **Where** | Your machine | GitHub's cloud VMs | GitHub's cloud VMs |
+| **When** | On demand | On push, PR, or manual trigger | On release tag or manual trigger |
+| **Platforms** | Only your current OS | Any/all configured platforms | Any/all configured platforms |
+| **Signed** | Yes (your Keychain) | No | Yes (via GitHub Secrets) |
+| **Notarized** | Yes | No | Yes |
+| **Installers** | PKG, DMG, Inno Setup | No (raw artifacts only) | PKG, DMG, Inno Setup |
+| **Speed** | Faster (no VM startup) | ~5-10 min per platform | ~10-15 min per platform |
+| **Use case** | Development + releases | Cross-platform verification | Fully automated releases |
 
-Use local builds for day-to-day development. Use CI to verify your plugin works on other platforms before merging or releasing.
+Use local builds for day-to-day development and current releases. Use CI to verify your plugin compiles on other platforms. In the future, CI with GitHub Secrets can handle the entire release pipeline.
 
 ---
 
