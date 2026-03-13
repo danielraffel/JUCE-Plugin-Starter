@@ -7,7 +7,7 @@
 - [x] A1.2 — Write Source/AutoUpdater.h
 - [x] A1.3 — Write Source/AutoUpdater_Mac.mm
 - [x] A1.4 — Update CMakeLists.txt (Sparkle linking)
-- [ ] A1.5 — Update .env.example (auto-update variables)
+- [x] A1.5 — Update .env.example (auto-update variables)
 - [ ] A1.6 — Update scripts/post_build.sh (Sparkle Info.plist entries)
 - [ ] A1.7 — Add "Check for Updates..." to standalone app menu
 - [ ] A1.8 — Add EdDSA signing to build.sh publish
