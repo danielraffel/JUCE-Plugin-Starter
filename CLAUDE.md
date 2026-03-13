@@ -226,5 +226,19 @@ When you see the release notes prompt during `./scripts/build.sh publish`, immed
 - Fixed rare crash when changing plugin settings
 - Better audio quality with reduced distortion
 
+## Tracking Remaining Work
+
+When completing a large feature on JUCE-Plugin-Starter or juce-dev where some work items are intentionally deferred, offer to create GitHub issues on **this repo** (danielraffel/JUCE-Plugin-Starter). Issues for juce-dev plugin work also go here since the two projects are tightly coupled and most implementation lives in this repo.
+
+**Issue conventions:**
+- **Naming**: Prefix with the feature area in brackets, e.g. `[Auto-Updates] Phase B — Private distribution mode`. Be specific enough that the title alone tells you what the work is.
+- **Labels**: Create a label for the feature area (e.g. `auto-updates`) and apply it to all related issues so they can be filtered together.
+- **Series linking**: Add a "Series" section at the bottom of every related issue showing the full ordered list with dependency notes and a "YOU ARE HERE" marker. This makes it obvious which issues to do first and what blocks what.
+- **Cross-repo references**: When work spans both JUCE-Plugin-Starter and generous-corp-marketplace (juce-dev plugin), note both repos in a "Repos impacted" section in each issue.
+
+**Never include** API keys, tokens, passwords, private URLs, or any credentials in issue descriptions — these are public issues on public repos.
+
+This prevents losing track of deferred work that lives in proposal docs or progress files that get stale.
+
 ## Additional Project Info
 See @README.md for general project information.
