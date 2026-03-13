@@ -1349,11 +1349,11 @@ Linux uses Clang by default (for consistency with macOS) and Ninja as the build 
 
 ### Does CI cost money?
 
-**Public repositories**: Completely free, unlimited minutes.
+GitHub Actions pricing depends on your repository type and plan. Check [GitHub's pricing page](https://github.com/pricing) for current details and limits — the specifics below may change.
 
-**Private repositories**: GitHub provides **2,000 free minutes/month** on the free plan. A typical JUCE plugin build takes 5-10 minutes per platform. With smart platform detection (only building what you need), a macOS-only project uses ~5-10 minutes per push — that's roughly **200+ builds/month for free**.
+At the time of writing, public repositories get free unlimited minutes. Private repositories get a monthly allocation of free minutes depending on your plan. A typical JUCE plugin build takes 5-10 minutes per platform. With smart platform detection (only building platforms you need), you can keep usage low.
 
-Note: macOS runners use minutes at a 10x rate on private repos (1 minute = 10 minutes of quota). So a 5-minute macOS build costs 50 minutes of quota. If cost is a concern on private repos, you can limit CI to specific branches or trigger manually instead of on every push.
+> **Note:** GitHub applies multipliers for certain runner types (e.g., macOS minutes may count at a higher rate than Linux). See [GitHub's billing docs](https://docs.github.com/en/billing/managing-billing-for-your-products/managing-billing-for-github-actions/about-billing-for-github-actions) for the latest rates. If cost is a concern, you can limit CI to specific branches or trigger manually instead of on every push.
 
 ### Can I run CI locally instead of on GitHub?
 
