@@ -119,6 +119,7 @@ cd JUCE-Plugin-Starter
   - [Why Use Prompts?](#why-use-prompts)
   - [Contributing Prompts](#contributing-prompts)
 - [🔄 Auto-Updates *(Planned)*](#-auto-updates-planned)
+- [❓ CI/CD FAQ](#-cicd-faq)
 - [📚 Resources](#-resources)
 
 ---
@@ -685,14 +686,69 @@ python3 scripts/bump_version.py major  # 0.1.0 → 1.0.0
 
 ### CI/CD with GitHub Actions
 
-The template includes a GitHub Actions workflow (`.github/workflows/build.yml`) that:
-- Builds on **macOS** (arm64 + x86_64 universal binary), **Linux** (Ubuntu 22.04, Clang), and **Windows**
+The template includes a GitHub Actions workflow (`.github/workflows/build.yml`) that automatically builds and tests your plugin across platforms.
+
+**What it does:**
+- Builds on **macOS** (arm64 + x86_64 universal binary), **Windows** (MSVC + Ninja), and **Linux** (Ubuntu 22.04, Clang + Ninja)
 - Uses **sccache** for build caching
 - Runs **Catch2** unit tests via CTest
 - Validates **VST3** with PluginVal
-- Uploads build artifacts
+- Uploads build artifacts you can download from the Actions tab
 
-The workflow triggers on pushes to `main` and `feature/**` branches, plus pull requests.
+**When it runs:**
+- Automatically on pushes to `main`, `feature/**`, and `integrate/**` branches
+- Automatically on pull requests
+- Manually via **workflow_dispatch** (Actions tab > "Run workflow" button)
+
+**Smart platform detection:**
+
+The CI workflow only builds the platforms your project actually supports. It checks three things in order:
+
+1. **Manual override** — When triggered via "Run workflow", you can type which platforms to build (e.g., `macos,windows`)
+2. **`CI_PLATFORMS` in `.env`** — Set this to control which platforms CI builds by default (e.g., `CI_PLATFORMS="macos,windows"`)
+3. **Auto-detect** — If neither is set, CI looks at your project files:
+   - **macOS**: Always included (all JUCE-Plugin-Starter projects support macOS)
+   - **Windows**: Detected if `scripts/build.ps1` exists or `CMakeLists.txt` has `if(MSVC)` / `if(WIN32)` blocks
+   - **Linux**: Detected if `CMakeLists.txt` has `UNIX AND NOT APPLE` blocks
+
+**Configuring platforms:**
+
+Add this to your `.env` file:
+```bash
+# Only build macOS (default for new projects)
+CI_PLATFORMS="macos"
+
+# Build macOS and Windows
+CI_PLATFORMS="macos,windows"
+
+# Build all three platforms
+CI_PLATFORMS="macos,windows,linux"
+```
+
+If you're using the [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin, you can also run `/juce-dev:ci` to interactively view and change your platform configuration, trigger builds, and check results — all without leaving your terminal.
+
+**Triggering CI manually:**
+
+From the GitHub Actions tab:
+1. Go to **Actions** > **Build & Test**
+2. Click **"Run workflow"**
+3. Optionally type platforms (e.g., `macos,windows`) or leave blank for auto-detect
+4. Click **"Run workflow"**
+
+From the command line (requires [GitHub CLI](https://cli.github.com/)):
+```bash
+# Trigger with auto-detected platforms
+gh workflow run build.yml
+
+# Trigger for specific platforms
+gh workflow run build.yml -f platforms="macos,windows"
+
+# Check status
+gh run list --workflow=build.yml --limit=5
+
+# View logs from latest run
+gh run view --log
+```
 
 ### Complete Documentation
 
@@ -1208,6 +1264,74 @@ In-app auto-update support via [Sparkle](https://sparkle-project.org/) (macOS) a
 3. **Phase B**: Private distribution for commercial plugins (requires validation)
 
 When implemented, the [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin will provide `/juce-dev:setup-updates` to configure auto-updates for your project.
+
+---
+
+## ❓ CI/CD FAQ
+
+### Do I need all three platforms?
+
+No. Most projects start as **macOS-only**, and that's perfectly fine. The CI workflow auto-detects what your project supports — if you haven't added Windows or Linux build scripts, those platforms simply won't run. You're never wasting CI minutes on platforms you don't use.
+
+### What if I only develop on macOS?
+
+That's the default. New projects created with `init_plugin_project.sh` start with `CI_PLATFORMS="macos"` in `.env`. CI will only build on macOS. When you're ready to add Windows or Linux support, update the setting and the CI automatically picks it up.
+
+### How do I add Windows support later?
+
+1. Add `scripts/build.ps1` to your project (or use `/juce-dev:port windows` if you have the juce-dev plugin)
+2. Add Windows-specific CMake guards (`if(MSVC)`, `if(WIN32)`) to `CMakeLists.txt`
+3. Update `.env`: `CI_PLATFORMS="macos,windows"`
+4. Push — CI will now build on both platforms
+
+The CI auto-detection also works: if it finds `build.ps1`, Windows builds are automatically included even without setting `CI_PLATFORMS`.
+
+### How do I add Linux support later?
+
+1. Add Linux CMake guards (`if(UNIX AND NOT APPLE)`) to `CMakeLists.txt`
+2. Update `.env`: `CI_PLATFORMS="macos,windows,linux"`
+3. Push — CI will now build on all three platforms
+
+Linux uses Clang by default (for consistency with macOS) and Ninja as the build system.
+
+### Does CI cost money?
+
+GitHub Actions is **free for public repositories** with generous limits. For private repos, GitHub provides 2,000 free minutes/month on the free plan. A typical JUCE plugin build takes 5-10 minutes per platform, so you'd get ~60-100 builds/month for free.
+
+### Can I trigger CI without pushing?
+
+Yes. Use the **"Run workflow"** button in the GitHub Actions tab (workflow_dispatch), or from the command line:
+```bash
+gh workflow run build.yml -f platforms="macos"
+```
+This is useful for re-running builds without making code changes.
+
+### What are the build artifacts?
+
+After each CI run, you can download the compiled plugin from the **Actions** tab > click a run > **Artifacts** section. Each platform uploads its build artifacts (Standalone app, VST3, AU, CLAP — whatever your project builds).
+
+### Can I use CI with Claude Code?
+
+Yes. The [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin provides `/juce-dev:ci` which can:
+- Show your current platform configuration
+- Change which platforms CI builds (updates `.env` for you)
+- Trigger CI builds
+- Check build status and results
+- View build logs
+
+All without leaving your terminal.
+
+### What's the difference between local builds and CI?
+
+| | Local Build | CI Build |
+|---|---|---|
+| **Where** | Your machine | GitHub's cloud VMs |
+| **When** | On demand (`./scripts/build.sh`) | On push, PR, or manual trigger |
+| **Platforms** | Only your current OS | Any/all configured platforms |
+| **Speed** | Faster (no VM startup) | Slower (~5-10 min per platform) |
+| **Use case** | Development iteration | Cross-platform verification |
+
+Use local builds for day-to-day development. Use CI to verify your plugin works on other platforms before merging or releasing.
 
 ---
 
