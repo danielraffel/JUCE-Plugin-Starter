@@ -9,7 +9,7 @@
 - [x] A1.4 — Update CMakeLists.txt (Sparkle linking)
 - [x] A1.5 — Update .env.example (auto-update variables)
 - [x] A1.6 — Update scripts/post_build.sh (Sparkle Info.plist entries)
-- [ ] A1.7 — Add "Check for Updates..." to standalone app menu
+- [x] A1.7 — Add "Check for Updates..." to standalone app menu
 - [ ] A1.8 — Add EdDSA signing to build.sh publish
 - [ ] A1.9 — Add appcast XML generation to build.sh
 - [ ] A1.10 — Implement correct publish pipeline order

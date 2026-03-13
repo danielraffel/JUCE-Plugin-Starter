@@ -18,3 +18,11 @@
 - No PAT injection needed for public mode — Sparkle reads SUFeedURL from Info.plist
 - No feedURLStringForUpdater: delegate override needed — rely on Info.plist SUFeedURL
 - Guard file with #if JUCE_MAC && ENABLE_AUTO_UPDATE && ENABLE_SPARKLE
+
+## A1.7 — StandaloneApp.cpp
+- Must use JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1 to replace default standalone
+- Use StandaloneFilterWindow directly — don't try to manually create PluginHolder
+- On macOS, use setMacMainMenu with extra apple menu items for app name menu
+- On Windows, use a "Help" menu (no file menu in standalone)
+- Initialize AutoUpdater via Timer::callAfterDelay(500) — NOT during static init
+- StandaloneApp.cpp is always compiled for Standalone but guards with #if ENABLE_AUTO_UPDATE

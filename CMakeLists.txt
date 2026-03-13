@@ -193,11 +193,15 @@ clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
 
 if(DEFINED ENV{ENABLE_AUTO_UPDATE} AND "$ENV{ENABLE_AUTO_UPDATE}" STREQUAL "true")
     if(TARGET ${PROJECT_NAME}_Standalone)
-        target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE ENABLE_AUTO_UPDATE=1)
+        target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE
+            ENABLE_AUTO_UPDATE=1
+            JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1
+        )
 
-        # Add AutoUpdater header to all targets (stub when disabled)
+        # Custom standalone app with "Check for Updates..." menu
         target_sources(${PROJECT_NAME}_Standalone PRIVATE
             Source/AutoUpdater.h
+            Source/StandaloneApp.cpp
         )
 
         if(APPLE)
