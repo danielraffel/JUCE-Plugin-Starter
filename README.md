@@ -1448,6 +1448,41 @@ All without leaving your terminal.
 
 Use local builds for day-to-day development. Use CI verify mode to confirm your plugin compiles on other platforms. Use CI publish mode with GitHub Secrets for fully automated, signed releases.
 
+### Does publishing automatically update my website and repo?
+
+Yes. When you publish (either locally via `./scripts/build.sh all publish` or via CI publish mode), the `update_download_links.sh` script:
+
+1. **Updates gh-pages download buttons** — Replaces "Coming Soon" stubs with active download links, or updates existing version numbers
+2. **Updates README.md download links** — Finds versioned release URLs and updates them to the new version (including fixing the repo name if the project was cloned/forked)
+3. **Pushes changes** — Commits and pushes both gh-pages and README.md changes automatically
+4. **Sets repo homepage** — On first publish, automatically sets the GitHub repo's "Website" field to your GitHub Pages URL (visible in the repo's About section)
+
+If you have a custom domain configured for GitHub Pages, the script detects it and uses that URL instead of the default `username.github.io/repo` URL.
+
+### How do I set up code signing certificates for CI?
+
+Use the included `scripts/export_signing_certs.sh` script:
+
+```bash
+./scripts/export_signing_certs.sh
+```
+
+This script:
+1. **Reads** `APP_CERT` and `INSTALLER_CERT` names from your `.env`
+2. **Exports** all identities from your macOS Keychain as a single `.p12` file
+3. **Caches** the `.p12` in `.secrets/` (gitignored) so you don't re-export each time
+4. **Pushes** 7 secrets to GitHub via `gh secret set`:
+   - `APPLE_DEVELOPER_CERTIFICATE_P12_BASE64` / `PASSWORD`
+   - `APPLE_INSTALLER_CERTIFICATE_P12_BASE64` / `PASSWORD`
+   - `APPLE_ID`, `APP_SPECIFIC_PASSWORD`, `TEAM_ID`
+
+**About the macOS security dialog:** When the script exports certificates from your Keychain, macOS will show a security dialog asking you to "Allow" access to your private keys. This is Apple's standard security model — no tool can bypass it. You'll see this dialog once per export (not on re-runs if the `.p12` is cached). The script exports all identities in your login keychain; CI imports them into a temporary keychain and `codesign`/`productbuild` pick the right cert by name. Extra certificates are harmless.
+
+**Options:**
+- `--check` — Dry run (show what would be pushed without pushing)
+- `--force` — Re-export from Keychain even if cached `.p12` exists
+- `--repo <name>` — Target a specific GitHub repo
+
 ---
 
 ## 📚 Resources

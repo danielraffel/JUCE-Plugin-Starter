@@ -34,16 +34,16 @@ RestartApplications=yes
 
 [Files]
 ; VST3 plugin
-Source: "artifacts\VST3\{#AppName}.vst3\*"; DestDir: "{commoncf}\VST3\{#AppName}.vst3"; Flags: recursesubdirs; Check: ShouldInstallVST3
+Source: "{{ARTIFACTS}}\VST3\{#AppName}.vst3\*"; DestDir: "{commoncf}\VST3\{#AppName}.vst3"; Flags: recursesubdirs skipifsourcedoesntexist; Check: ShouldInstallVST3
 ; CLAP plugin
-Source: "artifacts\CLAP\{#AppName}.clap\*"; DestDir: "{commoncf}\CLAP\{#AppName}.clap"; Flags: recursesubdirs; Check: ShouldInstallCLAP
+Source: "{{ARTIFACTS}}\CLAP\{#AppName}.clap\*"; DestDir: "{commoncf}\CLAP\{#AppName}.clap"; Flags: recursesubdirs skipifsourcedoesntexist; Check: ShouldInstallCLAP
 ; Standalone app
-Source: "artifacts\Standalone\{#AppName}.exe"; DestDir: "{app}"; Flags: ignoreversion; Check: ShouldInstallStandalone
+Source: "{{ARTIFACTS}}\Standalone\{#AppName}.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Check: ShouldInstallStandalone
 ; WinSparkle DLL for auto-updates (bundled alongside standalone)
-Source: "artifacts\Standalone\WinSparkle.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Check: ShouldInstallStandalone
+Source: "{{ARTIFACTS}}\Standalone\WinSparkle.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Check: ShouldInstallStandalone
 ; DiagnosticKit (optional troubleshooting tool)
-Source: "artifacts\Diagnostics\{#AppName} Diagnostics.exe"; DestDir: "{app}\Diagnostics"; Flags: ignoreversion skipifsourcedoesntexist; Tasks: diagnostics
-Source: "artifacts\Diagnostics\.env"; DestDir: "{app}\Diagnostics"; Flags: ignoreversion skipifsourcedoesntexist; Tasks: diagnostics
+Source: "{{ARTIFACTS}}\Diagnostics\{#AppName} Diagnostics.exe"; DestDir: "{app}\Diagnostics"; Flags: ignoreversion skipifsourcedoesntexist; Tasks: diagnostics
+Source: "{{ARTIFACTS}}\Diagnostics\.env"; DestDir: "{app}\Diagnostics"; Flags: ignoreversion skipifsourcedoesntexist; Tasks: diagnostics
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppName}.exe"; Check: ShouldInstallStandalone

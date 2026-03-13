@@ -68,6 +68,12 @@ set(PLUGIN_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 project(${PROJECT_NAME} VERSION ${PLUGIN_VERSION})
 
+# Enable Objective-C/C++ on Apple platforms (needed for Visage + Ninja builds)
+if(APPLE)
+    enable_language(OBJC)
+    enable_language(OBJCXX)
+endif()
+
 # Fetch JUCE using FetchContent
 include(FetchContent)
 

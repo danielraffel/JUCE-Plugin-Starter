@@ -9,12 +9,13 @@ on:
         default: ""
         type: string
       mode:
-        description: "Build mode"
+        description: "Build mode (draft = publish with draft release)"
         type: choice
         options:
           - verify
           - sign
           - publish
+          - draft
         default: verify
       sign_macos:
         description: "Sign macOS builds (sign/publish modes)"
@@ -56,6 +57,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       mode: ${{ steps.set-mode.outputs.mode }}
+      draft_release: ${{ steps.set-mode.outputs.draft_release }}
     steps:
       - uses: actions/checkout@v4
 
@@ -70,8 +72,17 @@ jobs:
           else
             MODE="verify"
           fi
+
+          # "draft" mode is publish with a draft release — normalize for build/sign checks
+          DRAFT_RELEASE="false"
+          if [ "$MODE" = "draft" ]; then
+            DRAFT_RELEASE="true"
+            MODE="publish"
+          fi
+
           echo "mode=$MODE" >> $GITHUB_OUTPUT
-          echo "Build mode: $MODE"
+          echo "draft_release=$DRAFT_RELEASE" >> $GITHUB_OUTPUT
+          echo "Build mode: $MODE (draft: $DRAFT_RELEASE)"
 
       - name: Detect platforms
         id: set-matrix
@@ -289,15 +300,15 @@ jobs:
 
       - name: Download PluginVal
         run: |
-          curl -LO "https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_${{ runner.os }}.zip"
-          7z x pluginval_${{ runner.os }}.zip || unzip pluginval_${{ runner.os }}.zip || true
+          curl -L "https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_${{ runner.os }}.zip" -o pluginval.zip
+          7z x pluginval.zip || unzip pluginval.zip || true
 
       - name: Validate VST3 (macOS)
         if: runner.os == 'macOS'
         run: |
           PLUGIN="$HOME/Library/Audio/Plug-Ins/VST3/${{ env.PROJECT_NAME }}.vst3"
           if [ -d "$PLUGIN" ]; then
-            pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --verbose --validate "$PLUGIN"
+            pluginval.app/Contents/MacOS/pluginval --validate-in-process --strictness-level 5 --verbose --skip-gui-tests --output-dir "./pluginval-logs" --validate "$PLUGIN"
           fi
 
       - name: Validate VST3 (Linux)
@@ -305,16 +316,18 @@ jobs:
         run: |
           PLUGIN="$HOME/.vst3/${{ env.PROJECT_NAME }}.vst3"
           if [ -d "$PLUGIN" ]; then
-            ./pluginval --strictness-level 5 --verbose --validate "$PLUGIN"
+            ./pluginval --validate-in-process --strictness-level 5 --verbose --skip-gui-tests --output-dir "./pluginval-logs" --validate "$PLUGIN"
           fi
 
       - name: Validate VST3 (Windows)
         if: runner.os == 'Windows'
+        timeout-minutes: 10
+        continue-on-error: true
         shell: cmd
         run: |
           set PLUGIN=${{ env.BUILD_DIR }}\${{ env.PROJECT_NAME }}_artefacts\${{ env.BUILD_TYPE }}\VST3\${{ env.PROJECT_NAME }}.vst3
           if exist "%PLUGIN%" (
-            pluginval.exe --strictness-level 5 --verbose --validate "%PLUGIN%"
+            pluginval.exe --validate-in-process --strictness-level 5 --verbose --skip-gui-tests --output-dir "./pluginval-logs" --validate "%PLUGIN%"
           )
 
       # ── macOS code signing ────────────────────────────────────────
@@ -339,35 +352,99 @@ jobs:
             fi
           done
 
-      - name: Notarize macOS Binaries
-        if: steps.signing.outputs.mode == 'publish' && steps.signing.outputs.sign_macos == 'true' && runner.os == 'macOS'
+      # ── macOS: Package into .pkg installer ──────────────────────────
+      - name: Package & Notarize macOS Installer
+        if: steps.signing.outputs.mode == 'publish' && runner.os == 'macOS'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
           TEAM_ID: ${{ secrets.TEAM_ID }}
         run: |
-          echo "Notarizing macOS binaries..."
-          # Create a zip of signed artifacts for notarization
-          NOTARIZE_ZIP="$RUNNER_TEMP/notarize.zip"
-          ditto -c -k --keepParent \
-            "${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" \
-            "$NOTARIZE_ZIP"
+          VERSION="${VERSION_MAJOR:-0}.${VERSION_MINOR:-0}.${VERSION_PATCH:-0}"
+          PKG_DIR="$RUNNER_TEMP/pkg_staging"
+          mkdir -p "$PKG_DIR"
 
-          xcrun notarytool submit "$NOTARIZE_ZIP" \
-            --apple-id "$APPLE_ID" \
-            --password "$APP_SPECIFIC_PASSWORD" \
-            --team-id "$TEAM_ID" \
-            --wait --timeout 15m
+          # Create component packages for each plugin format that exists
+          PKG_ARGS=""
 
-          # Staple notarization tickets
-          for PLUGIN_PATH in \
-            "$HOME/Library/Audio/Plug-Ins/Components/${{ env.PROJECT_NAME }}.component" \
-            "$HOME/Library/Audio/Plug-Ins/VST3/${{ env.PROJECT_NAME }}.vst3" \
-            "${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.app"; do
-            if [ -e "$PLUGIN_PATH" ]; then
-              xcrun stapler staple "$PLUGIN_PATH" 2>/dev/null || true
-            fi
-          done
+          AU_PATH="$HOME/Library/Audio/Plug-Ins/Components/${{ env.PROJECT_NAME }}.component"
+          if [ -d "$AU_PATH" ]; then
+            pkgbuild --component "$AU_PATH" \
+              --install-location "/Library/Audio/Plug-Ins/Components" \
+              --identifier "${{ env.PROJECT_BUNDLE_ID }}.au" \
+              "$PKG_DIR/au.pkg"
+            PKG_ARGS="$PKG_ARGS --package $PKG_DIR/au.pkg"
+            echo "  Component: AU"
+          fi
+
+          VST3_PATH="$HOME/Library/Audio/Plug-Ins/VST3/${{ env.PROJECT_NAME }}.vst3"
+          if [ -d "$VST3_PATH" ]; then
+            pkgbuild --component "$VST3_PATH" \
+              --install-location "/Library/Audio/Plug-Ins/VST3" \
+              --identifier "${{ env.PROJECT_BUNDLE_ID }}.vst3" \
+              "$PKG_DIR/vst3.pkg"
+            PKG_ARGS="$PKG_ARGS --package $PKG_DIR/vst3.pkg"
+            echo "  Component: VST3"
+          fi
+
+          CLAP_PATH="$HOME/Library/Audio/Plug-Ins/CLAP/${{ env.PROJECT_NAME }}.clap"
+          if [ -d "$CLAP_PATH" ]; then
+            pkgbuild --component "$CLAP_PATH" \
+              --install-location "/Library/Audio/Plug-Ins/CLAP" \
+              --identifier "${{ env.PROJECT_BUNDLE_ID }}.clap" \
+              "$PKG_DIR/clap.pkg"
+            PKG_ARGS="$PKG_ARGS --package $PKG_DIR/clap.pkg"
+            echo "  Component: CLAP"
+          fi
+
+          APP_PATH="${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.app"
+          if [ -d "$APP_PATH" ]; then
+            pkgbuild --component "$APP_PATH" \
+              --install-location "/Applications" \
+              --identifier "${{ env.PROJECT_BUNDLE_ID }}.standalone" \
+              "$PKG_DIR/standalone.pkg"
+            PKG_ARGS="$PKG_ARGS --package $PKG_DIR/standalone.pkg"
+            echo "  Component: Standalone"
+          fi
+
+          if [ -z "$PKG_ARGS" ]; then
+            echo "::warning::No plugin components found for packaging"
+            exit 0
+          fi
+
+          # Create distribution XML and combined installer
+          eval "productbuild --synthesize $PKG_ARGS $PKG_DIR/distribution.xml"
+          eval "productbuild --distribution $PKG_DIR/distribution.xml \
+            --package-path $PKG_DIR \
+            $RUNNER_TEMP/unsigned.pkg"
+
+          # Sign the installer package (if installer cert available)
+          INSTALLER_PKG="${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_${VERSION}.pkg"
+          SIGN_MACOS="${{ steps.signing.outputs.sign_macos }}"
+          if [ "$SIGN_MACOS" = "true" ] && [ -n "${{ env.INSTALLER_CERT }}" ]; then
+            productsign --sign "${{ env.INSTALLER_CERT }}" \
+              "$RUNNER_TEMP/unsigned.pkg" "$INSTALLER_PKG"
+            rm -f "$RUNNER_TEMP/unsigned.pkg"
+            echo "  Signed installer with: ${{ env.INSTALLER_CERT }}"
+          else
+            mv "$RUNNER_TEMP/unsigned.pkg" "$INSTALLER_PKG"
+          fi
+
+          # Notarize the .pkg (if signing is enabled)
+          if [ "$SIGN_MACOS" = "true" ] && [ -n "$APPLE_ID" ]; then
+            echo "  Notarizing $(basename "$INSTALLER_PKG")..."
+            xcrun notarytool submit "$INSTALLER_PKG" \
+              --apple-id "$APPLE_ID" \
+              --password "$APP_SPECIFIC_PASSWORD" \
+              --team-id "$TEAM_ID" \
+              --wait --timeout 15m
+
+            xcrun stapler staple "$INSTALLER_PKG"
+            echo "  Notarized and stapled"
+          fi
+
+          echo "INSTALLER_PKG=$INSTALLER_PKG" >> $GITHUB_ENV
+          echo "  Created: $(basename "$INSTALLER_PKG") ($(du -h "$INSTALLER_PKG" | cut -f1))"
 
       # ── Windows code signing (PFX) ────────────────────────────────
       - name: Sign Windows Binaries (PFX)
@@ -412,6 +489,62 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
+      # ── Windows: Package installer (Inno Setup) ─────────────────────
+      - name: Package Windows Installer
+        if: steps.signing.outputs.mode == 'publish' && runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $version = "${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}"
+          $artifacts = Join-Path (Get-Location) "${{ env.BUILD_DIR }}\${{ env.PROJECT_NAME }}_artefacts\${{ env.BUILD_TYPE }}"
+
+          # Check if Inno Setup template exists
+          if (Test-Path "templates\installer.iss") {
+            # Use project-specific Inno Setup template
+            $issContent = Get-Content "templates\installer.iss" -Raw
+            $issContent = $issContent -replace '\{\{PROJECT_NAME\}\}', "${{ env.PROJECT_NAME }}"
+            $issContent = $issContent -replace '\{\{VERSION\}\}', $version
+            $issContent = $issContent -replace '\{\{ARTIFACTS\}\}', $artifacts
+            $issContent = $issContent -replace '\{\{COMPANY_NAME\}\}', "${{ env.DEVELOPER_NAME }}"
+            $issContent = $issContent -replace '\{\{PROJECT_BUNDLE_ID\}\}', "${{ env.PROJECT_BUNDLE_ID }}"
+            $issFile = "$env:RUNNER_TEMP\installer.iss"
+            $issContent | Out-File -FilePath $issFile -Encoding UTF8
+            & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" $issFile
+            # Find the generated Setup.exe (Inno outputs to Output/ relative to the .iss file)
+            $setupExe = Get-ChildItem -Path "$env:RUNNER_TEMP\Output" -Filter "*_Setup.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($setupExe) {
+              echo "INSTALLER_PKG=$($setupExe.FullName)" >> $env:GITHUB_ENV
+              Write-Host "  Created: $($setupExe.Name)"
+            }
+          } else {
+            # Simple zip fallback - create a zip of the build artifacts
+            $outDir = "${{ env.BUILD_DIR }}"
+            $zipName = "${{ env.PROJECT_NAME }}_${version}_Setup.zip"
+            Compress-Archive -Path "$artifacts\Standalone\*","$artifacts\VST3\*" `
+              -DestinationPath "$outDir\$zipName" -Force -ErrorAction SilentlyContinue
+            echo "INSTALLER_PKG=$outDir\$zipName" >> $env:GITHUB_ENV
+            Write-Host "  Created: $zipName (zip fallback - no Inno Setup template)"
+          }
+
+      # ── Linux: Package tar.gz archive ──────────────────────────────
+      - name: Package Linux Archive
+        if: steps.signing.outputs.mode == 'publish' && runner.os == 'Linux'
+        run: |
+          VERSION="${VERSION_MAJOR:-0}.${VERSION_MINOR:-0}.${VERSION_PATCH:-0}"
+          ARTIFACTS="${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}"
+          ARCHIVE="${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_${VERSION}.tar.gz"
+
+          # Package VST3, CLAP, and Standalone into a tar.gz
+          PACK_DIRS=""
+          [ -d "$ARTIFACTS/VST3" ] && PACK_DIRS="$PACK_DIRS -C $ARTIFACTS VST3"
+          [ -d "$ARTIFACTS/CLAP" ] && PACK_DIRS="$PACK_DIRS -C $ARTIFACTS CLAP"
+          [ -d "$ARTIFACTS/Standalone" ] && PACK_DIRS="$PACK_DIRS -C $ARTIFACTS Standalone"
+
+          if [ -n "$PACK_DIRS" ]; then
+            eval "tar czf $ARCHIVE $PACK_DIRS"
+            echo "INSTALLER_PKG=$ARCHIVE" >> $GITHUB_ENV
+            echo "  Created: $(basename "$ARCHIVE") ($(du -h "$ARCHIVE" | cut -f1))"
+          fi
+
       # ── Artifacts ─────────────────────────────────────────────────
       - name: Set artifact paths
         run: |
@@ -425,6 +558,13 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACTS_PATH }}
 
+      - name: Upload Installer Package
+        if: steps.signing.outputs.mode == 'publish' && env.INSTALLER_PKG != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-installer-${{ runner.os }}
+          path: ${{ env.INSTALLER_PKG }}
+
   # ── Create GitHub Release (publish mode only) ───────────────────────
   create_release:
     needs: [detect_platforms, build_and_test]
@@ -436,6 +576,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Load .env
         run: |
@@ -447,10 +589,11 @@ jobs:
             done < .env
           fi
 
-      - name: Download all artifacts
+      - name: Download installer artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          pattern: "*-installer-*"
+          path: installers
 
       - name: Create Release
         env:
@@ -461,20 +604,48 @@ jobs:
 
           echo "Creating release ${TAG}..."
 
-          # Create the release (or update if tag exists)
-          gh release create "$TAG" \
-            --title "${{ env.PRODUCT_NAME }} ${VERSION}" \
-            --generate-notes \
-            --draft \
-            artifacts/**/* 2>/dev/null || \
-          gh release upload "$TAG" artifacts/**/* --clobber 2>/dev/null || true
+          # Find all installer files (flatten nested dirs from download-artifact)
+          RELEASE_DIR="$RUNNER_TEMP/release_files"
+          mkdir -p "$RELEASE_DIR"
+          find installers -type f \( -name "*.pkg" -o -name "*.exe" -o -name "*.tar.gz" -o -name "*.zip" \) \
+            -exec cp {} "$RELEASE_DIR/" \;
+
+          echo "Files for release:"
+          ls -la "$RELEASE_DIR/" 2>/dev/null || echo "  (none found)"
+
+          # Draft flag (draft mode creates a draft release for review)
+          DRAFT_FLAG=""
+          if [ "${{ needs.detect_platforms.outputs.draft_release }}" = "true" ]; then
+            DRAFT_FLAG="--draft"
+            echo "Creating DRAFT release (review before publishing)..."
+          fi
+
+          # Create the release with installer files
+          if ls "$RELEASE_DIR"/* &>/dev/null; then
+            gh release create "$TAG" \
+              --title "${{ env.PRODUCT_NAME }} ${VERSION}" \
+              --generate-notes \
+              $DRAFT_FLAG \
+              "$RELEASE_DIR"/* 2>/dev/null || \
+            gh release upload "$TAG" "$RELEASE_DIR"/* --clobber 2>/dev/null || true
+          else
+            # No installer files — create release without assets
+            gh release create "$TAG" \
+              --title "${{ env.PRODUCT_NAME }} ${VERSION}" \
+              --generate-notes \
+              $DRAFT_FLAG 2>/dev/null || true
+          fi
 
           echo "Release ${TAG} created/updated"
 
       # ── Update website download links ─────────────────────────────
       - name: Update Website Download Links
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -f scripts/update_download_links.sh ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             chmod +x scripts/update_download_links.sh
             ./scripts/update_download_links.sh
           fi

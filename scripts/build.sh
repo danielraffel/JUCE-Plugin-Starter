@@ -1598,8 +1598,14 @@ enable_github_pages() {
         -f source[branch]="$pages_branch" \
         -f source[path]=/ \
         2>/dev/null; then
+        local pages_url="https://${GITHUB_USER:-owner}.github.io/${GITHUB_REPO}/"
         echo "✅ GitHub Pages enabled (source: ${pages_branch})"
-        echo "   URL: https://${GITHUB_USER:-owner}.github.io/${GITHUB_REPO}/"
+        echo "   URL: ${pages_url}"
+
+        # Set the repo homepage to the Pages URL so it shows in the About section
+        gh api "repos/${repo}" --method PATCH -f homepage="$pages_url" --silent 2>/dev/null && \
+            echo "✅ Set repo homepage to: ${pages_url}" || true
+
         return 0
     else
         echo -e "${YELLOW}⚠️  Could not enable GitHub Pages automatically${NC}"

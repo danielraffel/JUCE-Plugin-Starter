@@ -96,33 +96,65 @@ ${end_marker}"
 }
 
 # ── Update versioned URLs (for subsequent updates) ───────────────────
+# Replaces full GitHub release URLs including repo name (handles repo renames/clones)
 update_versioned_urls() {
     local file="$1"
 
     if [[ -z "$PLATFORM_FILTER" ]] || [[ "$PLATFORM_FILTER" == "macos" ]]; then
         sedi -E \
-            "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/${PROJECT_NAME}_[0-9]+\.[0-9]+\.[0-9]+\.pkg|/releases/download/${TAG}/${PROJECT_NAME}_${VERSION}.pkg|g" \
+            "s|https://github\.com/[^/]+/[^/]+/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/${PROJECT_NAME}_[0-9]+\.[0-9]+\.[0-9]+\.pkg|${RELEASE_BASE}/${PROJECT_NAME}_${VERSION}.pkg|g" \
             "$file"
     fi
 
     if [[ -z "$PLATFORM_FILTER" ]] || [[ "$PLATFORM_FILTER" == "windows" ]]; then
+        # Match both _Setup.exe and _Setup.zip (zip fallback when no Inno Setup template)
+        local win_filename
+        win_filename=$(basename "$WINDOWS_URL")
         sedi -E \
-            "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/${PROJECT_NAME}_[0-9]+\.[0-9]+\.[0-9]+_Setup\.exe|/releases/download/${TAG}/${PROJECT_NAME}_${VERSION}_Setup.exe|g" \
+            "s|https://github\.com/[^/]+/[^/]+/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/${PROJECT_NAME}_[0-9]+\.[0-9]+\.[0-9]+_Setup\.(exe\|zip)|${RELEASE_BASE}/${win_filename}|g" \
             "$file"
     fi
 
     if [[ -z "$PLATFORM_FILTER" ]] || [[ "$PLATFORM_FILTER" == "linux" ]]; then
         sedi -E \
-            "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/${PROJECT_NAME}_[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz|/releases/download/${TAG}/${PROJECT_NAME}_${VERSION}.tar.gz|g" \
+            "s|https://github\.com/[^/]+/[^/]+/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/${PROJECT_NAME}_[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz|${RELEASE_BASE}/${PROJECT_NAME}_${VERSION}.tar.gz|g" \
             "$file"
     fi
 }
 
-# ── Build download URLs ──────────────────────────────────────────────
+# ── Build download URLs (defaults — may be overridden by actual asset names) ──
 RELEASE_BASE="https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/download/${TAG}"
 MACOS_URL="${RELEASE_BASE}/${PROJECT_NAME}_${VERSION}.pkg"
 WINDOWS_URL="${RELEASE_BASE}/${PROJECT_NAME}_${VERSION}_Setup.exe"
 LINUX_URL="${RELEASE_BASE}/${PROJECT_NAME}_${VERSION}.tar.gz"
+
+# ── Check which platforms have actual release assets ─────────────────
+# Only activate download buttons for platforms with real files in the release
+# Also detects actual filenames (e.g., .zip fallback instead of .exe on Windows)
+HAS_MACOS=false
+HAS_WINDOWS=false
+HAS_LINUX=false
+FULL_REPO="${GITHUB_USER}/${GITHUB_REPO}"
+if command -v gh &>/dev/null; then
+    RELEASE_ASSETS=$(gh release view "$TAG" --repo "$FULL_REPO" --json assets --jq '.assets[].name' 2>/dev/null || true)
+    if [[ -n "$RELEASE_ASSETS" ]]; then
+        echo "$RELEASE_ASSETS" | grep -q "\.pkg$" && HAS_MACOS=true
+        # Windows: prefer _Setup.exe, fall back to _Setup.zip
+        WIN_ASSET=$(echo "$RELEASE_ASSETS" | grep -E "_Setup\.(exe|zip)$" | head -1 || true)
+        if [[ -n "$WIN_ASSET" ]]; then
+            HAS_WINDOWS=true
+            WINDOWS_URL="${RELEASE_BASE}/${WIN_ASSET}"
+        fi
+        echo "$RELEASE_ASSETS" | grep -q "\.tar\.gz$" && HAS_LINUX=true
+        echo "  Release assets: macOS=$HAS_MACOS windows=$HAS_WINDOWS linux=$HAS_LINUX"
+    else
+        # No release found or no assets — update all platforms (for local builds)
+        HAS_MACOS=true; HAS_WINDOWS=true; HAS_LINUX=true
+    fi
+else
+    # No gh CLI — update all platforms
+    HAS_MACOS=true; HAS_WINDOWS=true; HAS_LINUX=true
+fi
 
 # ── 1. Update README.md ──────────────────────────────────────────────
 README="$ROOT_DIR/README.md"
@@ -158,15 +190,16 @@ if [[ "$HAS_GHPAGES" == "true" ]]; then
     INDEX="$TMPDIR/index.html"
     if [[ -f "$INDEX" ]]; then
         # First: marker-comment block replacement (handles stub→active AND active→updated)
-        if [[ -z "$PLATFORM_FILTER" ]] || [[ "$PLATFORM_FILTER" == "macos" ]]; then
+        # Only activate buttons for platforms that have actual release assets
+        if [[ "$HAS_MACOS" == "true" ]] && { [[ -z "$PLATFORM_FILTER" ]] || [[ "$PLATFORM_FILTER" == "macos" ]]; }; then
             replace_download_block "$INDEX" "macos" "$MACOS_URL" \
                 "Download for macOS" "Universal Binary (Intel + Apple Silicon)"
         fi
-        if [[ -z "$PLATFORM_FILTER" ]] || [[ "$PLATFORM_FILTER" == "windows" ]]; then
+        if [[ "$HAS_WINDOWS" == "true" ]] && { [[ -z "$PLATFORM_FILTER" ]] || [[ "$PLATFORM_FILTER" == "windows" ]]; }; then
             replace_download_block "$INDEX" "windows" "$WINDOWS_URL" \
                 "Download for Windows" "64-bit"
         fi
-        if [[ -z "$PLATFORM_FILTER" ]] || [[ "$PLATFORM_FILTER" == "linux" ]]; then
+        if [[ "$HAS_LINUX" == "true" ]] && { [[ -z "$PLATFORM_FILTER" ]] || [[ "$PLATFORM_FILTER" == "linux" ]]; }; then
             replace_download_block "$INDEX" "linux" "$LINUX_URL" \
                 "Download for Linux" "x86_64"
         fi
@@ -196,12 +229,39 @@ else
     echo "  Tip: Run /juce-dev:website to create a download page"
 fi
 
-# ── 3. Commit README changes if needed ────────────────────────────────
+# ── 3. Commit and push README changes if needed ──────────────────────
 cd "$ROOT_DIR"
 if ! git diff --quiet README.md 2>/dev/null; then
     git add README.md
     git commit -m "Update download links to ${TAG}" --quiet
-    echo -e "${GREEN}  Committed README.md changes${NC}"
+    # Push if we're in CI or if a remote is configured
+    if [[ -n "${CI:-}" ]] || git remote get-url origin &>/dev/null; then
+        git push origin HEAD --quiet 2>/dev/null && \
+            echo -e "${GREEN}  Committed and pushed README.md changes${NC}" || \
+            echo -e "${YELLOW}  Committed README.md changes (push failed — push manually)${NC}"
+    else
+        echo -e "${GREEN}  Committed README.md changes${NC}"
+    fi
+fi
+
+# ── 4. Set repo homepage to GitHub Pages URL (if not already set) ────
+PAGES_URL="https://${GITHUB_USER}.github.io/${GITHUB_REPO}/"
+# Check for custom domain — if the user has one, Pages serves from there instead
+if [[ "$HAS_GHPAGES" == "true" ]]; then
+    CUSTOM_DOMAIN=$(gh api "repos/${GITHUB_USER}/${GITHUB_REPO}/pages" --jq '.cname // empty' 2>/dev/null || true)
+    if [[ -n "$CUSTOM_DOMAIN" ]]; then
+        PAGES_URL="http://www.${CUSTOM_DOMAIN}/${GITHUB_REPO}/"
+    fi
+
+    # Set repo homepage URL if not already set
+    CURRENT_HOMEPAGE=$(gh api "repos/${GITHUB_USER}/${GITHUB_REPO}" --jq '.homepage // empty' 2>/dev/null || true)
+    if [[ -z "$CURRENT_HOMEPAGE" ]]; then
+        gh api "repos/${GITHUB_USER}/${GITHUB_REPO}" --method PATCH -f homepage="$PAGES_URL" --silent 2>/dev/null && \
+            echo -e "${GREEN}  Set repo homepage to: ${PAGES_URL}${NC}" || true
+    fi
+
+    echo ""
+    echo -e "${GREEN}Website updated:${NC} ${PAGES_URL}"
 fi
 
 echo "Done."
