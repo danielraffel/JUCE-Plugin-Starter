@@ -185,6 +185,69 @@ clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
     CLAP_FEATURES audio-effect)
 
 # ==============================================================================
+# Auto-Update Support (Standalone target only)
+# ==============================================================================
+# Enabled via ENABLE_AUTO_UPDATE=true in .env
+# macOS: Sparkle 2.x framework (downloaded by scripts/setup_sparkle.sh)
+# Windows: WinSparkle (downloaded by scripts/setup_winsparkle.sh)
+
+if(DEFINED ENV{ENABLE_AUTO_UPDATE} AND "$ENV{ENABLE_AUTO_UPDATE}" STREQUAL "true")
+    if(TARGET ${PROJECT_NAME}_Standalone)
+        target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE ENABLE_AUTO_UPDATE=1)
+
+        # Add AutoUpdater header to all targets (stub when disabled)
+        target_sources(${PROJECT_NAME}_Standalone PRIVATE
+            Source/AutoUpdater.h
+        )
+
+        if(APPLE)
+            set(SPARKLE_FRAMEWORK_PATH "${CMAKE_SOURCE_DIR}/external/Sparkle.framework")
+            if(EXISTS "${SPARKLE_FRAMEWORK_PATH}")
+                target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE ENABLE_SPARKLE=1)
+
+                # Add macOS Sparkle implementation
+                target_sources(${PROJECT_NAME}_Standalone PRIVATE
+                    Source/AutoUpdater_Mac.mm
+                )
+
+                target_include_directories(${PROJECT_NAME}_Standalone PRIVATE
+                    "${CMAKE_SOURCE_DIR}/external"
+                )
+
+                target_link_libraries(${PROJECT_NAME}_Standalone PRIVATE
+                    "${SPARKLE_FRAMEWORK_PATH}"
+                )
+
+                # Embed Sparkle.framework in the Standalone app bundle
+                add_custom_command(TARGET ${PROJECT_NAME}_Standalone POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E make_directory
+                        "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_Standalone>/Contents/Frameworks"
+                    COMMAND ditto
+                        "${SPARKLE_FRAMEWORK_PATH}"
+                        "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_Standalone>/Contents/Frameworks/Sparkle.framework"
+                    COMMAND ${CMAKE_COMMAND} -E remove_directory
+                        "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_Standalone>/Contents/Frameworks/Sparkle.framework/Headers"
+                    COMMENT "Embedding Sparkle.framework in ${PROJECT_NAME} Standalone"
+                    VERBATIM
+                )
+
+                # Run post_build.sh on Standalone to set Sparkle Info.plist entries
+                add_custom_command(TARGET ${PROJECT_NAME}_Standalone POST_BUILD
+                    COMMAND "${CMAKE_SOURCE_DIR}/scripts/post_build.sh"
+                        "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}_Standalone>"
+                    COMMENT "Updating Info.plist (version + Sparkle) for ${PROJECT_NAME}_Standalone"
+                    VERBATIM
+                )
+            else()
+                message(WARNING "ENABLE_AUTO_UPDATE is true but Sparkle.framework not found at ${SPARKLE_FRAMEWORK_PATH}. Run scripts/setup_sparkle.sh first.")
+            endif()
+        elseif(WIN32)
+            # WinSparkle support added in Phase A2
+        endif()
+    endif()
+endif()
+
+# ==============================================================================
 # Standard macOS Paths (no permission prompts)
 # ==============================================================================
 # This plugin uses Apple-recommended Application Support paths:
