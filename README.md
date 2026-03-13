@@ -118,7 +118,7 @@ cd JUCE-Plugin-Starter
   - [How to Use](#how-to-use)
   - [Why Use Prompts?](#why-use-prompts)
   - [Contributing Prompts](#contributing-prompts)
-- [🔄 Auto-Updates *(Planned)*](#-auto-updates-planned)
+- [🔄 Auto-Updates](#-auto-updates)
 - [📚 Resources](#-resources)
 
 ---
@@ -1192,22 +1192,22 @@ As you build features with AI assistance, consider contributing successful promp
 
 ---
 
-## 🔄 Auto-Updates *(Planned)*
+## 🔄 Auto-Updates
 
-In-app auto-update support via [Sparkle](https://sparkle-project.org/) (macOS) and [WinSparkle](https://winsparkle.org/) (Windows) is planned. The `.env.example` already has placeholder Sparkle variables but there is no integration yet.
+In-app auto-update support via [Sparkle 2.x](https://sparkle-project.org/) (macOS) and [WinSparkle](https://winsparkle.org/) (Windows).
 
-**Planned architecture:**
-- **Updater UI** lives in the Standalone app only ("Check for Updates..." on macOS app menu, Settings panel on Windows)
+- **Updater UI** lives in the Standalone app only ("Check for Updates..." in the app menu)
 - **Update payload** is a full product installer (PKG on macOS, Inno Setup on Windows) that replaces all plugin formats (AU, VST3, CLAP, Standalone)
 - **EdDSA signing** ensures installer integrity on both platforms
 - **Appcast XML** feed hosted in the project repo (public mode) or a private repo (commercial mode)
 
-**Implementation phases:**
-1. **Phase A1**: Public macOS updates (PKG-based, Sparkle 2.x)
-2. **Phase A2**: Public Windows updates (Inno Setup, WinSparkle)
-3. **Phase B**: Private distribution for commercial plugins (requires validation)
+**Setup:** Use the [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin:
+```
+/juce-dev:setup-updates          # Add auto-update support
+/juce-dev:setup-updates --doctor # Validate existing setup
+```
 
-When implemented, the [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin will provide `/juce-dev:setup-updates` to configure auto-updates for your project.
+**Future:** Private distribution for commercial plugins (Phase B, requires validation).
 
 ---
 

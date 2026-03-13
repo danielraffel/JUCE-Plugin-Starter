@@ -44,6 +44,26 @@
 - Appcast file lives in repo root as appcast-macos.xml, committed and pushed as final publish step
 - generate_release_notes.py --format sparkle already produces HTML suitable for appcast <description>
 
+## Phase A2 — Windows / WinSparkle
+- WinSparkle 0.9.2 ZIP from vslavik/winsparkle (NOT nicehash fork — that repo doesn't exist)
+- ZIP has nested structure: x64/Release/, ARM64/Release/, Release/ (x86)
+- PlunderTube bundled WinSparkle already flattened to x64/ — setup_winsparkle.sh must flatten during extraction
+- ZIP also includes bin/ dir with winsparkle-tool.exe (key gen + signing + verification)
+- WinSparkle init sequence: set_app_details → set_build_version → set_appcast_url → set_eddsa_public_key → callbacks → init()
+- IMPORTANT: win_sparkle_set_dsa_pub_pem() is DEPRECATED — use win_sparkle_set_eddsa_public_key() instead
+- WinSparkle has no Info.plist — feed URL and EdDSA key must be compiled in via CMake definitions
+- CMake passes AUTO_UPDATE_FEED_URL and AUTO_UPDATE_EDDSA_KEY as compile definitions on Windows
+- WinSparkle callbacks are called from background threads — need thread-safe state (std::atomic, std::mutex)
+- onCanShutdown returns 1 to allow shutdown; onShutdownRequest calls systemRequestedQuit() for graceful exit
+- WinSparkle.dll must be copied next to the standalone .exe (CMake post-build handles this)
+- Inno Setup picks up WinSparkle.dll from artifacts/Standalone/ with skipifsourcedoesntexist flag
+- Inno Setup handles elevation automatically for {commoncf} (Common Files) paths
+- Inno Setup CloseApplications=yes handles locked plugin files in DAW
+- Windows appcast uses sparkle:os="windows" attribute in enclosure
+- EdDSA signing on Windows: winsparkle-tool.exe sign -f KEYFILE FILENAME
+- EdDSA key gen on Windows: winsparkle-tool.exe generate-key -f KEYFILE
+- Key file is a local file (unlike macOS Keychain); must be passed via EDDSA_KEY_FILE env var or stored in project root
+
 ## A1.11 — Shutdown Callbacks
 - Sparkle handles quit-and-relaunch for PKG installs internally
 - SPUUpdaterDelegate updater:willInstallUpdate: callback fires before install begins
