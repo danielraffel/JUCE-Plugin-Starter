@@ -34,3 +34,18 @@
 - Environment vars must be exported when invoking cmake --build for post_build.sh to see them
 - The shared JUCE cache (~/.juce_cache) can have stale generator state from Xcode builds —
   delete it if switching between Xcode and Ninja generators
+
+## A1.8–A1.10 — EdDSA Signing & Appcast Generation
+- sign_update tool is at external/bin/sign_update (downloaded by setup_sparkle.sh)
+- sign_update reads EdDSA private key from macOS Keychain; for CI use EDDSA_PRIVATE_KEY env var
+- sign_update output format: sparkle:edSignature="<sig>" length="<len>"
+- Appcast XML must be generated from template — Sparkle's generate_appcast tool does NOT support PKG-based updates
+- Publish pipeline order: build → sign → notarize → PKG → EdDSA-sign → GitHub Release → appcast LAST
+- Appcast file lives in repo root as appcast-macos.xml, committed and pushed as final publish step
+- generate_release_notes.py --format sparkle already produces HTML suitable for appcast <description>
+
+## A1.11 — Shutdown Callbacks
+- Sparkle handles quit-and-relaunch for PKG installs internally
+- SPUUpdaterDelegate updater:willInstallUpdate: callback fires before install begins
+- Normal JUCE shutdown path handles audio cleanup — no special handling needed
+- WinSparkle (Phase A2) will need explicit win_sparkle_set_shutdown_request_callback

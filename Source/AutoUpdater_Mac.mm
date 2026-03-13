@@ -65,6 +65,16 @@
           error.localizedDescription, error.domain, (long)error.code);
 }
 
+// About to install update — perform cleanup before quit
+- (void)updater:(SPUUpdater *)updater willInstallUpdate:(SUAppcastItem *)item
+{
+    self.currentState = AutoUpdater::State::ReadyToInstall;
+    NSLog(@"AutoUpdater: Will install update %@", item.displayVersionString ?: item.versionString);
+    // Sparkle handles quit-and-relaunch for PKG installs.
+    // Any additional cleanup (saving state, releasing audio) happens
+    // via the normal JUCE shutdown path when the app quits.
+}
+
 // Update cycle complete
 - (void)updater:(SPUUpdater *)updater
     didFinishUpdateCycleForUpdateCheck:(SPUUpdateCheck)updateCheck
