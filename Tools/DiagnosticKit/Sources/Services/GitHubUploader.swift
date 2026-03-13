@@ -25,7 +25,7 @@ class GitHubUploader {
         }
 
         // Create issue title
-        let title = "Diagnostic Report - \(Date().formatted(date: .abbreviated, time: .shortened))"
+        let title = "[Mac] Diagnostic Report - \(Date().formatted(date: .abbreviated, time: .shortened))"
 
         // Create issue body
         let body = formatIssueBody(data)
@@ -78,7 +78,7 @@ class GitHubUploader {
         let payload: [String: Any] = [
             "title": title,
             "body": body,
-            "labels": ["diagnostic-report", "automated"]
+            "labels": ["diagnostic-report", "automated", "macos"]
         ]
 
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)

@@ -2,7 +2,12 @@
 
 ## ℹ️ Overview
 
-This is a JUCE plugin starter template using CMake and environment-based configuration for folks new to audio plugin development on macOS. It allows you to create standalone apps and audio plugins (AU/VST3) for macOS using Xcode. It’s designed for quick setup, ease of customization, and modern JUCE development workflows.
+This is a cross-platform JUCE plugin starter template using CMake and environment-based configuration for folks new to audio plugin development. It allows you to create standalone apps and audio plugins for macOS, Windows, and Linux. It’s designed for quick setup, ease of customization, and modern JUCE development workflows.
+
+**Supported platforms:**
+- **macOS**: AU, AUv3, VST3, CLAP, Standalone (Xcode or Ninja)
+- **Windows**: VST3, CLAP, Standalone (MSVC + Ninja)
+- **Linux**: VST3, CLAP, Standalone (Clang + Ninja)
 
 ---
 
@@ -91,6 +96,8 @@ cd JUCE-Plugin-Starter
     - [✅ Set Minimum macOS Deployment Target](#-set-minimum-macos-deployment-target)
 - [📦 Project File Structure](#-project-file-structure)
   - [About the JUCE cache location](#about-the-juce-cache-location)
+- [🧪 Unit Testing with Catch2](#-unit-testing-with-catch2)
+- [🎨 Code Style](#-code-style)
 - [💡 Tips](#-tips)
   - [🔁 Building with AI Tools](#-building-with-ai-tools)
     - [Using with Cursor](#using-with-cursor)
@@ -111,6 +118,8 @@ cd JUCE-Plugin-Starter
   - [How to Use](#how-to-use)
   - [Why Use Prompts?](#why-use-prompts)
   - [Contributing Prompts](#contributing-prompts)
+- [🔄 Auto-Updates *(Planned)*](#-auto-updates-planned)
+- [❓ CI/CD FAQ](#-cicd-faq)
 - [📚 Resources](#-resources)
 
 ---
@@ -120,9 +129,21 @@ cd JUCE-Plugin-Starter
 To build and develop plugins with this template, you’ll need:
 
 ### System Requirements
+
+**macOS:**
 - macOS 15.0 or later
 - [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12) (latest version)
 - Recommended: Additional IDE with Support for 3rd Party AI Models ([Alex Sidebar](http://alexcodes.app), [Cursor](http://cursor.com), [Windsurf](http://windsurf.com), [Trae](http://trae.ai), or [VSCode](https://code.visualstudio.com))
+
+**Windows:**
+- Windows 10/11
+- [Visual Studio 2022](https://visualstudio.microsoft.com/) (Community or Build Tools) with C++ workload
+- CMake and Ninja (installable via winget)
+
+**Linux (Ubuntu/Debian):**
+- Ubuntu 22.04+ or Debian-based distribution
+- Clang (or GCC), CMake, Ninja
+- JUCE dependencies: `libasound2-dev libx11-dev libxinerama-dev libxext-dev libxrandr-dev libxcursor-dev libfreetype6-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev libcurl4-openssl-dev pkg-config`
 
 ---
 
@@ -145,18 +166,13 @@ Use the included [`dependencies.sh`](./scripts/dependencies.sh) script. It **che
 bash <(curl -fsSL https://raw.githubusercontent.com/danielraffel/JUCE-Plugin-Starter/main/scripts/dependencies.sh)
 ```
 
-The script handles:
+The script auto-detects your platform and handles:
 
-* ✅ **Xcode Command Line Tools**
-* ✅ **Homebrew**
-* ✅ **CMake**
-* ✅ **PluginVal**
+**macOS:** Xcode CLI Tools, Homebrew, CMake, Ninja, PluginVal
 
-It also includes **optional installs**, commented out by default:
+**Windows:** Git, CMake, Ninja, Visual Studio Build Tools (via winget)
 
-* **Faust** – DSP prototyping compiler
-* **GoogleTest** – C++ unit testing
-* **Python 3**, **pip3**, and **behave** – for behavior-driven development (BDD)
+**Linux:** CMake, Ninja, Clang, Git, pkg-config, and all JUCE library dependencies (via apt)
 
 > ✏️ When you run `dependencies.sh` software like Homebrew may ask you to do additonal configurations to complete your setup:
 ```
@@ -180,9 +196,9 @@ If you prefer, you can install all required tools manually:
 | **Homebrew**                              | macOS package manager            | `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"` |
 | **PluginVal**                             | Plugin validation & testing      | `brew install --cask pluginval`                                                                   |
 | **Faust** *(optional)*                    | DSP prototyping compiler         | `brew install faust`                                                                              |
-| **GoogleTest** or **Catch2** *(optional)* | C++ unit testing                 | `brew install googletest` or `brew install catch2`                                                |
+| **Catch2** *(built-in)*                   | C++ unit testing (included via FetchContent) | No install needed — fetched automatically by CMake                                                |
 | **Python 3 + behave** *(optional)*        | Natural language test automation | `brew install python && pip3 install behave`                                                      |
-| **[JUCE](https://juce.com)**              | Audio plugin framework (AU/VST3) | `git clone https://github.com/juce-framework/JUCE.git`                                                          |
+| **[JUCE](https://juce.com)**              | Audio plugin framework (AU/AUv3/VST3/CLAP) | No install needed — fetched automatically by CMake                                                          |
 
 ---
 
@@ -291,24 +307,37 @@ Want to pre-configure your developer settings?
 
 ## 🧱 Build Targets
 
-Once the project is open in Xcode, you can build:
-
+**macOS** (via Xcode or command line):
 * ✅ **Standalone App**
-* ✅ **AudioUnit Plugin (AU)** – for Logic Pro, GarageBand
+* ✅ **Audio Unit v2 (AU)** – for Logic Pro, GarageBand
+* ✅ **Audio Unit v3 (AUv3)** – app extension format, also works on iOS
 * ✅ **VST3 Plugin** – for Reaper, Ableton Live, etc.
+* ✅ **CLAP Plugin** – for Bitwig, Reaper, and other CLAP-compatible DAWs
 
-> Switch targets using the Xcode scheme selector.
-> 
+**Windows** (via PowerShell + MSVC):
+* ✅ **Standalone App (.exe)**
+* ✅ **VST3 Plugin** – installs to `C:\Program Files\Common Files\VST3\`
+* ✅ **CLAP Plugin**
+
+**Linux** (via Clang + Ninja):
+* ✅ **Standalone App** – binary executable
+* ✅ **VST3 Plugin** – installs to `~/.vst3/`
+* ✅ **CLAP Plugin** – installs to `~/.clap/`
+
+> On macOS, switch targets using the Xcode scheme selector.
+>
 <img width="352" alt="image" src="https://github.com/user-attachments/assets/4c3c3ac7-0613-46dc-a6b0-286743b858be" />
 
-> Make sure the `FORMATS AU VST3 Standalone` line is present in `CMakeLists.txt`.
+> On macOS, the `FORMATS AU AUv3 VST3 Standalone` line is in `CMakeLists.txt`. On Windows and Linux, only `VST3 Standalone` are used (AU/AUv3 are macOS-only). CLAP is added separately via `clap-juce-extensions`.
 
 ---
 ## Where Files Are Generated (Plugins + App)
 
 ### Where Plugin Files Are Installed
 
-When you build your plugin from Xcode, the following file types are generated and installed in the standard macOS plugin locations:
+When you build your plugin, files are installed to platform-standard locations:
+
+**macOS:**
 - Audio Unit (AU) Component:
 ```
 ~/Library/Audio/Plug-Ins/Components/YourPlugin.component
@@ -317,12 +346,30 @@ When you build your plugin from Xcode, the following file types are generated an
 ```
 ~/Library/Audio/Plug-Ins/VST3/YourPlugin.vst3
 ```
+- CLAP Plugin:
+```
+~/Library/Audio/Plug-Ins/CLAP/YourPlugin.clap
+```
+- AUv3 App Extension:
+```
+Found inside your build folder in PROJECT_NAME_artefacts/AUv3/YourPlugin.appex
+```
 - Standalone App:
 ```
 Found inside your build folder in your `PROJECT_NAME_artefacts` debug or release folder.
 ```
 
-These paths are standard for macOS plugin development and are used by DAWs like Logic Pro, Ableton Live, Reaper, etc.
+**Linux:**
+- VST3: `~/.vst3/YourPlugin.vst3`
+- CLAP: `~/.clap/YourPlugin.clap`
+- Standalone: `build/PROJECT_NAME_artefacts/Release/Standalone/YourPlugin`
+
+**Windows:**
+- VST3: `C:\Program Files\Common Files\VST3\YourPlugin.vst3`
+- CLAP: `build\PROJECT_NAME_artefacts\Release\CLAP\YourPlugin.clap`
+- Standalone: `build\PROJECT_NAME_artefacts\Release\Standalone\YourPlugin.exe`
+
+These paths are standard for plugin development and are used by DAWs like Logic Pro, Ableton Live, Reaper, Bitwig, etc.
 
 ---
 
@@ -436,10 +483,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 #### ✅ Change Output Formats
 
 ```cmake
-FORMATS AU VST3 Standalone
+FORMATS AU AUv3 VST3 Standalone
 ```
 
-To skip AU, just remove it:
+> **Note:** CLAP format is added separately via `clap-juce-extensions` (already configured in CMakeLists.txt).
+
+To skip a format, just remove it:
 
 ```cmake
 FORMATS VST3 Standalone
@@ -485,20 +534,30 @@ JUCE-Plugin-Starter/
 ├── scripts/                       ← Automation / helper scripts
 │   ├── about/                     ← Documentation
 │   │   └── build_system.md        ← Comprehensive build system documentation
-│   ├── build.sh                   ← Unified build system (local, test, sign, notarize, publish)
+│   ├── build.sh                   ← macOS build system (local, test, sign, notarize, publish)
+│   ├── build.ps1                  ← Windows build system (local, test, publish via Inno Setup)
 │   ├── bump_version.py            ← Semantic version management
-│   ├── dependencies.sh            ← Automated dependency setup
+│   ├── dependencies.sh            ← Cross-platform dependency setup (macOS/Windows/Linux)
 │   ├── diagnose_plugin.sh         ← Plugin diagnostic tool
 │   ├── generate_and_open_xcode.sh ← Script that loads `.env`, runs CMake, and opens Xcode
 │   ├── generate_release_notes.py  ← AI-powered release notes generator
 │   ├── init_plugin_project.sh     ← Script that reinitializes this repo to make it yours
 │   ├── post_build.sh              ← Enhanced version handling with semantic versioning
 │   └── validate_plugin.sh         ← Plugin validation tool
+├── .clang-format                  ← JUCE-style code formatting rules
 ├── Source/                        ← Your plugin source code
 │   ├── PluginProcessor.cpp/.h
 │   └── PluginEditor.cpp/.h
+├── tests/                         ← Catch2 unit tests
+│   ├── Catch2Main.cpp             ← Custom main with JUCE init
+│   ├── PluginBasics.cpp           ← Example plugin tests
+│   └── helpers/test_helpers.h     ← Test utilities
+├── templates/
+│   └── installer.iss              ← Windows Inno Setup installer template
+├── .github/
+│   └── workflows/build.yml       ← CI/CD: macOS + Linux + Windows matrix build
 └── build/                         ← Generated by CMake (can be deleted anytime)
-    └── YourPlugin.xcodeproj       ← Generated Xcode project
+    └── YourPlugin.xcodeproj       ← Generated Xcode project (macOS)
 
 ~/.juce_cache/                     ← Shared JUCE location (outside project)
 └── juce-src/                      ← JUCE framework (shared across all projects)
@@ -517,17 +576,23 @@ JUCE-Plugin-Starter/
 
 ## 🔨 Enhanced Build System
 
-This template now includes a unified build system (`scripts/build.sh`) that provides comprehensive functionality:
+This template includes platform-specific build scripts:
+- **macOS**: `scripts/build.sh` — full-featured (build, test, sign, notarize, publish)
+- **Linux**: `scripts/build.sh` — build, test, and package as tar.gz (auto-detects platform)
+- **Windows**: `scripts/build.ps1` — build, test, and package with Inno Setup
 
 ### Quick Build Commands
 
+**macOS:**
 ```bash
 # Quick local build (all formats)
 ./scripts/build.sh
 
 # Build specific format
-./scripts/build.sh au          # Audio Unit only
+./scripts/build.sh au          # Audio Unit v2 only
+./scripts/build.sh auv3        # Audio Unit v3 only
 ./scripts/build.sh vst3        # VST3 only
+./scripts/build.sh clap        # CLAP only
 ./scripts/build.sh standalone  # Standalone app only
 
 # Build multiple formats in one command
@@ -535,8 +600,8 @@ This template now includes a unified build system (`scripts/build.sh`) that prov
 ./scripts/build.sh au standalone        # Build AU and Standalone
 ./scripts/build.sh au vst3 test         # Build AU and VST3, then test both
 
-# Build with testing
-./scripts/build.sh all test    # Build and run PluginVal tests
+# Build with testing (Catch2 unit tests + PluginVal validation)
+./scripts/build.sh all test    # Build and run all tests
 
 # Fast development workflow
 ./scripts/build.sh uninstall            # Uninstall all plugin components
@@ -549,6 +614,29 @@ This template now includes a unified build system (`scripts/build.sh`) that prov
 ./scripts/build.sh all pkg      # Build, sign, notarize PKG (no GitHub release)
 ./scripts/build.sh all publish  # Full release with installer and GitHub publishing
 ```
+
+**Linux:**
+```bash
+./scripts/build.sh                     # Build all formats (VST3, CLAP, Standalone)
+./scripts/build.sh vst3               # Build VST3 only
+./scripts/build.sh standalone         # Build Standalone only
+./scripts/build.sh all test           # Build and run Catch2 + PluginVal tests
+./scripts/build.sh all unsigned       # Create tar.gz package
+```
+
+> **Note:** On Linux, `build.sh` auto-detects the platform and uses Ninja instead of Xcode. AU/AUv3 formats are skipped automatically. Code signing and notarization are macOS-only.
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\build.ps1                    # Build all formats (VST3, CLAP, Standalone)
+.\scripts\build.ps1 vst3              # Build VST3 only
+.\scripts\build.ps1 standalone        # Build Standalone only
+.\scripts\build.ps1 all test          # Build and run Catch2 + PluginVal tests
+.\scripts\build.ps1 all publish       # Build and create Inno Setup installer
+.\scripts\build.ps1 all unsigned      # Unsigned installer (fast testing)
+```
+
+> **Note:** On Windows, you must load the Visual Studio developer environment before building. See [Windows Prerequisites](#system-requirements).
 
 ### New Build Actions
 
@@ -596,9 +684,200 @@ python3 scripts/bump_version.py major  # 0.1.0 → 1.0.0
 - **Diagnostic Tool**: `./scripts/diagnose_plugin.sh` - Troubleshoot plugin issues
 - **AI Release Notes**: `./scripts/generate_release_notes.py` - Generate release notes from git history
 
+### CI/CD with GitHub Actions
+
+The template includes a GitHub Actions workflow (`.github/workflows/build.yml`) that automatically builds and tests your plugin across platforms.
+
+**What it does:**
+- Builds on **macOS** (arm64 + x86_64 universal binary), **Windows** (MSVC + Ninja), and **Linux** (Ubuntu 22.04, Clang + Ninja)
+- Uses **sccache** for build caching
+- Runs **Catch2** unit tests via CTest
+- Validates **VST3** with PluginVal
+- Uploads build artifacts you can download from the Actions tab
+
+**When it runs:**
+- Automatically on pushes to `main`, `feature/**`, and `integrate/**` branches
+- Automatically on pull requests
+- Manually via **workflow_dispatch** (Actions tab > "Run workflow" button)
+
+**Smart platform detection:**
+
+The CI workflow only builds the platforms your project actually supports. It checks three things in order:
+
+1. **Manual override** — When triggered via "Run workflow", you can type which platforms to build (e.g., `macos,windows`)
+2. **`CI_PLATFORMS` in `.env`** — Set this to control which platforms CI builds by default (e.g., `CI_PLATFORMS="macos,windows"`)
+3. **Auto-detect** — If neither is set, CI looks at your project files:
+   - **macOS**: Always included (all JUCE-Plugin-Starter projects support macOS)
+   - **Windows**: Detected if `scripts/build.ps1` exists or `CMakeLists.txt` has `if(MSVC)` / `if(WIN32)` blocks
+   - **Linux**: Detected if `CMakeLists.txt` has `UNIX AND NOT APPLE` blocks
+
+**Configuring platforms:**
+
+Add this to your `.env` file:
+```bash
+# Only build macOS (default for new projects)
+CI_PLATFORMS="macos"
+
+# Build macOS and Windows
+CI_PLATFORMS="macos,windows"
+
+# Build all three platforms
+CI_PLATFORMS="macos,windows,linux"
+```
+
+If you're using the [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin, you can also run `/juce-dev:ci` to interactively view and change your platform configuration, trigger builds, and check results — all without leaving your terminal.
+
+**Triggering CI manually:**
+
+From the GitHub Actions tab:
+1. Go to **Actions** > **Build & Test**
+2. Click **"Run workflow"**
+3. Optionally type platforms (e.g., `macos,windows`) or leave blank for auto-detect
+4. Click **"Run workflow"**
+
+From the command line (requires [GitHub CLI](https://cli.github.com/)):
+```bash
+# Trigger with auto-detected platforms
+gh workflow run build.yml
+
+# Trigger for specific platforms
+gh workflow run build.yml -f platforms="macos,windows"
+
+# Check status
+gh run list --workflow=build.yml --limit=5
+
+# View logs from latest run
+gh run view --log
+```
+
+### How CI Works Under the Hood
+
+The workflow (`.github/workflows/build.yml`) runs in two stages:
+
+**Stage 1: Platform Detection** (`detect_platforms` job)
+
+A lightweight Ubuntu runner checks which platforms to build. It looks at three sources in priority order:
+
+1. **`platforms` input** — If you triggered manually and typed `macos,windows`, it uses that
+2. **`CI_PLATFORMS` from `.env`** — Reads your configured preference
+3. **Auto-detect** — Scans project files:
+   - Checks for `scripts/build.ps1` → Windows
+   - Greps `CMakeLists.txt` for `UNIX AND NOT APPLE` → Linux
+   - macOS is always included
+
+It outputs a JSON matrix that GitHub Actions uses to spawn the right set of build VMs.
+
+**Stage 2: Build & Test** (`build_and_test` job, runs per platform)
+
+Each platform VM runs through these steps:
+
+| Step | macOS | Windows | Linux | What it does |
+|------|-------|---------|-------|-------------|
+| **Setup compiler** | (built-in) | MSVC via `ilammy/msvc-dev-cmd` | Clang via `egor-tensin/setup-clang` | Ensures the right C++ compiler is available |
+| **Install deps** | `brew install ninja` | `choco install ninja` | `apt-get install` JUCE deps + Ninja + Xvfb | Platform-specific build tools and libraries |
+| **Checkout** | `actions/checkout@v4` | same | same | Clones your repo |
+| **sccache** | `mozilla-actions/sccache-action` | same | same | Shared compilation cache (speeds up rebuilds) |
+| **Load .env** | Parses `.env` into env vars | same | same | Makes `PROJECT_NAME`, `BUNDLE_ID`, etc. available |
+| **Configure** | `cmake -B build -G Ninja` | same + MSVC toolchain | same + Clang | Generates build files from `CMakeLists.txt` |
+| **Build** | `cmake --build build --parallel 4` | same | same | Compiles everything (4 parallel jobs) |
+| **Catch2 Tests** | `ctest --verbose` | same | same | Runs your unit tests |
+| **PluginVal** | Downloads + validates VST3 | same (may crash on headless VMs) | same | Industry-standard plugin validation |
+| **Upload** | `actions/upload-artifact` | same | same | Makes build output downloadable |
+
+**What gets built per platform:**
+
+| Format | macOS | Windows | Linux |
+|--------|-------|---------|-------|
+| Standalone | `.app` | `.exe` | binary |
+| AU | `.component` | — | — |
+| AUv3 | `.appex` | — | — |
+| VST3 | `.vst3` | `.vst3` | `.vst3` |
+| CLAP | `.clap` | `.clap` | `.clap` |
+
+**Build VMs used:**
+- **macOS**: `macos-14` (Apple Silicon M1, arm64 + x86_64 universal binary via `-DCMAKE_OSX_ARCHITECTURES`)
+- **Windows**: `windows-latest` (MSVC 2022 + Ninja)
+- **Linux**: `ubuntu-22.04` (Clang + Ninja, Xvfb for headless display)
+
+**Caching:**
+
+[sccache](https://github.com/mozilla/sccache) caches compiled object files across CI runs. First builds take 5-10 minutes per platform; subsequent builds with minor changes are significantly faster since unchanged files are served from cache.
+
 ### Complete Documentation
 
 For comprehensive build system documentation, see [`scripts/about/build_system.md`](scripts/about/build_system.md).
+
+---
+
+## 🧪 Unit Testing with Catch2
+
+This template includes [Catch2 v3](https://github.com/catchorg/Catch2) for unit testing, fetched automatically via CMake's FetchContent.
+
+### Test Structure
+
+```
+tests/
+├── Catch2Main.cpp          # Custom main with JUCE MessageManager initialization
+├── PluginBasics.cpp        # Example plugin tests
+└── helpers/
+    └── test_helpers.h      # Helper for running tests with an active plugin editor
+```
+
+### Running Tests
+
+```bash
+# Run all tests (Catch2 unit tests + PluginVal validation)
+./scripts/build.sh all test
+
+# This will:
+# 1. Build all plugin formats
+# 2. Build the Catch2 Tests target
+# 3. Run Catch2 unit tests
+# 4. Run PluginVal validation on AU and VST3
+```
+
+### Writing Tests
+
+Add new test files to `tests/`. They're automatically discovered via CMake's `GLOB_RECURSE`.
+
+```cpp
+#include <PluginProcessor.h>
+#include <catch2/catch_test_macros.hpp>
+
+TEST_CASE ("My feature works", "[feature]")
+{
+    PluginProcessor plugin;
+    // Test your plugin logic
+    CHECK (plugin.getName().isNotEmpty());
+}
+```
+
+For tests that need the plugin editor, use the helper:
+
+```cpp
+#include "helpers/test_helpers.h"
+
+TEST_CASE ("Editor renders", "[editor]")
+{
+    runWithinPluginEditor ([] (PluginProcessor& plugin) {
+        REQUIRE (plugin.getActiveEditor() != nullptr);
+    });
+}
+```
+
+---
+
+## 🎨 Code Style
+
+This template includes a `.clang-format` file with JUCE-style conventions:
+
+- **Brace style**: Allman (opening brace on new line), except for lambdas
+- **Indent**: 4 spaces, no tabs
+- **Column limit**: None (no line wrapping)
+- **Standard**: C++17
+- **ObjC**: Separate section for Objective-C++ files
+
+Most IDEs (Xcode, VS Code, CLion) will automatically pick up `.clang-format` for code formatting.
 
 ---
 
@@ -955,7 +1234,9 @@ The build system will automatically detect and package the following plugin form
 | Format | Extension    | Path |
 |--------|--------------|------|
 | AU     | `.component` | `~/Library/Audio/Plug-Ins/Components/` |
+| AUv3   | `.appex`     | Bundled in build artefacts |
 | VST3   | `.vst3`      | `~/Library/Audio/Plug-Ins/VST3/` |
+| CLAP   | `.clap`      | `~/Library/Audio/Plug-Ins/CLAP/` |
 | AAX    | `.aaxplugin` | `/Library/Application Support/Avid/Audio/Plug-Ins/` |
 
 - The script signs, notarizes, and staples each format (if found)
@@ -1017,6 +1298,135 @@ These prompts are designed to help you quickly implement common plugin features:
 As you build features with AI assistance, consider contributing successful prompts back to this collection. This helps the community build plugins faster and more consistently.
 
 > 💡 **Note**: These prompts are starting points. Always review AI-generated code for your specific use case and test thoroughly.
+
+---
+
+## 🔄 Auto-Updates *(Planned)*
+
+In-app auto-update support via [Sparkle](https://sparkle-project.org/) (macOS) and [WinSparkle](https://winsparkle.org/) (Windows) is planned. The `.env.example` already has placeholder Sparkle variables but there is no integration yet.
+
+**Planned architecture:**
+- **Updater UI** lives in the Standalone app only ("Check for Updates..." on macOS app menu, Settings panel on Windows)
+- **Update payload** is a full product installer (PKG on macOS, Inno Setup on Windows) that replaces all plugin formats (AU, VST3, CLAP, Standalone)
+- **EdDSA signing** ensures installer integrity on both platforms
+- **Appcast XML** feed hosted in the project repo (public mode) or a private repo (commercial mode)
+
+**Implementation phases:**
+1. **Phase A1**: Public macOS updates (PKG-based, Sparkle 2.x)
+2. **Phase A2**: Public Windows updates (Inno Setup, WinSparkle)
+3. **Phase B**: Private distribution for commercial plugins (requires validation)
+
+When implemented, the [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin will provide `/juce-dev:setup-updates` to configure auto-updates for your project.
+
+---
+
+## ❓ CI/CD FAQ
+
+### Do I need all three platforms?
+
+No. Most projects start as **macOS-only**, and that's perfectly fine. The CI workflow auto-detects what your project supports — if you haven't added Windows or Linux build scripts, those platforms simply won't run. You're never wasting CI minutes on platforms you don't use.
+
+### What if I only develop on macOS?
+
+That's the default. New projects created with `init_plugin_project.sh` start with `CI_PLATFORMS="macos"` in `.env`. CI will only build on macOS. When you're ready to add Windows or Linux support, update the setting and the CI automatically picks it up.
+
+### How do I add Windows support later?
+
+1. Add `scripts/build.ps1` to your project (or use `/juce-dev:port windows` if you have the juce-dev plugin)
+2. Add Windows-specific CMake guards (`if(MSVC)`, `if(WIN32)`) to `CMakeLists.txt`
+3. Update `.env`: `CI_PLATFORMS="macos,windows"`
+4. Push — CI will now build on both platforms
+
+The CI auto-detection also works: if it finds `build.ps1`, Windows builds are automatically included even without setting `CI_PLATFORMS`.
+
+### How do I add Linux support later?
+
+1. Add Linux CMake guards (`if(UNIX AND NOT APPLE)`) to `CMakeLists.txt`
+2. Update `.env`: `CI_PLATFORMS="macos,windows,linux"`
+3. Push — CI will now build on all three platforms
+
+Linux uses Clang by default (for consistency with macOS) and Ninja as the build system.
+
+### Does CI cost money?
+
+GitHub Actions pricing depends on your repository type and plan. Check [GitHub's pricing page](https://github.com/pricing) for current details and limits — the specifics below may change.
+
+At the time of writing, public repositories get free unlimited minutes. Private repositories get a monthly allocation of free minutes depending on your plan. A typical JUCE plugin build takes 5-10 minutes per platform. With smart platform detection (only building platforms you need), you can keep usage low.
+
+> **Note:** GitHub applies multipliers for certain runner types (e.g., macOS minutes may count at a higher rate than Linux). See [GitHub's billing docs](https://docs.github.com/en/billing/managing-billing-for-your-products/managing-billing-for-github-actions/about-billing-for-github-actions) for the latest rates. If cost is a concern, you can limit CI to specific branches or trigger manually instead of on every push.
+
+### Can I run CI locally instead of on GitHub?
+
+Yes — the CI workflow just runs standard CMake commands. You can replicate what CI does on your own machine:
+
+```bash
+# What CI runs (simplified):
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel 4
+cd build && ctest --verbose --output-on-failure
+```
+
+Or use the project's build scripts, which do the same thing with extra conveniences:
+```bash
+./scripts/build.sh all test    # macOS/Linux: build + Catch2 + PluginVal
+.\scripts\build.ps1 all test   # Windows: build + Catch2 + PluginVal
+```
+
+The main value of CI is building on platforms you **don't** have locally. If you develop on macOS, CI lets you verify Windows and Linux builds without needing those machines. But for your local platform, `./scripts/build.sh` is faster and gives the same results.
+
+### Can I trigger CI without pushing?
+
+Yes. Use the **"Run workflow"** button in the GitHub Actions tab (workflow_dispatch), or from the command line:
+```bash
+gh workflow run build.yml -f platforms="macos"
+```
+This is useful for re-running builds without making code changes.
+
+### What are the build artifacts?
+
+After each CI run, you can download the compiled plugin from the **Actions** tab > click a run > **Artifacts** section at the bottom. Each platform uploads its build output (Standalone app, VST3, AU, CLAP — whatever your project builds). These are real compiled binaries you can run and test.
+
+**Current limitations:** The default CI workflow builds unsigned, unpackaged artifacts — they're meant for verifying that your plugin compiles and passes tests on each platform. They are **not** code-signed, notarized, or packaged into installers (no `.pkg`, `.dmg`, or Inno Setup `.exe`). Artifacts also expire after 90 days by default.
+
+For signed, notarized distribution builds, use `./scripts/build.sh all publish` on your local machine (see [How to Distribute Your Plugin](#-how-to-distribute-your-plugin)).
+
+### Can CI create production-ready, signed builds?
+
+Not out of the box, but yes — it's absolutely possible to extend the workflow to produce full release artifacts in the cloud. The approach:
+
+1. **Store credentials as [GitHub Secrets](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions)** — Your Apple Developer certificates (base64-encoded), `APP_SPECIFIC_PASSWORD`, `TEAM_ID`, signing identities, and any other sensitive `.env` values go into your repo's Settings > Secrets and variables > Actions.
+
+2. **Import certificates during CI** — A workflow step decodes the certificate from the secret, imports it into a temporary macOS keychain, and makes it available for code signing. This is a [well-documented pattern](https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development) for macOS CI.
+
+3. **Run the full build pipeline** — Instead of just `cmake --build`, the workflow would call `./scripts/build.sh all publish` (or `notarize`, `pkg`, etc.), which handles signing, notarization, installer creation, and GitHub release publishing.
+
+This is a future enhancement — the current workflow focuses on build verification across platforms. When you're ready for cloud-based releases, the existing `build.sh` and `build.ps1` scripts already support the full pipeline; they just need the right credentials injected via GitHub Secrets.
+
+### Can I use CI with Claude Code?
+
+Yes. The [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin provides `/juce-dev:ci` which can:
+- Show your current platform configuration
+- Change which platforms CI builds (updates `.env` for you)
+- Trigger CI builds
+- Check build status and results
+- View build logs
+
+All without leaving your terminal.
+
+### What's the difference between local builds and CI?
+
+| | Local Build | CI Build (current) | CI Build (future, with Secrets) |
+|---|---|---|---|
+| **Where** | Your machine | GitHub's cloud VMs | GitHub's cloud VMs |
+| **When** | On demand | On push, PR, or manual trigger | On release tag or manual trigger |
+| **Platforms** | Only your current OS | Any/all configured platforms | Any/all configured platforms |
+| **Signed** | Yes (your Keychain) | No | Yes (via GitHub Secrets) |
+| **Notarized** | Yes | No | Yes |
+| **Installers** | PKG, DMG, Inno Setup | No (raw artifacts only) | PKG, DMG, Inno Setup |
+| **Speed** | Faster (no VM startup) | ~5-10 min per platform | ~10-15 min per platform |
+| **Use case** | Development + releases | Cross-platform verification | Fully automated releases |
+
+Use local builds for day-to-day development and current releases. Use CI to verify your plugin compiles on other platforms. In the future, CI with GitHub Secrets can handle the entire release pipeline.
 
 ---
 
