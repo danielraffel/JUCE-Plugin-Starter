@@ -1483,6 +1483,42 @@ This script:
 - `--force` — Re-export from Keychain even if cached `.p12` exists
 - `--repo <name>` — Target a specific GitHub repo
 
+### What if my `.env` is gitignored and CI can't read it?
+
+Use a `.env.ci` file. The CI workflow automatically falls back to `.env.ci` if `.env` doesn't exist. Put only non-secret values in `.env.ci` (it gets committed):
+
+```bash
+# .env.ci — safe to commit (no secrets)
+PROJECT_NAME=MyPlugin
+PROJECT_BUNDLE_ID=com.mycompany.myplugin
+DEVELOPER_NAME="My Company"
+VERSION_MAJOR=1
+VERSION_MINOR=0
+VERSION_PATCH=0
+GITHUB_USER=myusername
+GITHUB_REPO=MyPlugin
+CI_PLATFORMS="macos,windows"
+
+# Cert names (not secrets — just identifies which cert to use)
+APP_CERT="Developer ID Application: My Name (TEAMID)"
+INSTALLER_CERT="Developer ID Installer: My Name (TEAMID)"
+TEAM_ID=MYTEAMID
+```
+
+Sensitive values (APPLE_ID, APP_SPECIFIC_PASSWORD, certificate .p12 files) stay as GitHub Secrets — never in `.env.ci`.
+
+### Can I publish releases to a different repo than my source code?
+
+**For most projects, this isn't needed.** The default single-repo pattern (source code + releases + website in one repo) is simpler and recommended.
+
+However, if you have a specific reason to separate releases from source (e.g., private source code with a public download page), the CI workflow supports configuring a separate release repository. This is an advanced pattern that requires additional setup:
+
+- A separate GitHub repo for releases
+- A PAT (Personal Access Token) with cross-repo access stored as a GitHub Secret
+- Manual appcast configuration if using auto-updates
+
+This pattern is tracked in [issue #9](https://github.com/danielraffel/JUCE-Plugin-Starter/issues/9) and depends on EdDSA signing support ([issue #7](https://github.com/danielraffel/JUCE-Plugin-Starter/issues/7)). Unless you have a specific need, stick with the default single-repo approach.
+
 ---
 
 ## 📚 Resources
