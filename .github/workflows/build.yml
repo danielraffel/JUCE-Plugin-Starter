@@ -92,9 +92,11 @@ jobs:
           # 1. Check workflow_dispatch input
           INPUT_PLATFORMS="${{ github.event.inputs.platforms }}"
 
-          # 2. If no input, try CI_PLATFORMS from .env
-          if [ -z "$INPUT_PLATFORMS" ] && [ -f .env ]; then
-            INPUT_PLATFORMS=$(grep '^CI_PLATFORMS=' .env | sed 's/^CI_PLATFORMS=//' | sed 's/^["'\'']//' | sed 's/["'\'']*$//')
+          # 2. If no input, try CI_PLATFORMS from .env or .env.ci
+          ENV_FILE=".env"
+          [ ! -f "$ENV_FILE" ] && [ -f ".env.ci" ] && ENV_FILE=".env.ci"
+          if [ -z "$INPUT_PLATFORMS" ] && [ -f "$ENV_FILE" ]; then
+            INPUT_PLATFORMS=$(grep '^CI_PLATFORMS=' "$ENV_FILE" | sed 's/^CI_PLATFORMS=//' | sed 's/^["'\'']//' | sed 's/["'\'']*$//')
           fi
 
           # 3. If still empty or "all", auto-detect from project files
@@ -185,12 +187,14 @@ jobs:
 
       - name: Load .env
         run: |
-          if [ -f .env ]; then
+          ENV_FILE=".env"
+          [ ! -f "$ENV_FILE" ] && [ -f ".env.ci" ] && ENV_FILE=".env.ci"
+          if [ -f "$ENV_FILE" ]; then
             while IFS='=' read -r key value; do
               [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
               value=$(echo "$value" | sed 's/^["'\'']//' | sed 's/["'\'']*$//')
               echo "${key}=${value}" >> $GITHUB_ENV
-            done < .env
+            done < "$ENV_FILE"
           fi
 
       # ── Signing status detection ──────────────────────────────────
@@ -581,12 +585,14 @@ jobs:
 
       - name: Load .env
         run: |
-          if [ -f .env ]; then
+          ENV_FILE=".env"
+          [ ! -f "$ENV_FILE" ] && [ -f ".env.ci" ] && ENV_FILE=".env.ci"
+          if [ -f "$ENV_FILE" ]; then
             while IFS='=' read -r key value; do
               [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
               value=$(echo "$value" | sed 's/^["'\'']//' | sed 's/["'\'']*$//')
               echo "${key}=${value}" >> $GITHUB_ENV
-            done < .env
+            done < "$ENV_FILE"
           fi
 
       - name: Download installer artifacts
