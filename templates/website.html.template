@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{PLUGIN_DESCRIPTION}}">
+    <meta name="author" content="{{DEVELOPER_NAME}}">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <link rel="canonical" href="https://{{GITHUB_USER}}.github.io/{{GITHUB_REPO}}/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{PRODUCT_NAME}}">
+    <meta property="og:title" content="{{PRODUCT_NAME}}">
+    <meta property="og:description" content="{{PLUGIN_DESCRIPTION}}">
+    <meta property="og:url" content="https://{{GITHUB_USER}}.github.io/{{GITHUB_REPO}}/">
+    <meta property="og:image" content="https://{{GITHUB_USER}}.github.io/{{GITHUB_REPO}}/web-images/og-image.png">
+    <meta property="og:image:alt" content="{{PRODUCT_NAME}} preview">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{PRODUCT_NAME}}">
+    <meta name="twitter:description" content="{{PLUGIN_DESCRIPTION}}">
+    <meta name="twitter:image" content="https://{{GITHUB_USER}}.github.io/{{GITHUB_REPO}}/web-images/og-image.png">
+
+    <title>{{PRODUCT_NAME}}</title>
+    <style>
+        /* ── Color Scheme ─────────────────────────────────────────── */
+        :root {
+            --bg: #ffffff;
+            --surface: #f5f5f5;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --text: #111827;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --radius: 8px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #121212;
+                --surface: #1e1e1e;
+                --primary: #6366f1;
+                --primary-hover: #4f46e5;
+                --text: #f3f4f6;
+                --text-muted: #9ca3af;
+                --border: #374151;
+            }
+        }
+
+        /* ── Reset & Base ─────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 20px;
+            width: 100%;
+        }
+
+        /* ── Header ───────────────────────────────────────────────── */
+        header {
+            text-align: center;
+            padding: 60px 20px 48px;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+            max-width: 540px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* ── Buttons ──────────────────────────────────────────────── */
+        .downloads {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 14px 28px;
+            min-width: 260px;
+            min-height: 76px;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: background-color 0.15s, border-color 0.15s;
+            cursor: pointer;
+            border: 2px solid transparent;
+            user-select: none;
+        }
+
+        .btn small {
+            font-size: 0.78rem;
+            font-weight: 500;
+            opacity: 0.85;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-soon {
+            background-color: transparent;
+            border: 2px dashed var(--border);
+            color: var(--text-muted);
+            cursor: default;
+        }
+
+        .btn-github {
+            display: inline-flex;
+            flex-direction: row;
+            gap: 8px;
+            padding: 8px 16px;
+            min-width: 0;
+            min-height: 0;
+            font-size: 0.9rem;
+            background-color: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-github:hover {
+            border-color: var(--primary);
+        }
+
+        .btn-github svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* ── Footer ───────────────────────────────────────────────── */
+        footer {
+            text-align: center;
+            padding: 32px 20px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Responsive ───────────────────────────────────────────── */
+        @media (max-width: 540px) {
+            .downloads { flex-direction: column; align-items: center; }
+            .btn { width: 100%; max-width: 320px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="container">
+        <!-- GITHUB-LINK-START -->
+        <div class="header-actions">
+            <a href="https://github.com/{{GITHUB_USER}}/{{GITHUB_REPO}}" class="btn btn-github" target="_blank" rel="noopener noreferrer">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                Source
+            </a>
+        </div>
+        <!-- GITHUB-LINK-END -->
+
+        <h1>{{PRODUCT_NAME}}</h1>
+        <p class="subtitle">{{PLUGIN_DESCRIPTION}}</p>
+
+        <div class="downloads">
+            <!-- DOWNLOAD-MACOS-START -->
+            <a id="download-macos" href="#" class="btn btn-soon" aria-disabled="true">
+                <span>macOS — Coming Soon</span>
+            </a>
+            <!-- DOWNLOAD-MACOS-END -->
+
+            <!-- DOWNLOAD-WINDOWS-START -->
+            <a id="download-windows" href="#" class="btn btn-soon" aria-disabled="true">
+                <span>Windows — Coming Soon</span>
+            </a>
+            <!-- DOWNLOAD-WINDOWS-END -->
+        </div>
+    </header>
+
+    <footer>
+        <div class="container">
+            <p>Built by {{DEVELOPER_NAME}}</p>
+            <p style="margin-top: 6px;">Powered by <a href="https://github.com/danielraffel/JUCE-Plugin-Starter" target="_blank" rel="noopener noreferrer">JUCE Plugin Starter</a></p>
+        </div>
+    </footer>
+
+</body>
+</html>

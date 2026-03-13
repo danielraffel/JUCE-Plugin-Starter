@@ -8,9 +8,31 @@ on:
         required: false
         default: ""
         type: string
+      mode:
+        description: "Build mode"
+        type: choice
+        options:
+          - verify
+          - sign
+          - publish
+        default: verify
+      sign_macos:
+        description: "Sign macOS builds (sign/publish modes)"
+        type: boolean
+        default: true
+      sign_windows:
+        description: "Sign Windows builds (sign/publish modes)"
+        type: boolean
+        default: true
+      create_release:
+        description: "Create GitHub Release (publish mode)"
+        type: boolean
+        default: true
   push:
     branches: [main, "feature/**", "integrate/**"]
   pull_request:
+  release:
+    types: [created]
 
 concurrency:
   group: ${{ github.ref }}
@@ -28,13 +50,28 @@ defaults:
     shell: bash
 
 jobs:
-  # Determine which platforms to build
+  # ── Determine which platforms to build ──────────────────────────────
   detect_platforms:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      mode: ${{ steps.set-mode.outputs.mode }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Determine build mode
+        id: set-mode
+        run: |
+          # Release events always use publish mode
+          if [ "${{ github.event_name }}" = "release" ]; then
+            MODE="publish"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MODE="${{ github.event.inputs.mode }}"
+          else
+            MODE="verify"
+          fi
+          echo "mode=$MODE" >> $GITHUB_OUTPUT
+          echo "Build mode: $MODE"
 
       - name: Detect platforms
         id: set-matrix
@@ -97,6 +134,7 @@ jobs:
           echo "Matrix: $MATRIX"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
+  # ── Build, test, and optionally sign/publish ────────────────────────
   build_and_test:
     needs: detect_platforms
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
@@ -137,7 +175,6 @@ jobs:
       - name: Load .env
         run: |
           if [ -f .env ]; then
-            # Export env vars, skipping comments and empty lines
             while IFS='=' read -r key value; do
               [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
               value=$(echo "$value" | sed 's/^["'\'']//' | sed 's/["'\'']*$//')
@@ -145,6 +182,94 @@ jobs:
             done < .env
           fi
 
+      # ── Signing status detection ──────────────────────────────────
+      - name: Determine signing status
+        id: signing
+        run: |
+          MODE="${{ needs.detect_platforms.outputs.mode }}"
+          echo "mode=$MODE" >> $GITHUB_OUTPUT
+
+          # macOS signing
+          SIGN_MACOS="false"
+          if [ "$MODE" != "verify" ] && \
+             [ -n "${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}" ] && \
+             [ "${{ github.event.inputs.sign_macos }}" != "false" ]; then
+            SIGN_MACOS="true"
+          fi
+          echo "sign_macos=$SIGN_MACOS" >> $GITHUB_OUTPUT
+
+          # Windows signing — supports PFX or Azure Trusted Signing
+          SIGN_WINDOWS="false"
+          if [ "$MODE" != "verify" ] && \
+             [ "${{ github.event.inputs.sign_windows }}" != "false" ]; then
+            if [ -n "${{ secrets.WINDOWS_CERT_PFX }}" ] || \
+               [ -n "${{ secrets.AZURE_CLIENT_ID }}" ]; then
+              SIGN_WINDOWS="true"
+            fi
+          fi
+          echo "sign_windows=$SIGN_WINDOWS" >> $GITHUB_OUTPUT
+
+          # Windows signing method
+          WIN_METHOD="none"
+          if [ "$SIGN_WINDOWS" = "true" ]; then
+            if [ -n "${{ secrets.AZURE_CLIENT_ID }}" ]; then
+              WIN_METHOD="azure"
+            else
+              WIN_METHOD="pfx"
+            fi
+          fi
+          echo "win_method=$WIN_METHOD" >> $GITHUB_OUTPUT
+
+          echo "Mode: $MODE | Sign macOS: $SIGN_MACOS | Sign Windows: $SIGN_WINDOWS ($WIN_METHOD)"
+
+      # ── macOS certificate import ──────────────────────────────────
+      - name: Import Apple Certificates
+        if: steps.signing.outputs.sign_macos == 'true' && runner.os == 'macOS'
+        env:
+          APP_CERT_P12: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
+          APP_CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+          INSTALLER_CERT_P12: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_P12_BASE64 }}
+          INSTALLER_CERT_PASSWORD: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$APP_CERT_P12" | base64 --decode > $RUNNER_TEMP/app_cert.p12
+          security import $RUNNER_TEMP/app_cert.p12 -P "$APP_CERT_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+
+          if [ -n "$INSTALLER_CERT_P12" ]; then
+            echo "$INSTALLER_CERT_P12" | base64 --decode > $RUNNER_TEMP/installer_cert.p12
+            security import $RUNNER_TEMP/installer_cert.p12 -P "$INSTALLER_CERT_PASSWORD" \
+              -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+            rm -f $RUNNER_TEMP/installer_cert.p12
+          fi
+
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          rm -f $RUNNER_TEMP/app_cert.p12
+
+      # ── Windows PFX certificate import ────────────────────────────
+      - name: Import Windows Certificate (PFX)
+        if: steps.signing.outputs.sign_windows == 'true' && steps.signing.outputs.win_method == 'pfx' && runner.os == 'Windows'
+        shell: powershell
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          $pfxBytes = [Convert]::FromBase64String($env:WINDOWS_CERT_PFX)
+          $pfxPath = "$env:RUNNER_TEMP\certificate.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
+          Import-PfxCertificate -FilePath $pfxPath `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -Password (ConvertTo-SecureString -String $env:WINDOWS_CERT_PASSWORD -AsPlainText -Force)
+
+      # ── Build ─────────────────────────────────────────────────────
       - name: Configure
         run: |
           cmake -B ${{ env.BUILD_DIR }} \
@@ -157,6 +282,7 @@ jobs:
         continue-on-error: true
         run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4 -- -k 0
 
+      # ── Test ──────────────────────────────────────────────────────
       - name: Run Catch2 Tests
         working-directory: ${{ env.BUILD_DIR }}
         run: ctest --verbose --output-on-failure || true
@@ -191,6 +317,102 @@ jobs:
             pluginval.exe --strictness-level 5 --verbose --validate "%PLUGIN%"
           )
 
+      # ── macOS code signing ────────────────────────────────────────
+      - name: Sign macOS Binaries
+        if: steps.signing.outputs.sign_macos == 'true' && runner.os == 'macOS'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          echo "Signing macOS binaries..."
+          # Sign each plugin format that exists
+          for PLUGIN_PATH in \
+            "$HOME/Library/Audio/Plug-Ins/Components/${{ env.PROJECT_NAME }}.component" \
+            "$HOME/Library/Audio/Plug-Ins/VST3/${{ env.PROJECT_NAME }}.vst3" \
+            "$HOME/Library/Audio/Plug-Ins/CLAP/${{ env.PROJECT_NAME }}.clap" \
+            "${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.app"; do
+            if [ -e "$PLUGIN_PATH" ]; then
+              codesign --force --deep --sign "${{ env.APP_CERT }}" \
+                --options runtime --timestamp "$PLUGIN_PATH"
+              echo "  Signed: $(basename "$PLUGIN_PATH")"
+            fi
+          done
+
+      - name: Notarize macOS Binaries
+        if: steps.signing.outputs.mode == 'publish' && steps.signing.outputs.sign_macos == 'true' && runner.os == 'macOS'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          echo "Notarizing macOS binaries..."
+          # Create a zip of signed artifacts for notarization
+          NOTARIZE_ZIP="$RUNNER_TEMP/notarize.zip"
+          ditto -c -k --keepParent \
+            "${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" \
+            "$NOTARIZE_ZIP"
+
+          xcrun notarytool submit "$NOTARIZE_ZIP" \
+            --apple-id "$APPLE_ID" \
+            --password "$APP_SPECIFIC_PASSWORD" \
+            --team-id "$TEAM_ID" \
+            --wait --timeout 15m
+
+          # Staple notarization tickets
+          for PLUGIN_PATH in \
+            "$HOME/Library/Audio/Plug-Ins/Components/${{ env.PROJECT_NAME }}.component" \
+            "$HOME/Library/Audio/Plug-Ins/VST3/${{ env.PROJECT_NAME }}.vst3" \
+            "${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.app"; do
+            if [ -e "$PLUGIN_PATH" ]; then
+              xcrun stapler staple "$PLUGIN_PATH" 2>/dev/null || true
+            fi
+          done
+
+      # ── Windows code signing (PFX) ────────────────────────────────
+      - name: Sign Windows Binaries (PFX)
+        if: steps.signing.outputs.sign_windows == 'true' && steps.signing.outputs.win_method == 'pfx' && runner.os == 'Windows'
+        shell: powershell
+        env:
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          $pfxPath = "$env:RUNNER_TEMP\certificate.pfx"
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" -Recurse | Sort-Object -Descending | Select-Object -First 1
+
+          $artifacts = "${{ env.BUILD_DIR }}\${{ env.PROJECT_NAME }}_artefacts\${{ env.BUILD_TYPE }}"
+
+          # Sign VST3
+          $vst3 = Get-ChildItem "$artifacts" -Recurse -Filter "*.vst3" | Where-Object { $_.Extension -eq ".vst3" -and !$_.PSIsContainer } | Select-Object -First 1
+          if ($vst3) {
+            & $signtool sign /f $pfxPath /p $env:WINDOWS_CERT_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $vst3.FullName
+            Write-Host "  Signed: $($vst3.Name)"
+          }
+
+          # Sign Standalone
+          $exe = Get-ChildItem "$artifacts\Standalone" -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($exe) {
+            & $signtool sign /f $pfxPath /p $env:WINDOWS_CERT_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $exe.FullName
+            Write-Host "  Signed: $($exe.Name)"
+          }
+
+      # ── Windows code signing (Azure Trusted Signing) ──────────────
+      - name: Sign Windows Binaries (Azure)
+        if: steps.signing.outputs.sign_windows == 'true' && steps.signing.outputs.win_method == 'azure' && runner.os == 'Windows'
+        uses: azure/trusted-signing-action@v0.5.0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ env.BUILD_DIR }}\${{ env.PROJECT_NAME }}_artefacts\${{ env.BUILD_TYPE }}
+          files-folder-filter: exe,dll,vst3
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      # ── Artifacts ─────────────────────────────────────────────────
       - name: Set artifact paths
         run: |
           ARTIFACTS=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}
@@ -202,3 +424,66 @@ jobs:
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACTS_PATH }}
+
+  # ── Create GitHub Release (publish mode only) ───────────────────────
+  create_release:
+    needs: [detect_platforms, build_and_test]
+    if: >
+      needs.detect_platforms.outputs.mode == 'publish' &&
+      (github.event.inputs.create_release != 'false')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load .env
+        run: |
+          if [ -f .env ]; then
+            while IFS='=' read -r key value; do
+              [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+              value=$(echo "$value" | sed 's/^["'\'']//' | sed 's/["'\'']*$//')
+              echo "${key}=${value}" >> $GITHUB_ENV
+            done < .env
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${VERSION_MAJOR:-0}.${VERSION_MINOR:-0}.${VERSION_PATCH:-0}"
+          TAG="v${VERSION}"
+
+          echo "Creating release ${TAG}..."
+
+          # Create the release (or update if tag exists)
+          gh release create "$TAG" \
+            --title "${{ env.PRODUCT_NAME }} ${VERSION}" \
+            --generate-notes \
+            --draft \
+            artifacts/**/* 2>/dev/null || \
+          gh release upload "$TAG" artifacts/**/* --clobber 2>/dev/null || true
+
+          echo "Release ${TAG} created/updated"
+
+      # ── Update website download links ─────────────────────────────
+      - name: Update Website Download Links
+        run: |
+          if [ -f scripts/update_download_links.sh ]; then
+            chmod +x scripts/update_download_links.sh
+            ./scripts/update_download_links.sh
+          fi
+
+      # ── Cleanup keychain (macOS) ──────────────────────────────────
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/signing.keychain-db" ]; then
+            security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+          fi
+          rm -f "$RUNNER_TEMP/certificate.pfx" 2>/dev/null || true
