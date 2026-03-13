@@ -750,6 +750,59 @@ gh run list --workflow=build.yml --limit=5
 gh run view --log
 ```
 
+### How CI Works Under the Hood
+
+The workflow (`.github/workflows/build.yml`) runs in two stages:
+
+**Stage 1: Platform Detection** (`detect_platforms` job)
+
+A lightweight Ubuntu runner checks which platforms to build. It looks at three sources in priority order:
+
+1. **`platforms` input** — If you triggered manually and typed `macos,windows`, it uses that
+2. **`CI_PLATFORMS` from `.env`** — Reads your configured preference
+3. **Auto-detect** — Scans project files:
+   - Checks for `scripts/build.ps1` → Windows
+   - Greps `CMakeLists.txt` for `UNIX AND NOT APPLE` → Linux
+   - macOS is always included
+
+It outputs a JSON matrix that GitHub Actions uses to spawn the right set of build VMs.
+
+**Stage 2: Build & Test** (`build_and_test` job, runs per platform)
+
+Each platform VM runs through these steps:
+
+| Step | macOS | Windows | Linux | What it does |
+|------|-------|---------|-------|-------------|
+| **Setup compiler** | (built-in) | MSVC via `ilammy/msvc-dev-cmd` | Clang via `egor-tensin/setup-clang` | Ensures the right C++ compiler is available |
+| **Install deps** | `brew install ninja` | `choco install ninja` | `apt-get install` JUCE deps + Ninja + Xvfb | Platform-specific build tools and libraries |
+| **Checkout** | `actions/checkout@v4` | same | same | Clones your repo |
+| **sccache** | `mozilla-actions/sccache-action` | same | same | Shared compilation cache (speeds up rebuilds) |
+| **Load .env** | Parses `.env` into env vars | same | same | Makes `PROJECT_NAME`, `BUNDLE_ID`, etc. available |
+| **Configure** | `cmake -B build -G Ninja` | same + MSVC toolchain | same + Clang | Generates build files from `CMakeLists.txt` |
+| **Build** | `cmake --build build --parallel 4` | same | same | Compiles everything (4 parallel jobs) |
+| **Catch2 Tests** | `ctest --verbose` | same | same | Runs your unit tests |
+| **PluginVal** | Downloads + validates VST3 | same (may crash on headless VMs) | same | Industry-standard plugin validation |
+| **Upload** | `actions/upload-artifact` | same | same | Makes build output downloadable |
+
+**What gets built per platform:**
+
+| Format | macOS | Windows | Linux |
+|--------|-------|---------|-------|
+| Standalone | `.app` | `.exe` | binary |
+| AU | `.component` | — | — |
+| AUv3 | `.appex` | — | — |
+| VST3 | `.vst3` | `.vst3` | `.vst3` |
+| CLAP | `.clap` | `.clap` | `.clap` |
+
+**Build VMs used:**
+- **macOS**: `macos-14` (Apple Silicon M1, arm64 + x86_64 universal binary via `-DCMAKE_OSX_ARCHITECTURES`)
+- **Windows**: `windows-latest` (MSVC 2022 + Ninja)
+- **Linux**: `ubuntu-22.04` (Clang + Ninja, Xvfb for headless display)
+
+**Caching:**
+
+[sccache](https://github.com/mozilla/sccache) caches compiled object files across CI runs. First builds take 5-10 minutes per platform; subsequent builds with minor changes are significantly faster since unchanged files are served from cache.
+
 ### Complete Documentation
 
 For comprehensive build system documentation, see [`scripts/about/build_system.md`](scripts/about/build_system.md).
@@ -1296,7 +1349,30 @@ Linux uses Clang by default (for consistency with macOS) and Ninja as the build 
 
 ### Does CI cost money?
 
-GitHub Actions is **free for public repositories** with generous limits. For private repos, GitHub provides 2,000 free minutes/month on the free plan. A typical JUCE plugin build takes 5-10 minutes per platform, so you'd get ~60-100 builds/month for free.
+**Public repositories**: Completely free, unlimited minutes.
+
+**Private repositories**: GitHub provides **2,000 free minutes/month** on the free plan. A typical JUCE plugin build takes 5-10 minutes per platform. With smart platform detection (only building what you need), a macOS-only project uses ~5-10 minutes per push — that's roughly **200+ builds/month for free**.
+
+Note: macOS runners use minutes at a 10x rate on private repos (1 minute = 10 minutes of quota). So a 5-minute macOS build costs 50 minutes of quota. If cost is a concern on private repos, you can limit CI to specific branches or trigger manually instead of on every push.
+
+### Can I run CI locally instead of on GitHub?
+
+Yes — the CI workflow just runs standard CMake commands. You can replicate what CI does on your own machine:
+
+```bash
+# What CI runs (simplified):
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel 4
+cd build && ctest --verbose --output-on-failure
+```
+
+Or use the project's build scripts, which do the same thing with extra conveniences:
+```bash
+./scripts/build.sh all test    # macOS/Linux: build + Catch2 + PluginVal
+.\scripts\build.ps1 all test   # Windows: build + Catch2 + PluginVal
+```
+
+The main value of CI is building on platforms you **don't** have locally. If you develop on macOS, CI lets you verify Windows and Linux builds without needing those machines. But for your local platform, `./scripts/build.sh` is faster and gives the same results.
 
 ### Can I trigger CI without pushing?
 
