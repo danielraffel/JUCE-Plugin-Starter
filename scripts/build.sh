@@ -1576,27 +1576,48 @@ enable_github_pages() {
     echo -e "${GREEN}Enabling GitHub Pages...${NC}"
 
     # Check if Pages is already enabled
-    if gh api "repos/${repo}/pages" &>/dev/null; then
-        echo "✅ GitHub Pages already enabled"
+    local current_source=""
+    current_source=$(gh api "repos/${repo}/pages" --jq '.source.branch' 2>/dev/null) || true
+
+    if [[ -n "$current_source" ]]; then
+        echo "✅ GitHub Pages already enabled (source: ${current_source})"
         echo "   URL: https://${GITHUB_USER:-owner}.github.io/${GITHUB_REPO}/"
         return 0
     fi
 
-    # Enable Pages on main branch
+    # Prefer gh-pages branch if it exists, otherwise fall back to main
+    local pages_branch="main"
+    if git rev-parse --verify gh-pages &>/dev/null || git rev-parse --verify origin/gh-pages &>/dev/null; then
+        pages_branch="gh-pages"
+    fi
+
     if gh api \
         --method POST \
         -H "Accept: application/vnd.github+json" \
         "repos/${repo}/pages" \
-        -f source[branch]=main \
+        -f source[branch]="$pages_branch" \
         -f source[path]=/ \
         2>/dev/null; then
-        echo "✅ GitHub Pages enabled"
+        echo "✅ GitHub Pages enabled (source: ${pages_branch})"
         echo "   URL: https://${GITHUB_USER:-owner}.github.io/${GITHUB_REPO}/"
         return 0
     else
         echo -e "${YELLOW}⚠️  Could not enable GitHub Pages automatically${NC}"
-        echo "Enable manually: Settings → Pages → Deploy from main branch"
+        echo "Enable manually: Settings → Pages → Deploy from ${pages_branch} branch"
         return 1
+    fi
+}
+
+# Function to update website download links after a release
+update_website_download_links() {
+    echo ""
+    echo -e "${GREEN}Updating website download links...${NC}"
+
+    if [[ -f "$ROOT_DIR/scripts/update_download_links.sh" ]]; then
+        "$ROOT_DIR/scripts/update_download_links.sh" "$VERSION"
+    else
+        # Fall back to legacy landing page generation
+        generate_and_publish_landing_page
     fi
 }
 
@@ -1936,7 +1957,7 @@ main() {
                 eddsa_sign_artifact
                 create_github_release
                 enable_github_pages
-                generate_and_publish_landing_page
+                update_website_download_links
                 show_release_urls
                 generate_appcast
             fi
