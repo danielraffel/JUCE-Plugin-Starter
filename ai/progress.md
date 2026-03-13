@@ -5,7 +5,7 @@
 ### Template work (JUCE-Plugin-Starter)
 - [x] A1.1 — Add scripts/setup_sparkle.sh
 - [x] A1.2 — Write Source/AutoUpdater.h
-- [ ] A1.3 — Write Source/AutoUpdater_Mac.mm
+- [x] A1.3 — Write Source/AutoUpdater_Mac.mm
 - [ ] A1.4 — Update CMakeLists.txt (Sparkle linking)
 - [ ] A1.5 — Update .env.example (auto-update variables)
 - [ ] A1.6 — Update scripts/post_build.sh (Sparkle Info.plist entries)

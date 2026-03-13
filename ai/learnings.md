@@ -11,3 +11,10 @@
 - Actual structure: external/Sparkle.framework, external/bin/ (tools), external/Symbols/
 - PlunderTube's script expected Sparkle.xcframework — that was wrong for 2.8.0
 - Tools (sign_update, generate_keys) are in external/bin/, NOT inside the framework
+
+## A1.3 — AutoUpdater_Mac.mm
+- Use initWithStartingUpdater:NO then explicit startUpdater: for deferred init
+- PlunderTube used initWithStartingUpdater:YES — we use NO for explicit lifecycle control
+- No PAT injection needed for public mode — Sparkle reads SUFeedURL from Info.plist
+- No feedURLStringForUpdater: delegate override needed — rely on Info.plist SUFeedURL
+- Guard file with #if JUCE_MAC && ENABLE_AUTO_UPDATE && ENABLE_SPARKLE
