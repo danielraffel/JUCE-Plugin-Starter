@@ -885,6 +885,71 @@ TEST_CASE ("Editor renders", "[editor]")
 }
 ```
 
+### Benchmarks
+
+A separate `Benchmarks` target (using Catch2's benchmarking support) keeps test runs fast while giving you performance measurement:
+
+```bash
+# Run benchmarks
+cmake --build build --target Benchmarks
+ctest --test-dir build --verbose -R Benchmark
+```
+
+Add benchmark files to `benchmarks/`. Example (`benchmarks/AudioProcessing.cpp`):
+
+```cpp
+#include <PluginProcessor.h>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/benchmark/catch_benchmark.hpp>
+
+TEST_CASE ("processBlock benchmark", "[benchmark]")
+{
+    PluginProcessor plugin;
+    plugin.prepareToPlay (48000.0, 512);
+    juce::AudioBuffer<float> buffer (2, 512);
+    juce::MidiBuffer midi;
+
+    BENCHMARK ("stereo 512 samples")
+    {
+        plugin.processBlock (buffer, midi);
+        return buffer.getSample (0, 0);
+    };
+}
+```
+
+### Melatonin Inspector (opt-in)
+
+[Melatonin Inspector](https://github.com/sudara/melatonin_inspector) is a runtime UI component inspector for debugging JUCE plugin layouts — like browser DevTools for your plugin UI.
+
+Enable in `.env`:
+```bash
+ENABLE_MELATONIN_INSPECTOR=true
+```
+
+Use in your PluginEditor:
+```cpp
+#if ENABLE_MELATONIN_INSPECTOR
+#include <melatonin_inspector/melatonin_inspector.h>
+melatonin::Inspector inspector { *this };
+#endif
+```
+
+### Intel IPP (opt-in)
+
+[Intel IPP](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ipp.html) provides optimized FFT, filters, convolution, and resampling. Benefits DSP-heavy plugins like convolution reverbs and spectral processors.
+
+Enable in `.env`:
+```bash
+ENABLE_IPP=true
+```
+
+**Platform setup:**
+- **macOS**: Auto-fetched (x86_64 only — for universal builds, IPP is applied only to the x86_64 slice)
+- **Windows**: `nuget install intelipp.static.win-x64 -Version 2022.3.0.387`
+- **Linux**: `sudo apt install intel-oneapi-ipp-devel`
+
+Use in code with `#if IPP_ENABLED` guards.
+
 ---
 
 ## 🎨 Code Style
@@ -1616,4 +1681,17 @@ AUTO_UPDATE_FEED_URL_LINUX=https://raw.githubusercontent.com/youruser/yourrepo/m
 * [JUCE Tutorials](https://juce.com/learn/tutorials)
 * [JUCE Forum](https://forum.juce.com/)
 * [CMake Tutorial](https://cmake.org/learn/)
-* [pamplejuce: a far more robust JUCE audio plugin template](https://github.com/sudara/pamplejuce)
+
+---
+
+## 🙏 Acknowledgements
+
+This project owes a significant debt to [Pamplejuce](https://github.com/sudara/pamplejuce) by [Sudara](https://melatonin.dev). Pamplejuce showed the JUCE community how to do cross-platform CI/CD, code signing, testing, and packaging *right* — and made all of it approachable. Many of the build system patterns in this template were directly inspired by or adapted from Pamplejuce's work.
+
+### Which should you use?
+
+**[Pamplejuce](https://github.com/sudara/pamplejuce)** is the better choice for most developers. It's maintained by a serious audio developer, battle-tested by a large community, and stays closer to standard CMake conventions. If you're comfortable with CMake, git submodules, and configuring your own build environment, Pamplejuce is the way to go. It also has excellent [documentation](https://melatonin.dev/manuals/pamplejuce/).
+
+**JUCE Plugin Starter** is designed for people who are newer to audio plugin development or prefer a more hands-off setup. The [init script](./scripts/init_plugin_project.sh) installs all prerequisites and scaffolds a complete project in one pass. The [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin takes this further — letting you create, build, test, sign, and publish plugins using natural language without needing to learn the underlying toolchain. It also adds features like auto-updates (Sparkle/WinSparkle), AI-powered release notes, a GitHub Pages download site, and DiagnosticKit — things that go beyond what a template typically provides.
+
+If you're an experienced developer who wants control and community support, use Pamplejuce. If you want something that handles the setup and tooling for you so you can focus on building your plugin, this template and juce-dev might be a better fit.

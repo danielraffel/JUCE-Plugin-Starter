@@ -1,0 +1,7 @@
+END-USER LICENSE AGREEMENT
+
+This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement.
+
+By installing this software, you agree to these terms.
+
+Replace this file with your own license agreement before distributing.
