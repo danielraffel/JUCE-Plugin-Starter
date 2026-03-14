@@ -450,6 +450,67 @@ jobs:
           echo "INSTALLER_PKG=$INSTALLER_PKG" >> $GITHUB_ENV
           echo "  Created: $(basename "$INSTALLER_PKG") ($(du -h "$INSTALLER_PKG" | cut -f1))"
 
+      # ── macOS: EdDSA signing for auto-updates ──────────────────────
+      - name: Sign Installer with EdDSA
+        if: steps.signing.outputs.mode == 'publish' && runner.os == 'macOS' && env.ENABLE_AUTO_UPDATE == 'true'
+        env:
+          EDDSA_PRIVATE_KEY: ${{ secrets.EDDSA_PRIVATE_KEY }}
+        run: |
+          if [ -z "$EDDSA_PRIVATE_KEY" ]; then
+            echo "::warning::EDDSA_PRIVATE_KEY secret not configured — skipping EdDSA signing"
+            exit 0
+          fi
+
+          # Download Sparkle's sign_update tool
+          SPARKLE_VERSION="2.8.0"
+          SPARKLE_URL="https://github.com/nicktrandafil/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          SPARKLE_DIR="$RUNNER_TEMP/sparkle"
+          mkdir -p "$SPARKLE_DIR"
+
+          # Try the official Sparkle release first, fall back to alternative
+          curl -sL "https://github.com/nicktrandafil/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o "$RUNNER_TEMP/sparkle.tar.xz" 2>/dev/null || \
+          curl -sL "https://github.com/nicktrandafil/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.bz2" -o "$RUNNER_TEMP/sparkle.tar.bz2" 2>/dev/null
+
+          if [ -f "$RUNNER_TEMP/sparkle.tar.xz" ]; then
+            tar xf "$RUNNER_TEMP/sparkle.tar.xz" -C "$SPARKLE_DIR"
+          elif [ -f "$RUNNER_TEMP/sparkle.tar.bz2" ]; then
+            tar xf "$RUNNER_TEMP/sparkle.tar.bz2" -C "$SPARKLE_DIR"
+          fi
+
+          # Find sign_update binary
+          SIGN_TOOL=$(find "$SPARKLE_DIR" -name "sign_update" -type f 2>/dev/null | head -1)
+
+          # Fallback: use the one from the repo if setup_sparkle.sh was run
+          if [ -z "$SIGN_TOOL" ] || [ ! -x "$SIGN_TOOL" ]; then
+            SIGN_TOOL="external/bin/sign_update"
+          fi
+
+          if [ ! -x "$SIGN_TOOL" ]; then
+            echo "::warning::sign_update tool not found — skipping EdDSA signing"
+            exit 0
+          fi
+
+          # sign_update reads EDDSA_PRIVATE_KEY env var as fallback to Keychain
+          SIGN_OUTPUT=$("$SIGN_TOOL" "$INSTALLER_PKG" 2>&1)
+          echo "sign_update output: $SIGN_OUTPUT"
+
+          # Parse signature
+          EDDSA_SIG=$(echo "$SIGN_OUTPUT" | sed -n 's/.*edSignature="\([^"]*\)".*/\1/p')
+          EDDSA_LEN=$(echo "$SIGN_OUTPUT" | sed -n 's/.*length="\([^"]*\)".*/\1/p')
+
+          if [ -z "$EDDSA_LEN" ]; then
+            EDDSA_LEN=$(stat -f%z "$INSTALLER_PKG" 2>/dev/null || stat -c%s "$INSTALLER_PKG" 2>/dev/null)
+          fi
+
+          if [ -n "$EDDSA_SIG" ]; then
+            echo "EDDSA_SIGNATURE=$EDDSA_SIG" >> $GITHUB_ENV
+            echo "EDDSA_LENGTH=$EDDSA_LEN" >> $GITHUB_ENV
+            echo "  EdDSA signature: ${EDDSA_SIG:0:20}..."
+            echo "  Length: $EDDSA_LEN bytes"
+          else
+            echo "::warning::Could not parse EdDSA signature from sign_update output"
+          fi
+
       # ── Windows code signing (PFX) ────────────────────────────────
       - name: Sign Windows Binaries (PFX)
         if: steps.signing.outputs.sign_windows == 'true' && steps.signing.outputs.win_method == 'pfx' && runner.os == 'Windows'
@@ -569,6 +630,26 @@ jobs:
           name: ${{ env.PROJECT_NAME }}-installer-${{ runner.os }}
           path: ${{ env.INSTALLER_PKG }}
 
+      - name: Save EdDSA Signature Metadata
+        if: steps.signing.outputs.mode == 'publish' && env.EDDSA_SIGNATURE != ''
+        run: |
+          mkdir -p $RUNNER_TEMP/eddsa
+          cat > $RUNNER_TEMP/eddsa/eddsa-${{ runner.os }}.json <<SIGEOF
+          {
+            "platform": "${{ runner.os }}",
+            "signature": "${{ env.EDDSA_SIGNATURE }}",
+            "length": "${{ env.EDDSA_LENGTH }}",
+            "installer": "$(basename "${{ env.INSTALLER_PKG }}")"
+          }
+          SIGEOF
+
+      - name: Upload EdDSA Metadata
+        if: steps.signing.outputs.mode == 'publish' && env.EDDSA_SIGNATURE != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: eddsa-${{ runner.os }}
+          path: ${{ runner.temp }}/eddsa/
+
   # ── Create GitHub Release (publish mode only) ───────────────────────
   create_release:
     needs: [detect_platforms, build_and_test]
@@ -601,9 +682,17 @@ jobs:
           pattern: "*-installer-*"
           path: installers
 
+      - name: Download EdDSA metadata
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "eddsa-*"
+          path: eddsa
+        continue-on-error: true
+
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_REPO_PAT: ${{ secrets.RELEASE_REPO_PAT }}
         run: |
           VERSION="${VERSION_MAJOR:-0}.${VERSION_MINOR:-0}.${VERSION_PATCH:-0}"
           TAG="v${VERSION}"
@@ -626,23 +715,234 @@ jobs:
             echo "Creating DRAFT release (review before publishing)..."
           fi
 
+          # Determine target repo for the release
+          # RELEASE_REPO allows publishing to a different repo (split-repo pattern)
+          TARGET_REPO="${RELEASE_REPO:-${{ github.repository }}}"
+          REPO_FLAG=""
+          if [ "$TARGET_REPO" != "${{ github.repository }}" ]; then
+            REPO_FLAG="-R $TARGET_REPO"
+            echo "Publishing to external repo: $TARGET_REPO"
+            # Use PAT for cross-repo authentication
+            if [ -n "$RELEASE_REPO_PAT" ]; then
+              export GH_TOKEN="$RELEASE_REPO_PAT"
+            fi
+          fi
+
           # Create the release with installer files
           if ls "$RELEASE_DIR"/* &>/dev/null; then
             gh release create "$TAG" \
               --title "${{ env.PRODUCT_NAME }} ${VERSION}" \
               --generate-notes \
               $DRAFT_FLAG \
+              $REPO_FLAG \
               "$RELEASE_DIR"/* 2>/dev/null || \
-            gh release upload "$TAG" "$RELEASE_DIR"/* --clobber 2>/dev/null || true
+            gh release upload "$TAG" "$RELEASE_DIR"/* --clobber $REPO_FLAG 2>/dev/null || true
           else
-            # No installer files — create release without assets
             gh release create "$TAG" \
               --title "${{ env.PRODUCT_NAME }} ${VERSION}" \
               --generate-notes \
-              $DRAFT_FLAG 2>/dev/null || true
+              $DRAFT_FLAG \
+              $REPO_FLAG 2>/dev/null || true
           fi
 
-          echo "Release ${TAG} created/updated"
+          # Save release info for appcast generation
+          echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+          echo "RELEASE_REPO=$TARGET_REPO" >> $GITHUB_ENV
+          echo "Release ${TAG} created/updated on ${TARGET_REPO}"
+
+          # Reset token to default for subsequent steps
+          if [ "$TARGET_REPO" != "${{ github.repository }}" ]; then
+            export GH_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          fi
+
+      # ── Generate Appcast XML for auto-updates ────────────────────────
+      - name: Generate Appcast
+        if: env.ENABLE_AUTO_UPDATE == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_REPO_PAT: ${{ secrets.RELEASE_REPO_PAT }}
+        run: |
+          VERSION="${VERSION_MAJOR:-0}.${VERSION_MINOR:-0}.${VERSION_PATCH:-0}"
+          TAG="${RELEASE_TAG:-v${VERSION}}"
+          RELEASE_TARGET="${RELEASE_REPO:-${{ github.repository }}}"
+          BUILD_NUMBER="${VERSION_BUILD:-${VERSION_MAJOR:-0}${VERSION_MINOR:-0}${VERSION_PATCH:-0}}"
+
+          # Determine appcast target — same repo or separate appcast repo
+          APPCAST_TARGET="${APPCAST_REPO:-${{ github.repository }}}"
+          APPCAST_DIR="$RUNNER_TEMP/appcast_work"
+          mkdir -p "$APPCAST_DIR"
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Clone appcast repo (or use current repo)
+          if [ "$APPCAST_TARGET" != "${{ github.repository }}" ]; then
+            echo "Using separate appcast repo: $APPCAST_TARGET"
+            if [ -n "$RELEASE_REPO_PAT" ]; then
+              git clone "https://x-access-token:${RELEASE_REPO_PAT}@github.com/${APPCAST_TARGET}.git" "$APPCAST_DIR/repo"
+            else
+              git clone "https://github.com/${APPCAST_TARGET}.git" "$APPCAST_DIR/repo"
+            fi
+          else
+            git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$APPCAST_DIR/repo"
+          fi
+
+          cd "$APPCAST_DIR/repo"
+          PUB_DATE=$(date -R 2>/dev/null || date "+%a, %d %b %Y %H:%M:%S %z")
+
+          # Load EdDSA metadata if available
+          EDDSA_SIG=""
+          EDDSA_LEN=""
+          if [ -d "$GITHUB_WORKSPACE/eddsa" ]; then
+            for f in "$GITHUB_WORKSPACE/eddsa"/eddsa-*/eddsa-*.json; do
+              if [ -f "$f" ]; then
+                EDDSA_SIG=$(python3 -c "import json; d=json.load(open('$f')); print(d.get('signature',''))" 2>/dev/null || echo "")
+                EDDSA_LEN=$(python3 -c "import json; d=json.load(open('$f')); print(d.get('length',''))" 2>/dev/null || echo "")
+                EDDSA_INSTALLER=$(python3 -c "import json; d=json.load(open('$f')); print(d.get('installer',''))" 2>/dev/null || echo "")
+                break
+              fi
+            done
+          fi
+
+          # ── macOS appcast ──────────────────────────────────────────
+          PKG_NAME=$(find "$GITHUB_WORKSPACE/installers" -name "*.pkg" -type f 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "")
+          if [ -n "$PKG_NAME" ]; then
+            DOWNLOAD_URL="https://github.com/${RELEASE_TARGET}/releases/download/${TAG}/${PKG_NAME}"
+            EDDSA_ATTR=""
+            if [ -n "$EDDSA_SIG" ]; then
+              EDDSA_ATTR="sparkle:edSignature=\"${EDDSA_SIG}\""
+            fi
+            if [ -z "$EDDSA_LEN" ] && [ -n "$PKG_NAME" ]; then
+              PKG_PATH=$(find "$GITHUB_WORKSPACE/installers" -name "*.pkg" -type f 2>/dev/null | head -1)
+              EDDSA_LEN=$(stat -c%s "$PKG_PATH" 2>/dev/null || echo "0")
+            fi
+
+            cat > appcast-macos.xml <<APPCAST_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>${PROJECT_NAME} macOS Updates</title>
+              <link>${AUTO_UPDATE_FEED_URL:-https://raw.githubusercontent.com/${APPCAST_TARGET}/main/appcast-macos.xml}</link>
+              <language>en</language>
+              <item>
+                <title>Version ${VERSION}</title>
+                <sparkle:version>${BUILD_NUMBER}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                <pubDate>${PUB_DATE}</pubDate>
+                <enclosure
+                  url="${DOWNLOAD_URL}"
+                  ${EDDSA_ATTR}
+                  length="${EDDSA_LEN}"
+                  type="application/octet-stream" />
+              </item>
+            </channel>
+          </rss>
+          APPCAST_EOF
+            echo "  Generated appcast-macos.xml (EdDSA: $([ -n "$EDDSA_SIG" ] && echo 'yes' || echo 'no'))"
+          fi
+
+          # ── Windows appcast ────────────────────────────────────────
+          WIN_INSTALLER=$(find "$GITHUB_WORKSPACE/installers" -name "*Setup*.exe" -o -name "*Setup*.zip" 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "")
+          if [ -n "$WIN_INSTALLER" ]; then
+            WIN_TAG="${TAG}"
+            # Some projects use separate Windows release tags (e.g., v1.0.0-win)
+            if [ -n "$RELEASE_REPO" ] && [ "$RELEASE_REPO" != "${{ github.repository }}" ]; then
+              WIN_TAG="${TAG}-win"
+            fi
+            WIN_URL="https://github.com/${RELEASE_TARGET}/releases/download/${WIN_TAG}/${WIN_INSTALLER}"
+            WIN_SIZE=$(stat -c%s "$(find "$GITHUB_WORKSPACE/installers" -name "*Setup*" 2>/dev/null | head -1)" 2>/dev/null || echo "0")
+
+            cat > appcast-windows.xml <<APPCAST_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>${PROJECT_NAME} Windows Updates</title>
+              <link>${AUTO_UPDATE_FEED_URL_WINDOWS:-https://raw.githubusercontent.com/${APPCAST_TARGET}/main/appcast-windows.xml}</link>
+              <language>en</language>
+              <item>
+                <title>Version ${VERSION}</title>
+                <sparkle:version>${BUILD_NUMBER}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                <pubDate>${PUB_DATE}</pubDate>
+                <enclosure
+                  url="${WIN_URL}"
+                  sparkle:version="${BUILD_NUMBER}"
+                  sparkle:shortVersionString="${VERSION}"
+                  length="${WIN_SIZE}"
+                  type="application/octet-stream" />
+              </item>
+            </channel>
+          </rss>
+          APPCAST_EOF
+            echo "  Generated appcast-windows.xml"
+          fi
+
+          # ── Commit and push appcast changes ────────────────────────
+          git add appcast-*.xml 2>/dev/null || true
+          if ! git diff --cached --quiet 2>/dev/null; then
+            git commit -m "Update appcast for v${VERSION}"
+            git push origin HEAD
+            echo "  Appcast pushed to ${APPCAST_TARGET}"
+          else
+            echo "  Appcast unchanged, skipping push"
+          fi
+
+          cd "$GITHUB_WORKSPACE"
+
+      # ── Update latest.json (split-repo pattern) ──────────────────────
+      - name: Update latest.json
+        if: env.ENABLE_AUTO_UPDATE == 'true' && env.RELEASE_REPO != '' && env.RELEASE_REPO != github.repository
+        env:
+          RELEASE_REPO_PAT: ${{ secrets.RELEASE_REPO_PAT }}
+        run: |
+          VERSION="${VERSION_MAJOR:-0}.${VERSION_MINOR:-0}.${VERSION_PATCH:-0}"
+          TAG="${RELEASE_TAG:-v${VERSION}}"
+          RELEASE_TARGET="${RELEASE_REPO}"
+
+          LATEST_DIR="$RUNNER_TEMP/latest_work"
+          mkdir -p "$LATEST_DIR"
+
+          if [ -n "$RELEASE_REPO_PAT" ]; then
+            git clone "https://x-access-token:${RELEASE_REPO_PAT}@github.com/${RELEASE_TARGET}.git" "$LATEST_DIR/repo"
+          else
+            git clone "https://github.com/${RELEASE_TARGET}.git" "$LATEST_DIR/repo"
+          fi
+
+          cd "$LATEST_DIR/repo"
+
+          # Read existing latest.json or start fresh
+          EXISTING="{}"
+          [ -f latest.json ] && EXISTING=$(cat latest.json)
+
+          # Find installer filenames from artifacts
+          PKG_NAME=$(find "$GITHUB_WORKSPACE/installers" -name "*.pkg" -type f 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "")
+          WIN_NAME=$(find "$GITHUB_WORKSPACE/installers" -name "*Setup*" -type f 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "")
+          TAR_NAME=$(find "$GITHUB_WORKSPACE/installers" -name "*.tar.gz" -type f 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "")
+
+          # Build latest.json using python
+          python3 -c "
+          import json, sys
+          data = json.loads('''${EXISTING}''')
+          v = '${VERSION}'
+          repo = '${RELEASE_TARGET}'
+          tag = '${TAG}'
+          if '${PKG_NAME}':
+              data['macos'] = {'version': v, 'url': f'https://github.com/{repo}/releases/download/{tag}/${PKG_NAME}'}
+          if '${WIN_NAME}':
+              data['windows'] = {'version': v, 'url': f'https://github.com/{repo}/releases/download/{tag}-win/${WIN_NAME}'}
+          if '${TAR_NAME}':
+              data['linux'] = {'version': v, 'url': f'https://github.com/{repo}/releases/download/{tag}/${TAR_NAME}'}
+          print(json.dumps(data, indent=2))
+          " > latest.json
+
+          git add latest.json
+          if ! git diff --cached --quiet 2>/dev/null; then
+            git commit -m "Update latest.json for v${VERSION}"
+            git push origin HEAD
+            echo "  latest.json pushed to ${RELEASE_TARGET}"
+          fi
+
+          cd "$GITHUB_WORKSPACE"
 
       # ── Update website download links ─────────────────────────────
       - name: Update Website Download Links

@@ -1508,6 +1508,22 @@ This script:
 - `--force` — Re-export from Keychain even if cached `.p12` exists
 - `--repo <name>` — Target a specific GitHub repo
 
+### How does EdDSA signing work in CI?
+
+When you publish via CI with auto-updates enabled (`ENABLE_AUTO_UPDATE=true`), the macOS build job:
+
+1. Downloads Sparkle's `sign_update` tool
+2. Signs the PKG installer using the `EDDSA_PRIVATE_KEY` GitHub Secret
+3. Saves the EdDSA signature as a build artifact
+4. The release job reads the signature and embeds it in `appcast-macos.xml`
+
+**Setup:**
+1. Generate an EdDSA key pair: `external/bin/generate_keys` (from Sparkle, after running `scripts/setup_sparkle.sh`)
+2. Copy the **private key** and add it as a GitHub Secret: `EDDSA_PRIVATE_KEY`
+3. The **public key** goes in `.env` as `AUTO_UPDATE_EDDSA_PUBLIC_KEY` (embedded in your app's Info.plist)
+
+CI also generates `appcast-windows.xml` for WinSparkle (without EdDSA — Windows uses the same appcast format but WinSparkle doesn't require signatures for same-repo downloads).
+
 ### What if my `.env` is gitignored and CI can't read it?
 
 Use a `.env.ci` file. The CI workflow automatically falls back to `.env.ci` if `.env` doesn't exist. Put only non-secret values in `.env.ci` (it gets committed):
@@ -1536,13 +1552,16 @@ Sensitive values (APPLE_ID, APP_SPECIFIC_PASSWORD, certificate .p12 files) stay 
 
 **For most projects, this isn't needed.** The default single-repo pattern (source code + releases + website in one repo) is simpler and recommended.
 
-However, if you have a specific reason to separate releases from source (e.g., private source code with a public download page), the CI workflow supports configuring a separate release repository. This is an advanced pattern that requires additional setup:
+However, if you have a specific reason to separate releases from source (e.g., private source code with a public download page), the CI workflow supports a split-repo pattern:
 
-- A separate GitHub repo for releases
-- A PAT (Personal Access Token) with cross-repo access stored as a GitHub Secret
-- Manual appcast configuration if using auto-updates
+1. Set `RELEASE_REPO=owner/my-releases` in `.env` — releases are created on that repo instead of the source repo
+2. Set `APPCAST_REPO=owner/my-appcast` in `.env` — appcast XML feeds are pushed to a separate public repo
+3. Add `RELEASE_REPO_PAT` as a GitHub Secret — a PAT with write access to both repos
+4. CI automatically generates `latest.json` in the release repo (for dynamic website download buttons)
 
-This pattern is tracked in [issue #9](https://github.com/danielraffel/JUCE-Plugin-Starter/issues/9) and depends on EdDSA signing support ([issue #7](https://github.com/danielraffel/JUCE-Plugin-Starter/issues/7)). Unless you have a specific need, stick with the default single-repo approach.
+The appcast repo should be public (so Sparkle/WinSparkle can fetch it without auth). The release repo can be private if your standalone app embeds a download PAT for authenticated downloads.
+
+See `.env.example` for the full list of split-repo configuration options.
 
 ### Has Linux been tested on real hardware?
 
