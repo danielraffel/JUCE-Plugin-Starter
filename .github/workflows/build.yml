@@ -298,6 +298,10 @@ jobs:
       # ── Build ─────────────────────────────────────────────────────
       - name: Configure
         run: |
+          # Clear stale FetchContent subbuild caches (avoids generator mismatch)
+          for dir in ~/.juce_cache/*-subbuild; do
+            [ -d "$dir" ] && rm -rf "$dir/CMakeCache.txt" "$dir/CMakeFiles" 2>/dev/null || true
+          done
           cmake -B ${{ env.BUILD_DIR }} \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_C_COMPILER_LAUNCHER=sccache \
