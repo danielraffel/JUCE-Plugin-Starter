@@ -159,7 +159,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     clap-juce-extensions
     GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git
-    GIT_TAG main
+    GIT_TAG 0.26.0
     GIT_SHALLOW ON
 )
 
