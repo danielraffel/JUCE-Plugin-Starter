@@ -59,7 +59,7 @@ jobs:
       mode: ${{ steps.set-mode.outputs.mode }}
       draft_release: ${{ steps.set-mode.outputs.draft_release }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Determine build mode
         id: set-mode
@@ -191,7 +191,7 @@ jobs:
         run: nuget install intelipp.static.win-x64 -Version 2022.3.0.387
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cache build (sccache)
         uses: mozilla-actions/sccache-action@v0.0.9
@@ -713,7 +713,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
