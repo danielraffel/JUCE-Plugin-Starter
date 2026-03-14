@@ -507,8 +507,14 @@ cd "../$PROJECT_FOLDER"
 # --- Replace Placeholders in Files ---
 echo "Customizing project files..."
 
-# Create placeholder replacements
-find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.cmake" -o -name "*.txt" -o -name "*.md" -o -name ".env*" \) -exec sed -i '' \
+# Create placeholder replacements (cross-platform sed -i)
+if [[ "$(uname)" == "Darwin" ]]; then
+    SED_INPLACE=(-i '')
+else
+    SED_INPLACE=(-i)
+fi
+
+find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.cmake" -o -name "*.txt" -o -name "*.md" -o -name ".env*" \) -exec sed "${SED_INPLACE[@]}" \
     -e "s/PLUGIN_NAME_PLACEHOLDER/$PLUGIN_NAME/g" \
     -e "s/CLASS_NAME_PLACEHOLDER/$CLASS_NAME/g" \
     -e "s/PROJECT_FOLDER_PLACEHOLDER/$PROJECT_FOLDER/g" \
@@ -665,7 +671,18 @@ fi
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
 echo "1. Explore the Source/ directory and customize your plugin code"
-echo "2. Run './scripts/generate_and_open_xcode.sh' to build and open in Xcode"
+case "$(uname -s)" in
+    Darwin)
+        echo "2. Run './scripts/generate_and_open_xcode.sh' to build and open in Xcode"
+        echo "   Or: './scripts/build.sh standalone' to build and launch the standalone app"
+        ;;
+    MINGW*|MSYS*|CYGWIN*)
+        echo "2. Run '.\\scripts\\build.ps1 standalone' to build your plugin (PowerShell)"
+        ;;
+    *)
+        echo "2. Run './scripts/build.sh standalone' to build and launch the standalone app"
+        ;;
+esac
 echo "3. Test your plugin in a DAW or standalone"
 echo "4. Commit changes: git add . && git commit -m \"Your changes\""
 

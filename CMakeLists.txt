@@ -215,6 +215,18 @@ if(DEFINED ENV{ENABLE_AUTO_UPDATE} AND "$ENV{ENABLE_AUTO_UPDATE}" STREQUAL "true
             if(EXISTS "${SPARKLE_FRAMEWORK_PATH}")
                 target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE ENABLE_SPARKLE=1)
 
+                # Phase B: Embed PAT for private repo access (appcast + download auth)
+                if(DEFINED ENV{SPARKLE_EMBED_UPDATE_PAT} AND "$ENV{SPARKLE_EMBED_UPDATE_PAT}" STREQUAL "true")
+                    if(DEFINED ENV{AUTO_UPDATE_DOWNLOAD_PAT})
+                        target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE
+                            AUTO_UPDATE_DOWNLOAD_PAT="$ENV{AUTO_UPDATE_DOWNLOAD_PAT}"
+                        )
+                        message(STATUS "Auto-update PAT embedded for private repo access")
+                    else()
+                        message(WARNING "SPARKLE_EMBED_UPDATE_PAT=true but AUTO_UPDATE_DOWNLOAD_PAT not set in .env")
+                    endif()
+                endif()
+
                 # Add macOS Sparkle implementation
                 target_sources(${PROJECT_NAME}_Standalone PRIVATE
                     Source/AutoUpdater_Mac.mm

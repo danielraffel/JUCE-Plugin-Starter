@@ -11,6 +11,15 @@
 #undef Component
 #undef Point
 
+// ── PAT for private repo access (Phase B) ───────────────────────────────────
+// AUTO_UPDATE_DOWNLOAD_PAT is injected by CMake from .env if SPARKLE_EMBED_UPDATE_PAT=true.
+// When defined and non-empty, Sparkle adds Authorization headers for private repo downloads.
+#if defined(AUTO_UPDATE_DOWNLOAD_PAT)
+static constexpr const char* UPDATE_PAT = AUTO_UPDATE_DOWNLOAD_PAT;
+#else
+static constexpr const char* UPDATE_PAT = "";
+#endif
+
 // ── Sparkle Delegate ────────────────────────────────────────────────────────
 
 @interface AutoUpdaterDelegate : NSObject <SPUUpdaterDelegate>
@@ -38,6 +47,35 @@
 // Feed URL from Info.plist (set by post_build.sh from AUTO_UPDATE_FEED_URL_MACOS)
 // No delegate override needed — Sparkle reads SUFeedURL from Info.plist by default.
 // If SUFeedURL is empty/missing, Sparkle will report an error gracefully.
+
+// Add authentication header for private repo access (Phase B)
+- (NSURLRequest *)updater:(SPUUpdater *)updater
+    willSendRequestForFeed:(NSURLRequest *)request
+{
+    NSMutableURLRequest *mutableRequest = [request mutableCopy];
+    NSString *pat = [NSString stringWithUTF8String:UPDATE_PAT];
+    if (pat && pat.length > 0 && ![pat containsString:@"@"])
+    {
+        [mutableRequest setValue:[NSString stringWithFormat:@"token %@", pat]
+              forHTTPHeaderField:@"Authorization"];
+    }
+    return mutableRequest;
+}
+
+// Add authentication for download requests (private releases repo)
+- (NSURLRequest *)updater:(SPUUpdater *)updater
+          willSendRequest:(NSURLRequest *)request
+    forDownloadingUpdate:(SUAppcastItem *)item
+{
+    NSMutableURLRequest *mutableRequest = [request mutableCopy];
+    NSString *pat = [NSString stringWithUTF8String:UPDATE_PAT];
+    if (pat && pat.length > 0 && ![pat containsString:@"@"])
+    {
+        [mutableRequest setValue:[NSString stringWithFormat:@"token %@", pat]
+              forHTTPHeaderField:@"Authorization"];
+    }
+    return mutableRequest;
+}
 
 // Track when updates are found
 - (void)updater:(SPUUpdater *)updater didFindValidUpdate:(SUAppcastItem *)item

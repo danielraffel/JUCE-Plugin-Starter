@@ -123,7 +123,9 @@ update_versioned_urls() {
 }
 
 # ── Build download URLs (defaults — may be overridden by actual asset names) ──
-RELEASE_BASE="https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/download/${TAG}"
+# Support split-repo pattern: RELEASE_REPO overrides where downloads come from
+RELEASE_REPO_RESOLVED="${RELEASE_REPO:-${GITHUB_USER}/${GITHUB_REPO}}"
+RELEASE_BASE="https://github.com/${RELEASE_REPO_RESOLVED}/releases/download/${TAG}"
 MACOS_URL="${RELEASE_BASE}/${PROJECT_NAME}_${VERSION}.pkg"
 WINDOWS_URL="${RELEASE_BASE}/${PROJECT_NAME}_${VERSION}_Setup.exe"
 LINUX_URL="${RELEASE_BASE}/${PROJECT_NAME}_${VERSION}.tar.gz"
@@ -134,7 +136,7 @@ LINUX_URL="${RELEASE_BASE}/${PROJECT_NAME}_${VERSION}.tar.gz"
 HAS_MACOS=false
 HAS_WINDOWS=false
 HAS_LINUX=false
-FULL_REPO="${GITHUB_USER}/${GITHUB_REPO}"
+FULL_REPO="${RELEASE_REPO_RESOLVED}"
 if command -v gh &>/dev/null; then
     RELEASE_ASSETS=$(gh release view "$TAG" --repo "$FULL_REPO" --json assets --jq '.assets[].name' 2>/dev/null || true)
     if [[ -n "$RELEASE_ASSETS" ]]; then
