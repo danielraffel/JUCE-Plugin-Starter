@@ -171,13 +171,24 @@ jobs:
           sudo apt-get install -y libasound2-dev libx11-dev libxinerama-dev libxext-dev libxrandr-dev libxcursor-dev libfreetype6-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev libcurl4-openssl-dev pkg-config ninja-build xvfb
           sudo /usr/bin/Xvfb $DISPLAY &
 
+      - name: Install IPP (Linux)
+        if: runner.os == 'Linux' && env.ENABLE_IPP == 'true'
+        run: |
+          wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt-get update && sudo apt-get install -y intel-oneapi-ipp-devel
+
       - name: Install macOS Deps
         if: runner.os == 'macOS'
-        run: brew install ninja
+        run: brew install ninja osxutils
 
       - name: Install Ninja (Windows)
         if: runner.os == 'Windows'
         run: choco install ninja
+
+      - name: Install IPP (Windows)
+        if: runner.os == 'Windows' && env.ENABLE_IPP == 'true'
+        run: nuget install intelipp.static.win-x64 -Version 2022.3.0.387
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -352,6 +363,45 @@ jobs:
               codesign --force --deep --sign "${{ env.APP_CERT }}" \
                 --options runtime --timestamp "$PLUGIN_PATH"
               echo "  Signed: $(basename "$PLUGIN_PATH")"
+            fi
+          done
+
+      # ── macOS: Custom Finder icons for plugin bundles ────────────────
+      - name: Add Custom Finder Icons (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          ICON_FILE="${{ github.workspace }}/Resources/Images/app_icon.png"
+          if [ ! -f "$ICON_FILE" ]; then
+            echo "  No app_icon.png found — skipping Finder icon injection"
+            exit 0
+          fi
+
+          # Convert PNG to icns
+          ICONSET_DIR="$RUNNER_TEMP/icon.iconset"
+          mkdir -p "$ICONSET_DIR"
+          sips -z 512 512 "$ICON_FILE" --out "$ICONSET_DIR/icon_256x256@2x.png" 2>/dev/null || true
+          sips -z 256 256 "$ICON_FILE" --out "$ICONSET_DIR/icon_256x256.png" 2>/dev/null || true
+          sips -z 128 128 "$ICON_FILE" --out "$ICONSET_DIR/icon_128x128.png" 2>/dev/null || true
+          ICNS_FILE="$RUNNER_TEMP/plugin_icon.icns"
+          iconutil -c icns "$ICONSET_DIR" -o "$ICNS_FILE" 2>/dev/null || true
+
+          if [ ! -f "$ICNS_FILE" ]; then
+            echo "  Could not generate .icns — skipping"
+            exit 0
+          fi
+
+          # Inject icon resource into each plugin bundle
+          sips -i "$ICNS_FILE" 2>/dev/null || true
+          DeRez -only icns "$ICNS_FILE" > /tmp/plugin_icons 2>/dev/null || true
+
+          for BUNDLE_PATH in \
+            "$HOME/Library/Audio/Plug-Ins/Components/${{ env.PROJECT_NAME }}.component" \
+            "$HOME/Library/Audio/Plug-Ins/VST3/${{ env.PROJECT_NAME }}.vst3" \
+            "$HOME/Library/Audio/Plug-Ins/CLAP/${{ env.PROJECT_NAME }}.clap"; do
+            if [ -d "$BUNDLE_PATH" ]; then
+              Rez -a /tmp/plugin_icons -o "$BUNDLE_PATH/Icon"$'\r' 2>/dev/null || true
+              SetFile -a C "$BUNDLE_PATH" 2>/dev/null || true
+              echo "  Icon injected: $(basename "$BUNDLE_PATH")"
             fi
           done
 

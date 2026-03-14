@@ -31,6 +31,14 @@ WizardStyle=modern
 DisableProgramGroupPage=yes
 CloseApplications=yes
 RestartApplications=yes
+; License agreement — place your EULA at installer/EULA.txt
+; If the file doesn't exist, Inno Setup skips the license page
+LicenseFile=..\installer\EULA.txt
+UninstallFilesDir={commonappdata}\{#AppName}\uninstall
+
+[Types]
+Name: "full"; Description: "Full installation"
+Name: "custom"; Description: "Custom installation"; Flags: iscustom
 
 [Files]
 ; VST3 plugin
