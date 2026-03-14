@@ -1298,12 +1298,13 @@ As you build features with AI assistance, consider contributing successful promp
 
 ## 🔄 Auto-Updates
 
-In-app auto-update support via [Sparkle 2.x](https://sparkle-project.org/) (macOS) and [WinSparkle](https://winsparkle.org/) (Windows).
+In-app auto-update support via [Sparkle 2.x](https://sparkle-project.org/) (macOS), [WinSparkle](https://winsparkle.org/) (Windows), and custom appcast polling (Linux).
 
 - **Updater UI** lives in the Standalone app only ("Check for Updates..." in the app menu)
-- **Update payload** is a full product installer (PKG on macOS, Inno Setup on Windows) that replaces all plugin formats (AU, VST3, CLAP, Standalone)
-- **EdDSA signing** ensures installer integrity on both platforms
+- **Update payload** is a full product installer (PKG on macOS, Inno Setup on Windows) or tar.gz (Linux) that replaces all plugin formats
+- **EdDSA signing** ensures installer integrity on macOS and Windows
 - **Appcast XML** feed hosted in the project repo (public mode) or a private repo (commercial mode)
+- **Linux**: No external library needed — uses JUCE HTTP + XML to poll the same appcast feed, then shows an alert with a download link that opens in the default browser. Set `AUTO_UPDATE_FEED_URL_LINUX` in `.env` (or falls back to `AUTO_UPDATE_FEED_URL`)
 
 **Setup:** Use the [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin:
 ```
@@ -1336,11 +1337,11 @@ The CI auto-detection also works: if it finds `build.ps1`, Windows builds are au
 
 ### How do I add Linux support later?
 
-1. Add Linux CMake guards (`if(UNIX AND NOT APPLE)`) to `CMakeLists.txt`
+1. Add Linux CMake guards (`if(UNIX AND NOT APPLE)`) to `CMakeLists.txt` (or use `/juce-dev:port linux` if you have the juce-dev plugin)
 2. Update `.env`: `CI_PLATFORMS="macos,windows,linux"`
 3. Push — CI will now build on all three platforms
 
-Linux uses Clang by default (for consistency with macOS) and Ninja as the build system.
+Linux uses Clang by default (for consistency with macOS) and Ninja as the build system. Tested on Ubuntu 24.04 LTS.
 
 ### Does CI cost money?
 
@@ -1518,6 +1519,38 @@ However, if you have a specific reason to separate releases from source (e.g., p
 - Manual appcast configuration if using auto-updates
 
 This pattern is tracked in [issue #9](https://github.com/danielraffel/JUCE-Plugin-Starter/issues/9) and depends on EdDSA signing support ([issue #7](https://github.com/danielraffel/JUCE-Plugin-Starter/issues/7)). Unless you have a specific need, stick with the default single-repo approach.
+
+### Has Linux been tested on real hardware?
+
+Linux support has been validated end-to-end on **Ubuntu 24.04 LTS (aarch64)** running in a Proxmox VM. The following was confirmed:
+
+- `scripts/dependencies.sh` installs all required packages (cmake, ninja, clang, JUCE apt deps)
+- `scripts/build.sh` correctly detects Linux, uses Ninja, and skips AU/AUv3 formats
+- **VST3**, **CLAP**, and **Standalone** all compile and link successfully
+- **Auto-update** (custom appcast polling) compiles and integrates with the Help menu
+- **GitHub releases** can be created from Linux with `gh release create`
+- **Catch2 tests** compile and run (requires display server or Xvfb for editor tests)
+
+If you encounter issues on other distributions, please [open an issue](https://github.com/danielraffel/JUCE-Plugin-Starter/issues).
+
+### How does auto-update work on Linux?
+
+On macOS, auto-updates use Sparkle (native framework). On Windows, WinSparkle. On Linux, there's no standard update framework, so we use a **custom appcast poller** built entirely with JUCE:
+
+1. The standalone app polls the same Sparkle-compatible appcast XML feed
+2. It parses `<enclosure sparkle:version="X.Y.Z">` to find the latest version
+3. If a newer version is found, an AlertWindow appears: "Version X.Y.Z is available"
+4. Clicking "Download" opens the GitHub release URL in the default browser
+5. The user downloads the tar.gz and extracts it manually
+
+This matches Linux conventions — users expect to manage updates themselves rather than having apps self-modify. No external library is needed.
+
+**Configuration in `.env`:**
+```bash
+ENABLE_AUTO_UPDATE=true
+AUTO_UPDATE_FEED_URL_LINUX=https://raw.githubusercontent.com/youruser/yourrepo/main/appcast.xml
+# Or use AUTO_UPDATE_FEED_URL for all platforms
+```
 
 ---
 
