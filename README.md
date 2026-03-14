@@ -548,7 +548,12 @@ JUCE-Plugin-Starter/
 ├── .clang-format                  ← JUCE-style code formatting rules
 ├── Source/                        ← Your plugin source code
 │   ├── PluginProcessor.cpp/.h
-│   └── PluginEditor.cpp/.h
+│   ├── PluginEditor.cpp/.h
+│   ├── AutoUpdater.h             ← Cross-platform auto-update interface (opt-in)
+│   ├── AutoUpdater_Mac.mm        ← macOS Sparkle implementation
+│   ├── AutoUpdater_Win.cpp       ← Windows WinSparkle implementation
+│   ├── AutoUpdater_Linux.cpp     ← Linux custom appcast poller
+│   └── StandaloneApp.cpp         ← Custom standalone app with "Check for Updates" menu
 ├── tests/                         ← Catch2 unit tests
 │   ├── Catch2Main.cpp             ← Custom main with JUCE init
 │   ├── PluginBasics.cpp           ← Example plugin tests
@@ -1312,7 +1317,26 @@ In-app auto-update support via [Sparkle 2.x](https://sparkle-project.org/) (macO
 /juce-dev:setup-updates --doctor # Validate existing setup
 ```
 
-**Future:** Private distribution for commercial plugins (Phase B, requires validation).
+**Manual setup:**
+1. Set `ENABLE_AUTO_UPDATE=true` in `.env`
+2. Run `scripts/setup_sparkle.sh` (macOS) or `scripts/setup_winsparkle.sh` (Windows) — Linux needs no external library
+3. Set the appcast feed URL in `.env`:
+   - macOS: `AUTO_UPDATE_FEED_URL` (written to Info.plist by post_build.sh)
+   - Windows: `AUTO_UPDATE_FEED_URL_WINDOWS` (compiled into binary via CMake)
+   - Linux: `AUTO_UPDATE_FEED_URL_LINUX` (compiled into binary via CMake, falls back to `AUTO_UPDATE_FEED_URL`)
+4. Build standalone — "Check for Updates..." appears in the app menu (macOS) or Help menu (Windows/Linux)
+
+**How it works:**
+- On macOS: Sparkle downloads and installs the PKG automatically
+- On Windows: WinSparkle downloads and runs the Inno Setup installer
+- On Linux: Shows an AlertWindow with a "Download" button that opens the release URL in the browser
+
+**Source files:**
+- `Source/AutoUpdater.h` — shared interface + no-op stub when disabled
+- `Source/AutoUpdater_Mac.mm` — Sparkle integration (macOS)
+- `Source/AutoUpdater_Win.cpp` — WinSparkle integration (Windows)
+- `Source/AutoUpdater_Linux.cpp` — custom appcast poller (Linux)
+- `Source/StandaloneApp.cpp` — custom standalone app with update menu
 
 ---
 
