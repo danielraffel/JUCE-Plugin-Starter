@@ -308,6 +308,23 @@ if(DEFINED ENV{ENABLE_AUTO_UPDATE} AND "$ENV{ENABLE_AUTO_UPDATE}" STREQUAL "true
             else()
                 message(WARNING "ENABLE_AUTO_UPDATE is true but WinSparkle not found at ${WINSPARKLE_LIB}. Run scripts/setup_winsparkle.sh first.")
             endif()
+        elseif(UNIX AND NOT APPLE)
+            # Linux: custom appcast polling (no external library needed)
+            # Uses JUCE HTTP + XML to check for updates, shows AlertWindow with download link
+            target_sources(${PROJECT_NAME}_Standalone PRIVATE
+                Source/AutoUpdater_Linux.cpp
+            )
+
+            # Pass feed URL as compile definition
+            if(DEFINED ENV{AUTO_UPDATE_FEED_URL_LINUX})
+                target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE
+                    AUTO_UPDATE_FEED_URL="$ENV{AUTO_UPDATE_FEED_URL_LINUX}"
+                )
+            elseif(DEFINED ENV{AUTO_UPDATE_FEED_URL})
+                target_compile_definitions(${PROJECT_NAME}_Standalone PRIVATE
+                    AUTO_UPDATE_FEED_URL="$ENV{AUTO_UPDATE_FEED_URL}"
+                )
+            endif()
         endif()
     endif()
 endif()

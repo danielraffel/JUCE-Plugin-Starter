@@ -8,6 +8,7 @@
  *
  * macOS: Sparkle 2.x (AutoUpdater_Mac.mm)
  * Windows: WinSparkle (AutoUpdater_Win.cpp)
+ * Linux: Custom appcast polling (AutoUpdater_Linux.cpp)
  * Other/disabled: no-op stub (below)
  *
  * The updater UI lives in the Standalone app only. The update payload is a
