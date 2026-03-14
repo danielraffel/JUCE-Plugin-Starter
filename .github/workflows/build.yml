@@ -671,14 +671,14 @@ jobs:
           echo "ARTIFACT_NAME=${{ env.PROJECT_NAME }}-${{ runner.os }}" >> $GITHUB_ENV
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACTS_PATH }}
 
       - name: Upload Installer Package
         if: steps.signing.outputs.mode == 'publish' && env.INSTALLER_PKG != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PROJECT_NAME }}-installer-${{ runner.os }}
           path: ${{ env.INSTALLER_PKG }}
@@ -698,7 +698,7 @@ jobs:
 
       - name: Upload EdDSA Metadata
         if: steps.signing.outputs.mode == 'publish' && env.EDDSA_SIGNATURE != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eddsa-${{ runner.os }}
           path: ${{ runner.temp }}/eddsa/
