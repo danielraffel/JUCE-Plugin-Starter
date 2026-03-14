@@ -1681,4 +1681,17 @@ AUTO_UPDATE_FEED_URL_LINUX=https://raw.githubusercontent.com/youruser/yourrepo/m
 * [JUCE Tutorials](https://juce.com/learn/tutorials)
 * [JUCE Forum](https://forum.juce.com/)
 * [CMake Tutorial](https://cmake.org/learn/)
-* [pamplejuce: a far more robust JUCE audio plugin template](https://github.com/sudara/pamplejuce)
+
+---
+
+## 🙏 Acknowledgements
+
+This project owes a significant debt to [Pamplejuce](https://github.com/sudara/pamplejuce) by [Sudara](https://melatonin.dev). Pamplejuce showed the JUCE community how to do cross-platform CI/CD, code signing, testing, and packaging *right* — and made all of it approachable. Many of the build system patterns in this template were directly inspired by or adapted from Pamplejuce's work.
+
+### Which should you use?
+
+**[Pamplejuce](https://github.com/sudara/pamplejuce)** is the better choice for most developers. It's maintained by a serious audio developer, battle-tested by a large community, and stays closer to standard CMake conventions. If you're comfortable with CMake, git submodules, and configuring your own build environment, Pamplejuce is the way to go. It also has excellent [documentation](https://melatonin.dev/manuals/pamplejuce/).
+
+**JUCE Plugin Starter** is designed for people who are newer to audio plugin development or prefer a more hands-off setup. The [init script](./scripts/init_plugin_project.sh) installs all prerequisites and scaffolds a complete project in one pass. The [juce-dev](https://github.com/danielraffel/generous-corp-marketplace/tree/master/plugins/juce-dev) Claude Code plugin takes this further — letting you create, build, test, sign, and publish plugins using natural language without needing to learn the underlying toolchain. It also adds features like auto-updates (Sparkle/WinSparkle), AI-powered release notes, a GitHub Pages download site, and DiagnosticKit — things that go beyond what a template typically provides.
+
+If you're an experienced developer who wants control and community support, use Pamplejuce. If you want something that handles the setup and tooling for you so you can focus on building your plugin, this template and juce-dev might be a better fit.
