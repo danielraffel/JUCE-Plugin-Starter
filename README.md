@@ -427,6 +427,16 @@ Edit the files in `Source/`:
 
 Add more `.cpp/.h` files as needed for a modular architecture.
 
+### App Icon
+
+To add a custom app icon, place a **512x512** or **1024x1024** PNG at:
+
+```
+Resources/Images/app_icon.png
+```
+
+The build system detects this file automatically — no configuration needed. JUCE generates `.icns` (macOS) and `.ico` (Windows) from it. If no icon file is present, the default JUCE icon is used.
+
 ---
 
 ## 🛠️ How to Edit `CMakeLists.txt`
@@ -554,6 +564,9 @@ JUCE-Plugin-Starter/
 │   ├── AutoUpdater_Win.cpp       ← Windows WinSparkle implementation
 │   ├── AutoUpdater_Linux.cpp     ← Linux custom appcast poller
 │   └── StandaloneApp.cpp         ← Custom standalone app with "Check for Updates" menu
+├── Resources/
+│   └── Images/
+│       └── app_icon.png          ← App icon (optional, 512x512 or 1024x1024 PNG)
 ├── tests/                         ← Catch2 unit tests
 │   ├── Catch2Main.cpp             ← Custom main with JUCE init
 │   ├── PluginBasics.cpp           ← Example plugin tests

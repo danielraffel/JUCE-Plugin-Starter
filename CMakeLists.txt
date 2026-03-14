@@ -126,6 +126,12 @@ else()
     set(PLUGIN_FORMATS VST3 Standalone)
 endif()
 
+# App icon (optional — place a 512x512 or 1024x1024 PNG at Resources/Images/app_icon.png)
+set(APP_ICON_PATH "${CMAKE_SOURCE_DIR}/Resources/Images/app_icon.png")
+if(NOT EXISTS "${APP_ICON_PATH}")
+    set(APP_ICON_PATH "")
+endif()
+
 # Create the plugin
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME ${COMPANY_NAME}
@@ -147,6 +153,7 @@ juce_add_plugin(${PROJECT_NAME}
     AU_EXPORT_PREFIX "${PROJECT_NAME}AU"
     AU_SANDBOX_SAFE TRUE
     VST3_CATEGORIES "Drum|Tools"
+    ICON_BIG "${APP_ICON_PATH}"
 )
 
 juce_generate_juce_header(${PROJECT_NAME})
