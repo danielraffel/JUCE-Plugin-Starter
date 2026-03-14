@@ -133,6 +133,10 @@ if(APPLE)
     enable_language(OBJCXX)
 endif()
 
+# Set global C++ standard BEFORE FetchContent so dependencies inherit it
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # ==============================================================================
 # Dependencies (FetchContent)
 # ==============================================================================
@@ -159,7 +163,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     clap-juce-extensions
     GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git
-    GIT_TAG 0.26.0
+    GIT_TAG main
     GIT_SHALLOW ON
 )
 
@@ -599,10 +603,6 @@ if(APPLE)
     )
     endif()
 endif() # APPLE
-
-# Set global C++ standard for all targets
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Fix code signing and C++ standard for VST3 helper tool (macOS Xcode only)
 if(APPLE AND TARGET juce_vst3_helper)
