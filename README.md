@@ -885,6 +885,71 @@ TEST_CASE ("Editor renders", "[editor]")
 }
 ```
 
+### Benchmarks
+
+A separate `Benchmarks` target (using Catch2's benchmarking support) keeps test runs fast while giving you performance measurement:
+
+```bash
+# Run benchmarks
+cmake --build build --target Benchmarks
+ctest --test-dir build --verbose -R Benchmark
+```
+
+Add benchmark files to `benchmarks/`. Example (`benchmarks/AudioProcessing.cpp`):
+
+```cpp
+#include <PluginProcessor.h>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/benchmark/catch_benchmark.hpp>
+
+TEST_CASE ("processBlock benchmark", "[benchmark]")
+{
+    PluginProcessor plugin;
+    plugin.prepareToPlay (48000.0, 512);
+    juce::AudioBuffer<float> buffer (2, 512);
+    juce::MidiBuffer midi;
+
+    BENCHMARK ("stereo 512 samples")
+    {
+        plugin.processBlock (buffer, midi);
+        return buffer.getSample (0, 0);
+    };
+}
+```
+
+### Melatonin Inspector (opt-in)
+
+[Melatonin Inspector](https://github.com/sudara/melatonin_inspector) is a runtime UI component inspector for debugging JUCE plugin layouts — like browser DevTools for your plugin UI.
+
+Enable in `.env`:
+```bash
+ENABLE_MELATONIN_INSPECTOR=true
+```
+
+Use in your PluginEditor:
+```cpp
+#if ENABLE_MELATONIN_INSPECTOR
+#include <melatonin_inspector/melatonin_inspector.h>
+melatonin::Inspector inspector { *this };
+#endif
+```
+
+### Intel IPP (opt-in)
+
+[Intel IPP](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ipp.html) provides optimized FFT, filters, convolution, and resampling. Benefits DSP-heavy plugins like convolution reverbs and spectral processors.
+
+Enable in `.env`:
+```bash
+ENABLE_IPP=true
+```
+
+**Platform setup:**
+- **macOS**: Auto-fetched (x86_64 only — for universal builds, IPP is applied only to the x86_64 slice)
+- **Windows**: `nuget install intelipp.static.win-x64 -Version 2022.3.0.387`
+- **Linux**: `sudo apt install intel-oneapi-ipp-devel`
+
+Use in code with `#if IPP_ENABLED` guards.
+
 ---
 
 ## 🎨 Code Style
