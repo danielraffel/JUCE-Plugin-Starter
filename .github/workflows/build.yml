@@ -593,7 +593,7 @@ jobs:
       # ── Windows code signing (Azure Trusted Signing) ──────────────
       - name: Sign Windows Binaries (Azure)
         if: steps.signing.outputs.sign_windows == 'true' && steps.signing.outputs.win_method == 'azure' && runner.os == 'Windows'
-        uses: azure/trusted-signing-action@v0.5.0
+        uses: azure/trusted-signing-action@v1.1.0
         with:
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
