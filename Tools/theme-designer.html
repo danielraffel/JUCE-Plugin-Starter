@@ -368,7 +368,7 @@ button.tb-btn-accent:hover {
   overflow: auto;
 }
 #plugin-chrome {
-  background: var(--app-panel);
+  background: var(--vt-PluginBackground, var(--app-panel));
   border-radius: 10px;
   box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
   width: 100%;
@@ -382,8 +382,8 @@ button.tb-btn-accent:hover {
   gap: 8px;
   height: 32px;
   padding: 0 12px;
-  background: var(--app-panel-raised);
-  border-bottom: 1px solid var(--app-border-subtle);
+  background: var(--vt-PanelBackground, var(--app-panel-raised));
+  border-bottom: 1px solid var(--vt-PanelBorder, var(--app-border-subtle));
   user-select: none;
 }
 .traffic-lights {
@@ -405,6 +405,7 @@ button.tb-btn-accent:hover {
 #preview-area {
   padding: 16px;
   min-height: 300px;
+  background: var(--vt-PluginBackground, transparent);
 }
 .preview-section {
   margin-bottom: 20px;
