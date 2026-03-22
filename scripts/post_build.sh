@@ -164,30 +164,28 @@ echo "🔍 Final Info.plist version strings:"
 echo "🔧 Post-build script finished."
 
 # --- Copy to System Plug-Ins Directory ---
-# The component_path variable already holds the path to the .component bundle in the build directory.
-# Example: /Users/danielraffel/Code/PlunderTube/build/PlunderTube_artefacts/Debug/AU/PlunderTube.component
+# Only copy AU (.component) bundles to Components folder.
+# VST3, CLAP, and Standalone bundles should NOT be copied here — JUCE's
+# COPY_PLUGIN_AFTER_BUILD handles copying each format to the correct location.
 
-# Extract the component name (e.g., PlunderTube.component) from the component_path
 COMPONENT_NAME=$(basename "${component_path}")
 
-# Define the destination directory for AU plugins
-DEST_DIR="$HOME/Library/Audio/Plug-Ins/Components/"
+# Only copy .component bundles (AU) — skip .vst3, .app, .clap, .appex
+if [[ "${COMPONENT_NAME}" == *.component ]]; then
+    DEST_DIR="$HOME/Library/Audio/Plug-Ins/Components/"
+    echo "ℹ️  Attempting to copy ${COMPONENT_NAME} from ${component_path} to ${DEST_DIR}"
+    mkdir -p "${DEST_DIR}"
 
-echo "ℹ️  Attempting to copy ${COMPONENT_NAME} from ${component_path} to ${DEST_DIR}"
-
-# Ensure the destination directory exists
-mkdir -p "${DEST_DIR}"
-
-# Copy the entire .component bundle using rsync
-# rsync is generally good for this as it handles directory contents well and can be efficient.
-# The trailing slash on the source path is important for rsync to copy the *contents* of the source directory.
-if rsync -av --delete "${component_path}/" "${DEST_DIR}${COMPONENT_NAME}/"; then
-    echo "✅ Successfully copied ${COMPONENT_NAME} to ${DEST_DIR}"
-    echo "🔔 For Logic Pro, you may need to open Plugin Manager and 'Reset & Rescan' ${PROJECT_NAME_FROM_CMAKE:-PlunderTube}."
+    if rsync -av --delete "${component_path}/" "${DEST_DIR}${COMPONENT_NAME}/"; then
+        echo "✅ Successfully copied ${COMPONENT_NAME} to ${DEST_DIR}"
+        echo "🔔 For Logic Pro, you may need to open Plugin Manager and 'Reset & Rescan' ${PROJECT_NAME_FROM_CMAKE:-PlunderTube}."
+    else
+        echo "❌ Error: Failed to copy ${COMPONENT_NAME} to ${DEST_DIR}. rsync exit code: $?"
+        # Decide if this should be a fatal error for the build
+        # exit 1
+    fi
 else
-    echo "❌ Error: Failed to copy ${COMPONENT_NAME} to ${DEST_DIR}. rsync exit code: $?"
-    # Decide if this should be a fatal error for the build
-    # exit 1 
+    echo "ℹ️  Skipping copy to Components for ${COMPONENT_NAME} (not an AU bundle)"
 fi
 
 echo "🎉 All post-build operations complete."

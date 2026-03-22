@@ -389,6 +389,25 @@ clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
     CLAP_FEATURES audio-effect)
 
 # ==============================================================================
+# Fix: Override JUCE's incorrect Xcode INSTALL_PATH for non-AU targets
+# ==============================================================================
+# JUCE's _juce_configure_bundle sets XCODE_ATTRIBUTE_INSTALL_PATH to
+# $(LOCAL_APPS_DIR) for ALL targets, which resolves to the Components/ folder.
+# This causes VST3 and Standalone to be incorrectly installed alongside AU.
+if(APPLE)
+    if(TARGET ${PROJECT_NAME}_VST3)
+        set_target_properties(${PROJECT_NAME}_VST3 PROPERTIES
+            XCODE_ATTRIBUTE_INSTALL_PATH "$ENV{HOME}/Library/Audio/Plug-Ins/VST3"
+        )
+    endif()
+    if(TARGET ${PROJECT_NAME}_Standalone)
+        set_target_properties(${PROJECT_NAME}_Standalone PROPERTIES
+            XCODE_ATTRIBUTE_SKIP_INSTALL YES
+        )
+    endif()
+endif()
+
+# ==============================================================================
 # Xcode IDE Organization (macOS only)
 # ==============================================================================
 if(APPLE)
