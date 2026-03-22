@@ -500,6 +500,7 @@ button.tb-btn-accent:hover {
   -webkit-appearance: none;
   width: 14px; height: 14px;
   border-radius: 50%;
+  background: var(--vt-SliderThumb, #fff);
   cursor: pointer;
   border: 2px solid var(--app-panel);
 }
@@ -737,6 +738,30 @@ button.tb-btn-accent:hover {
 }
 
 /* ── Spinner animation ── */
+/* ── State scrubber overrides ── */
+[data-preview-state="hover"] .preview-btn { background: var(--vt-UiButtonBackgroundHover) !important; color: var(--vt-UiButtonTextHover) !important; }
+[data-preview-state="hover"] .preview-btn-accent { background: var(--vt-UiActionButtonBackgroundHover) !important; color: var(--vt-UiActionButtonTextHover) !important; }
+[data-preview-state="hover"] .toggle-track { background: var(--vt-ToggleButtonOnHover) !important; }
+[data-preview-state="hover"] .preview-input { border-color: var(--vt-TextEditorCaret) !important; }
+[data-preview-state="hover"] .dropdown-preview { border-color: var(--vt-TextEditorCaret) !important; }
+[data-preview-state="hover"] .preview-card { border-color: var(--vt-AccentPrimary) !important; }
+
+[data-preview-state="focus"] .preview-btn { box-shadow: 0 0 0 2px var(--vt-FocusRing) !important; }
+[data-preview-state="focus"] .preview-input { border-color: var(--vt-TextEditorCaret) !important; box-shadow: 0 0 0 2px var(--vt-FocusRing) !important; }
+[data-preview-state="focus"] .dropdown-preview { box-shadow: 0 0 0 2px var(--vt-FocusRing) !important; }
+
+[data-preview-state="disabled"] .preview-btn,
+[data-preview-state="disabled"] .preview-btn-accent,
+[data-preview-state="disabled"] .toggle-track,
+[data-preview-state="disabled"] .preview-input,
+[data-preview-state="disabled"] .dropdown-preview,
+[data-preview-state="disabled"] .preview-slider,
+[data-preview-state="disabled"] .preview-card { opacity: 0.4 !important; pointer-events: none !important; }
+
+[data-preview-state="error"] .preview-input { border-color: var(--vt-Error) !important; }
+[data-preview-state="error"] .preview-btn { border: 1px solid var(--vt-Error) !important; }
+[data-preview-state="error"] .preview-card { background: var(--vt-CardError) !important; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
   width: 16px; height: 16px;
@@ -1137,6 +1162,109 @@ button.tb-btn:disabled:hover {
    VISAGE THEME DESIGNER — JavaScript Engine
    ══════════════════════════════════════════════════════ */
 
+// ── Preset Library ───────────────────────
+const PresetLibrary = {
+  presets: {
+    'default': {},  // empty = use base theme as-is
+    'light': {
+      meta: { name: 'Light' },
+      colors: {
+        UiButtonBackground: { value: '#E0E0E4', alpha: 1 }, UiButtonBackgroundHover: { value: '#D0D0D6', alpha: 1 },
+        UiButtonText: { value: '#333338', alpha: 1 }, UiButtonTextHover: { value: '#1A1A1E', alpha: 1 },
+        UiActionButtonBackground: { value: '#7755CC', alpha: 1 }, UiActionButtonBackgroundHover: { value: '#8866DD', alpha: 1 },
+        TextButtonBackgroundOff: { value: '#F0F0F4', alpha: 1 }, TextButtonBackgroundOffHover: { value: '#E4E4E8', alpha: 1 },
+        TextButtonBackgroundOn: { value: '#F0F0F4', alpha: 1 }, TextButtonBackgroundOnHover: { value: '#E4E4E8', alpha: 1 },
+        TextButtonTextOff: { value: '#666670', alpha: 1 }, TextButtonTextOn: { value: '#7755CC', alpha: 1 },
+        ToggleButtonOff: { value: '#CCCCD2', alpha: 1 }, ToggleButtonOn: { value: '#7755CC', alpha: 1 },
+        TextEditorBackground: { value: '#FFFFFF', alpha: 1 }, TextEditorBorder: { value: '#CCCCD2', alpha: 1 }, TextEditorText: { value: '#1A1A1E', alpha: 1 },
+        PopupMenuBackground: { value: '#FFFFFF', alpha: 1 }, PopupMenuBorder: { value: '#CCCCD2', alpha: 1 }, PopupMenuText: { value: '#1A1A1E', alpha: 1 }, PopupMenuSelection: { value: '#7755CC', alpha: 1 },
+      },
+      custom: {
+        PluginBackground: { value: '#F4F4F8', alpha: 1 }, PanelBackground: { value: '#FFFFFF', alpha: 1 }, PanelBorder: { value: '#DDDDE2', alpha: 1 },
+        KnobArc: { value: '#7755CC', alpha: 1 }, KnobArcBackground: { value: '#DDDDE2', alpha: 1 },
+        SliderTrack: { value: '#DDDDE2', alpha: 1 }, SliderFill: { value: '#7755CC', alpha: 1 },
+        AccentPrimary: { value: '#7755CC', alpha: 1 }, AccentSecondary: { value: '#5588DD', alpha: 1 }, AccentTertiary: { value: '#44AA66', alpha: 1 },
+        TextPrimary: { value: '#1A1A1E', alpha: 1 }, TextSecondary: { value: '#666670', alpha: 1 }, TextDisabled: { value: '#AAAAB0', alpha: 1 },
+        CardEmpty: { value: '#F0F0F4', alpha: 1 }, CardReady: { value: '#FFFFFF', alpha: 1 },
+        ModalBackground: { value: '#FFFFFF', alpha: 1 }, ModalBorder: { value: '#CCCCD2', alpha: 1 },
+        TabActive: { value: '#7755CC', alpha: 1 }, Divider: { value: '#DDDDE2', alpha: 1 },
+      }
+    },
+    'midnight': {
+      meta: { name: 'Midnight' },
+      colors: {
+        UiButtonBackground: { value: '#1A1A2E', alpha: 1 }, UiButtonBackgroundHover: { value: '#2A2A44', alpha: 1 },
+        UiActionButtonBackground: { value: '#4A66CC', alpha: 1 }, UiActionButtonBackgroundHover: { value: '#5A77DD', alpha: 1 },
+        ToggleButtonOn: { value: '#4A66CC', alpha: 1 }, TextButtonTextOn: { value: '#4A66CC', alpha: 1 },
+        TextEditorBackground: { value: '#0E0E1A', alpha: 1 }, TextEditorCaret: { value: '#4A66CC', alpha: 1 },
+        PopupMenuBackground: { value: '#12122A', alpha: 1 }, PopupMenuSelection: { value: '#4A66CC', alpha: 1 },
+      },
+      custom: {
+        PluginBackground: { value: '#0A0A18', alpha: 1 }, PanelBackground: { value: '#0E0E1A', alpha: 1 }, PanelBorder: { value: '#222240', alpha: 1 },
+        KnobArc: { value: '#4A66CC', alpha: 1 }, KnobArcBackground: { value: '#1A1A2E', alpha: 1 },
+        SliderFill: { value: '#4A66CC', alpha: 1 }, SliderTrack: { value: '#1A1A2E', alpha: 1 },
+        AccentPrimary: { value: '#4A66CC', alpha: 1 }, AccentSecondary: { value: '#6688EE', alpha: 1 }, AccentTertiary: { value: '#44AACC', alpha: 1 },
+        TextPrimary: { value: '#CCCCEE', alpha: 1 }, TextSecondary: { value: '#6666AA', alpha: 1 },
+        TabActive: { value: '#4A66CC', alpha: 1 }, Divider: { value: '#222240', alpha: 1 },
+        WaveformLine: { value: '#4A66CC', alpha: 1 }, WaveformFill: { value: '#4A66CC', alpha: 0.15 },
+        ModalBackground: { value: '#12122A', alpha: 1 }, GradientStart: { value: '#4A66CC', alpha: 1 }, GradientEnd: { value: '#6688EE', alpha: 1 },
+        SpinnerColor: { value: '#4A66CC', alpha: 1 }, ProgressFill: { value: '#4A66CC', alpha: 1 }, FocusRing: { value: '#4A66CC', alpha: 0.5 },
+        BloomColor: { value: '#4A66CC', alpha: 0.3 },
+      }
+    },
+    'warm': {
+      meta: { name: 'Warm' },
+      colors: {
+        UiButtonBackground: { value: '#3D3228', alpha: 1 }, UiButtonBackgroundHover: { value: '#504436', alpha: 1 },
+        UiActionButtonBackground: { value: '#CC7733', alpha: 1 }, UiActionButtonBackgroundHover: { value: '#DD8844', alpha: 1 },
+        ToggleButtonOn: { value: '#CC7733', alpha: 1 }, TextButtonTextOn: { value: '#CC7733', alpha: 1 },
+        TextEditorBackground: { value: '#2A2218', alpha: 1 }, TextEditorCaret: { value: '#CC7733', alpha: 1 },
+        PopupMenuBackground: { value: '#2A2218', alpha: 1 }, PopupMenuSelection: { value: '#CC7733', alpha: 1 },
+      },
+      custom: {
+        PluginBackground: { value: '#1E1812', alpha: 1 }, PanelBackground: { value: '#2A2218', alpha: 1 }, PanelBorder: { value: '#44382A', alpha: 1 },
+        KnobArc: { value: '#CC7733', alpha: 1 }, KnobArcBackground: { value: '#3D3228', alpha: 1 },
+        SliderFill: { value: '#CC7733', alpha: 1 }, SliderTrack: { value: '#3D3228', alpha: 1 },
+        AccentPrimary: { value: '#CC7733', alpha: 1 }, AccentSecondary: { value: '#DDAA44', alpha: 1 }, AccentTertiary: { value: '#88AA44', alpha: 1 },
+        TextPrimary: { value: '#EEDDCC', alpha: 1 }, TextSecondary: { value: '#998877', alpha: 1 },
+        TabActive: { value: '#CC7733', alpha: 1 }, Divider: { value: '#44382A', alpha: 1 },
+        WaveformLine: { value: '#CC7733', alpha: 1 }, WaveformFill: { value: '#CC7733', alpha: 0.15 },
+        ModalBackground: { value: '#2A2218', alpha: 1 }, GradientStart: { value: '#CC7733', alpha: 1 }, GradientEnd: { value: '#DDAA44', alpha: 1 },
+        SpinnerColor: { value: '#CC7733', alpha: 1 }, ProgressFill: { value: '#CC7733', alpha: 1 }, FocusRing: { value: '#CC7733', alpha: 0.5 },
+        BloomColor: { value: '#CC7733', alpha: 0.3 },
+      }
+    }
+  },
+
+  apply(presetName) {
+    const preset = this.presets[presetName];
+    if (!preset) return;
+
+    // Start from base theme
+    const baseData = JSON.parse(document.getElementById('theme-data').textContent);
+    TokenRegistry.load(baseData);
+
+    // Apply preset overrides
+    if (preset.meta) TokenRegistry.theme.meta.name = preset.meta.name;
+    for (const section of ['colors', 'values', 'custom', 'juce']) {
+      if (preset[section]) {
+        for (const [name, token] of Object.entries(preset[section])) {
+          if (TokenRegistry.theme[section]?.[name]) {
+            TokenRegistry.theme[section][name] = { ...TokenRegistry.theme[section][name], ...token };
+          }
+        }
+      }
+    }
+
+    // Update UI
+    document.getElementById('theme-name').value = TokenRegistry.theme.meta.name;
+    CSSBridge.syncAll();
+    LeftPanel.render();
+    PreviewRenderer.render();
+    Toast.show('Preset applied: ' + (preset.meta?.name || presetName));
+  }
+};
+
 // ── Color Converter ──────────────────────
 const ColorConverter = {
   hexAlphaToRgba(hex, alpha) {
@@ -1254,6 +1382,8 @@ const CanvasRenderer = {
     this.pendingRedraw = true;
     requestAnimationFrame(() => {
       this.canvases.forEach(k => this.drawKnob(k.canvas, k.value));
+      PreviewRenderer.drawWaveform();
+      PreviewRenderer.drawMeters();
       this.pendingRedraw = false;
     });
   },
@@ -2146,6 +2276,11 @@ const App = {
       TokenRegistry.theme.meta.name = e.target.value;
     });
 
+    // Preset dropdown
+    document.getElementById('preset-select').addEventListener('change', (e) => {
+      PresetLibrary.apply(e.target.value);
+    });
+
     // Export
     document.getElementById('btn-export').addEventListener('click', () => ExportPanel.show());
     document.getElementById('export-close').addEventListener('click', () => ExportPanel.hide());
@@ -2165,7 +2300,18 @@ const App = {
       navigator.clipboard?.writeText(code).then(() => Toast.show('Copied to clipboard'));
     });
     document.getElementById('export-download').addEventListener('click', () => {
-      ImportExport.downloadJSON();
+      const code = document.getElementById('export-code').textContent;
+      const tab = ExportPanel.currentTab;
+      const name = (TokenRegistry.theme.meta?.name || 'theme').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const ext = { json: '.json', css: '.css', cpp: '.h', palette: '.h' }[tab] || '.txt';
+      const mime = { json: 'application/json', css: 'text/css', cpp: 'text/plain', palette: 'text/plain' }[tab] || 'text/plain';
+      const filename = tab === 'palette' ? `${name}-palette${ext}` : `${name}${ext}`;
+      const blob = new Blob([code], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      Toast.show('Downloaded ' + filename);
     });
 
     // Import
@@ -2188,6 +2334,9 @@ const App = {
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        ExportPanel.hide();
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
         e.preventDefault();
         ExportPanel.show();
