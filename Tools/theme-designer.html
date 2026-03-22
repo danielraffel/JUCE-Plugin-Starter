@@ -577,6 +577,175 @@ button.tb-btn-accent:hover {
 }
 .dropdown-arrow { font-size: 8px; opacity: 0.5; }
 
+/* ── Preview: Layout ── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.preview-card {
+  height: 56px;
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--app-text-dim);
+  position: relative;
+}
+.preview-card .card-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 7px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tab-bar {
+  display: flex;
+  border-bottom: 2px solid var(--app-border-subtle);
+  margin-bottom: 12px;
+}
+.tab-item {
+  padding: 6px 14px;
+  font-size: 11px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.12s;
+  color: var(--app-text-dim);
+}
+.tab-item.active { border-bottom-color: var(--vt-TabActive, #AA88FF); color: var(--app-text); }
+.tab-item:hover { color: var(--app-text-muted); }
+.preview-panel {
+  border: 1px solid;
+  border-radius: var(--app-radius);
+  padding: 12px;
+  font-size: 11px;
+}
+.preview-divider {
+  height: 1px;
+  margin: 8px 0;
+}
+
+/* ── Preview: Overlays ── */
+.overlay-card {
+  border: 1px solid;
+  border-radius: var(--app-radius);
+  padding: 0;
+  margin-bottom: 8px;
+  overflow: hidden;
+  max-width: 280px;
+}
+.overlay-card-header {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-bottom: 1px solid;
+}
+.overlay-card-body {
+  padding: 10px 12px;
+  font-size: 11px;
+}
+.overlay-card-footer {
+  padding: 8px 12px;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  border-top: 1px solid;
+}
+.overlay-card-footer button {
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--app-radius-sm);
+  font-size: 10px;
+  cursor: pointer;
+  font-family: var(--app-font);
+}
+.menu-preview {
+  border: 1px solid;
+  border-radius: var(--app-radius);
+  overflow: hidden;
+  max-width: 180px;
+  display: inline-block;
+}
+.menu-item {
+  padding: 5px 12px;
+  font-size: 11px;
+  cursor: default;
+}
+.menu-item.hovered { font-weight: 500; }
+.menu-divider { height: 1px; margin: 2px 0; }
+.tooltip-preview {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: var(--app-radius-sm);
+  font-size: 10px;
+  max-width: 180px;
+}
+
+/* ── Preview: States ── */
+.states-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 6px;
+}
+.state-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-border-subtle);
+}
+.state-demo-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-dim);
+}
+.state-demo-btn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: var(--app-radius-sm);
+  font-size: 10px;
+  font-family: var(--app-font);
+  cursor: default;
+}
+
+/* ── Preview: Effects ── */
+.effects-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.effect-card {
+  width: 100px;
+  height: 64px;
+  border-radius: var(--app-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--app-text-dim);
+}
+
+/* ── Spinner animation ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--app-border);
+  border-top-color: var(--app-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 /* ── RIGHT PANEL (Inspector) ────────────── */
 #right-panel {
   grid-area: right;
@@ -768,6 +937,17 @@ button.tb-btn-accent:hover {
 /* ── IMPORT INPUT ───────────────────────── */
 #import-input { display: none; }
 
+/* ── UNDO/REDO BUTTONS ─────────────────── */
+button.tb-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+button.tb-btn:disabled:hover {
+  background: var(--app-panel);
+  color: var(--app-text-muted);
+  border-color: var(--app-border);
+}
+
 /* ── TOAST ──────────────────────────────── */
 .toast {
   position: fixed;
@@ -819,6 +999,11 @@ button.tb-btn-accent:hover {
       </div>
     </div>
     <div class="toolbar-spacer"></div>
+    <div class="toolbar-group">
+      <button class="tb-btn" id="btn-undo" disabled title="Undo (⌘Z)">Undo</button>
+      <button class="tb-btn" id="btn-redo" disabled title="Redo (⌘⇧Z)">Redo</button>
+    </div>
+    <div class="toolbar-separator"></div>
     <div class="toolbar-group">
       <button class="tb-btn" id="btn-import">Import</button>
       <button class="tb-btn-accent tb-btn" id="btn-export">Export</button>
@@ -990,10 +1175,18 @@ const TokenRegistry = {
     return ColorConverter.hexAlphaToRgba(token.value, token.alpha ?? 1);
   },
 
-  setColor(section, name, hex, alpha) {
-    if (!this.theme[section]?.[name]) return;
-    this.theme[section][name].value = hex;
-    if (alpha !== undefined) this.theme[section][name].alpha = alpha;
+  setColor(section, name, hex, alpha, skipUndo) {
+    const token = this.theme[section]?.[name];
+    if (!token) return;
+    if (!skipUndo) {
+      UndoManager.push({
+        section, name,
+        prevValue: token.value, prevAlpha: token.alpha,
+        newValue: hex, newAlpha: alpha ?? token.alpha
+      });
+    }
+    token.value = hex;
+    if (alpha !== undefined) token.alpha = alpha;
     this.edits[`${section}.${name}`] = true;
     CSSBridge.syncToken(section, name);
     this.updateStatus();
@@ -1427,6 +1620,140 @@ const PreviewRenderer = {
             <div style="width:65%;height:100%;background:var(--vt-ProgressFill);border-radius:2px"></div>
           </div>
         </div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:8px" data-tokens="SpinnerColor" data-component="Spinner" data-framework="visage">
+          <div class="spinner" style="border-top-color:var(--vt-SpinnerColor)"></div>
+          <span style="font-size:10px;color:var(--vt-TextSecondary)">Loading...</span>
+        </div>
+      </div>
+
+      <!-- Layout -->
+      <div class="preview-section">
+        <div class="preview-section-title">Layout</div>
+        <div class="cards-grid" data-tokens="CardEmpty,CardLoading,CardReady,CardError" data-component="Cards" data-framework="visage">
+          <div class="preview-card" style="background:var(--vt-CardEmpty)">
+            <span>Empty</span>
+          </div>
+          <div class="preview-card" style="background:var(--vt-CardLoading)">
+            <div class="spinner" style="border-top-color:var(--vt-SpinnerColor);width:12px;height:12px;border-width:1.5px"></div>
+          </div>
+          <div class="preview-card" style="background:var(--vt-CardReady)">
+            <span>Ready</span>
+            <span class="card-badge" style="background:var(--vt-Success);color:#fff">OK</span>
+          </div>
+          <div class="preview-card" style="background:var(--vt-CardError)">
+            <span style="color:var(--vt-Error)">Error</span>
+            <span class="card-badge" style="background:var(--vt-Error);color:#fff">!</span>
+          </div>
+        </div>
+
+        <div class="tab-bar" data-tokens="TabActive,TabInactive" data-component="Tab Bar" data-framework="visage">
+          <div class="tab-item active">General</div>
+          <div class="tab-item">Audio</div>
+          <div class="tab-item">MIDI</div>
+          <div class="tab-item">About</div>
+        </div>
+
+        <div class="preview-panel" style="background:var(--vt-PanelBackground);border-color:var(--vt-PanelBorder)" data-tokens="PanelBackground,PanelBorder" data-component="Panel" data-framework="visage">
+          <span style="color:var(--vt-TextPrimary)">Panel content area</span>
+          <div class="preview-divider" style="background:var(--vt-Divider)"></div>
+          <span style="color:var(--vt-TextSecondary);font-size:10px">With divider and secondary text</span>
+        </div>
+      </div>
+
+      <!-- Overlays -->
+      <div class="preview-section">
+        <div class="preview-section-title">Overlays (Static Preview)</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start">
+          <div class="overlay-card" style="background:var(--vt-ModalBackground);border-color:var(--vt-ModalBorder)" data-tokens="ModalBackground,ModalBorder,OverlayBackground" data-component="Modal Dialog" data-framework="visage">
+            <div class="overlay-card-header" style="border-color:var(--vt-Divider);color:var(--vt-TextPrimary)">Confirm Action</div>
+            <div class="overlay-card-body" style="color:var(--vt-TextSecondary)">Are you sure you want to delete this preset? This cannot be undone.</div>
+            <div class="overlay-card-footer" style="border-color:var(--vt-Divider)">
+              <button style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText)">Cancel</button>
+              <button style="background:var(--vt-Error);color:#fff">Delete</button>
+            </div>
+          </div>
+
+          <div class="menu-preview" style="background:var(--vt-PopupMenuBackground);border-color:var(--vt-PopupMenuBorder)" data-tokens="PopupMenuBackground,PopupMenuBorder,PopupMenuText,PopupMenuSelection,PopupMenuSelectionText" data-component="Context Menu" data-framework="visage">
+            <div class="menu-item" style="color:var(--vt-PopupMenuText)">Copy</div>
+            <div class="menu-item hovered" style="background:var(--vt-PopupMenuSelection);color:var(--vt-PopupMenuSelectionText)">Paste</div>
+            <div class="menu-divider" style="background:var(--vt-Divider)"></div>
+            <div class="menu-item" style="color:var(--vt-PopupMenuText)">Rename</div>
+            <div class="menu-item" style="color:var(--vt-PopupMenuDisabledText)">Delete</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="tooltip-preview" style="background:var(--vt-TooltipBackground);color:var(--vt-TooltipText)" data-tokens="TooltipBackground,TooltipText" data-component="Tooltip" data-framework="visage">
+              Cutoff: 2400 Hz
+            </div>
+            <div class="tooltip-preview" style="background:var(--vt-TooltipBackground);color:var(--vt-TooltipText)">
+              Hold Shift for fine control
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- States -->
+      <div class="preview-section">
+        <div class="preview-section-title">States</div>
+        <div class="states-grid">
+          <div class="state-demo" data-tokens="UiButtonBackground,UiButtonText" data-component="Normal State" data-framework="visage">
+            <div class="state-demo-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText)">Normal</div>
+            <span class="state-demo-label">Default</span>
+          </div>
+          <div class="state-demo" data-tokens="UiButtonBackgroundHover,UiButtonTextHover" data-component="Hover State" data-framework="visage">
+            <div class="state-demo-btn" style="background:var(--vt-UiButtonBackgroundHover);color:var(--vt-UiButtonTextHover)">Hover</div>
+            <span class="state-demo-label">Hover</span>
+          </div>
+          <div class="state-demo" data-tokens="UiActionButtonBackground,UiActionButtonText" data-component="Active State" data-framework="visage">
+            <div class="state-demo-btn" style="background:var(--vt-UiActionButtonBackground);color:var(--vt-UiActionButtonText)">Active</div>
+            <span class="state-demo-label">Active</span>
+          </div>
+          <div class="state-demo">
+            <div class="state-demo-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);opacity:0.4">Disabled</div>
+            <span class="state-demo-label">Disabled</span>
+          </div>
+          <div class="state-demo" data-tokens="FocusRing" data-component="Focus State" data-framework="visage">
+            <div class="state-demo-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);box-shadow:0 0 0 2px var(--vt-FocusRing)">Focus</div>
+            <span class="state-demo-label">Focus</span>
+          </div>
+          <div class="state-demo" data-tokens="Error" data-component="Error State" data-framework="visage">
+            <div class="state-demo-btn" style="background:var(--vt-CardError);color:var(--vt-Error);border:1px solid var(--vt-Error)">Error</div>
+            <span class="state-demo-label">Error</span>
+          </div>
+          <div class="state-demo" data-tokens="Success" data-component="Success State" data-framework="visage">
+            <div class="state-demo-btn" style="background:rgba(76,175,80,0.12);color:var(--vt-Success);border:1px solid var(--vt-Success)">Success</div>
+            <span class="state-demo-label">Success</span>
+          </div>
+          <div class="state-demo" data-tokens="SpinnerColor" data-component="Loading State" data-framework="visage">
+            <div class="spinner" style="border-top-color:var(--vt-SpinnerColor);width:14px;height:14px;border-width:1.5px"></div>
+            <span class="state-demo-label">Loading</span>
+          </div>
+          <div class="state-demo" data-tokens="DragIndicator" data-component="Drag Target" data-framework="visage">
+            <div style="width:48px;height:32px;border:2px dashed var(--vt-DragIndicator);border-radius:var(--app-radius);display:flex;align-items:center;justify-content:center">
+              <span style="font-size:8px;color:var(--vt-DragIndicator)">Drop</span>
+            </div>
+            <span class="state-demo-label">Drag</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Effects -->
+      <div class="preview-section">
+        <div class="preview-section-title">Effects</div>
+        <div class="effects-row">
+          <div class="effect-card" style="background:linear-gradient(135deg, var(--vt-GradientStart), var(--vt-GradientEnd))" data-tokens="GradientStart,GradientEnd" data-component="Gradient" data-framework="visage">
+            Gradient
+          </div>
+          <div class="effect-card" style="background:var(--vt-PanelBackground);box-shadow:0 4px 16px var(--vt-ShadowColor)" data-tokens="ShadowColor" data-component="Shadow" data-framework="visage">
+            Shadow
+          </div>
+          <div class="effect-card" style="background:var(--vt-PanelBackground);box-shadow:0 0 20px 4px var(--vt-BloomColor)" data-tokens="BloomColor" data-component="Bloom/Glow" data-framework="visage">
+            Bloom
+          </div>
+          <div class="effect-card" style="background:var(--vt-PanelBackground);backdrop-filter:blur(8px);border:1px solid var(--app-border-subtle)">
+            Blur
+          </div>
+        </div>
       </div>
     `;
 
@@ -1446,6 +1773,14 @@ const PreviewRenderer = {
         track.style.background = isOn
           ? getComputedStyle(document.getElementById('preview-area')).getPropertyValue('--vt-ToggleButtonOn')
           : getComputedStyle(document.getElementById('preview-area')).getPropertyValue('--vt-ToggleButtonOff');
+      });
+    });
+
+    // Tab click
+    document.querySelectorAll('.tab-item').forEach(tab => {
+      tab.addEventListener('click', () => {
+        tab.parentElement.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
       });
     });
 
@@ -1665,6 +2000,54 @@ const Toast = {
   }
 };
 
+// ── Undo Manager ─────────────────────────
+const UndoManager = {
+  stack: [],
+  index: -1,
+  maxDepth: 50,
+
+  push(action) {
+    this.stack = this.stack.slice(0, this.index + 1);
+    this.stack.push(action);
+    if (this.stack.length > this.maxDepth) { this.stack.shift(); }
+    else { this.index++; }
+    this.updateButtons();
+  },
+
+  undo() {
+    if (this.index < 0) return;
+    const action = this.stack[this.index--];
+    const token = TokenRegistry.theme[action.section]?.[action.name];
+    if (token) {
+      token.value = action.prevValue;
+      if (action.prevAlpha !== undefined) token.alpha = action.prevAlpha;
+      CSSBridge.syncToken(action.section, action.name);
+      CanvasRenderer.scheduleRedraw();
+    }
+    this.updateButtons();
+  },
+
+  redo() {
+    if (this.index >= this.stack.length - 1) return;
+    const action = this.stack[++this.index];
+    const token = TokenRegistry.theme[action.section]?.[action.name];
+    if (token) {
+      token.value = action.newValue;
+      if (action.newAlpha !== undefined) token.alpha = action.newAlpha;
+      CSSBridge.syncToken(action.section, action.name);
+      CanvasRenderer.scheduleRedraw();
+    }
+    this.updateButtons();
+  },
+
+  updateButtons() {
+    const u = document.getElementById('btn-undo');
+    const r = document.getElementById('btn-redo');
+    if (u) u.disabled = this.index < 0;
+    if (r) r.disabled = this.index >= this.stack.length - 1;
+  }
+};
+
 // ── Select & Tweak (Inspector) ───────────
 const SelectAndTweak = {
   init() {
@@ -1791,11 +2174,35 @@ const App = {
       if (e.target.files[0]) ImportExport.handleFile(e.target.files[0]);
     });
 
+    // Undo / Redo buttons
+    document.getElementById('btn-undo').addEventListener('click', () => {
+      UndoManager.undo();
+      LeftPanel.render();
+      PreviewRenderer.render();
+    });
+    document.getElementById('btn-redo').addEventListener('click', () => {
+      UndoManager.redo();
+      LeftPanel.render();
+      PreviewRenderer.render();
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
         e.preventDefault();
         ExportPanel.show();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        UndoManager.undo();
+        LeftPanel.render();
+        PreviewRenderer.render();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        UndoManager.redo();
+        LeftPanel.render();
+        PreviewRenderer.render();
       }
     });
   }
