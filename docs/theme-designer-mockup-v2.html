@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Precision Noir | Audio Theme Editor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface": "#0e0e0e",
+                        "surface-tint": "#d0bcff",
+                        "surface-bright": "#2b2c2c",
+                        "on-error-container": "#ff97a3",
+                        "on-secondary-fixed": "#413e42",
+                        "surface-container-lowest": "#000000",
+                        "on-background": "#e7e5e5",
+                        "secondary-dim": "#a09da1",
+                        "error-container": "#7f2737",
+                        "surface-container-highest": "#252626",
+                        "secondary-container": "#3d3b3e",
+                        "on-tertiary-fixed": "#393953",
+                        "primary": "#d0bcff",
+                        "surface-container-high": "#1f2020",
+                        "tertiary-fixed-dim": "#cdccec",
+                        "inverse-primary": "#6b48bb",
+                        "secondary": "#a09da1",
+                        "surface-dim": "#0e0e0e",
+                        "primary-container": "#522da1",
+                        "error-dim": "#b95463",
+                        "primary-fixed": "#e9ddff",
+                        "inverse-on-surface": "#565555",
+                        "tertiary-container": "#dbdafb",
+                        "on-error": "#490013",
+                        "on-surface": "#e7e5e5",
+                        "outline-variant": "#484848",
+                        "on-tertiary": "#54546f",
+                        "on-secondary-fixed-variant": "#5d5a5f",
+                        "on-tertiary-fixed-variant": "#555671",
+                        "surface-container-low": "#131313",
+                        "inverse-surface": "#fcf9f8",
+                        "on-primary-container": "#d9c8ff",
+                        "background": "#0e0e0e",
+                        "error": "#ec7c8a",
+                        "on-surface-variant": "#acabaa",
+                        "on-primary-fixed-variant": "#6745b8",
+                        "secondary-fixed": "#e6e1e6",
+                        "secondary-fixed-dim": "#d8d3d8",
+                        "outline": "#767575",
+                        "tertiary-fixed": "#dbdafb",
+                        "tertiary-dim": "#cdccec",
+                        "surface-variant": "#252626",
+                        "on-secondary": "#211f23",
+                        "on-primary": "#4b259a",
+                        "on-tertiary-container": "#4c4c67",
+                        "surface-container": "#191a1a",
+                        "primary-fixed-dim": "#dccdff",
+                        "on-primary-fixed": "#4a2399",
+                        "on-secondary-container": "#c2bec2",
+                        "primary-dim": "#c4acff",
+                        "tertiary": "#ebe9ff"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .custom-knob {
+            background: conic-gradient(from 180deg at 50% 50%, #d0bcff 0deg, #522da1 180deg, #1f2020 181deg);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary/30 min-h-screen overflow-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-xl flex items-center justify-between px-6 h-14 w-full shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
+<div class="flex items-center gap-8">
+<span class="text-lg font-black tracking-tighter text-zinc-100">Precision Noir</span>
+<nav class="hidden md:flex items-center gap-6 font-sans text-sm font-semibold tracking-tight">
+<a class="text-zinc-400 hover:text-zinc-200 transition-colors" href="#">Default</a>
+<a class="text-zinc-400 hover:text-zinc-200 transition-colors" href="#">Hover</a>
+<a class="text-purple-400 border-b-2 border-purple-500 pb-1" href="#">Active</a>
+<a class="text-zinc-400 opacity-50 cursor-not-allowed" href="#">Disabled</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-zinc-900 rounded-lg p-1">
+<button class="px-3 py-1 text-xs font-bold text-zinc-100 bg-zinc-800 rounded shadow-sm">A</button>
+<button class="px-3 py-1 text-xs font-medium text-zinc-500 hover:text-zinc-300">B</button>
+</div>
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined text-zinc-400 hover:bg-zinc-800/50 p-1.5 rounded-lg transition-colors active:scale-95 duration-200" data-icon="history">history</button>
+<button class="material-symbols-outlined text-zinc-400 hover:bg-zinc-800/50 p-1.5 rounded-lg transition-colors active:scale-95 duration-200" data-icon="settings">settings</button>
+</div>
+<button class="bg-purple-500/10 text-purple-400 px-4 py-1.5 rounded font-bold text-sm hover:bg-purple-500/20 active:scale-95 transition-all">Export</button>
+</div>
+</header>
+<main class="pt-14 flex h-screen overflow-hidden">
+<!-- Left SideNavBar (Token List) -->
+<aside class="fixed left-0 top-14 bottom-0 w-64 bg-zinc-900/90 flex flex-col py-4 gap-2 z-40">
+<div class="px-6 mb-4">
+<h2 class="text-zinc-100 font-bold">Theme Tokens</h2>
+<p class="text-[10px] text-zinc-500 uppercase tracking-widest">v1.0.4-beta</p>
+<div class="mt-4 relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500" data-icon="search">search</span>
+<input class="w-full bg-zinc-800/50 border-none rounded-lg py-2 pl-9 pr-4 text-xs focus:ring-1 focus:ring-purple-500/50 text-zinc-300 placeholder:text-zinc-600" placeholder="Search tokens..." type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto px-2 no-scrollbar">
+<!-- Group: Backgrounds -->
+<div class="mb-6">
+<h3 class="px-4 text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-2">Backgrounds</h3>
+<div class="space-y-0.5">
+<div class="group flex items-center justify-between px-4 py-2 bg-purple-500/10 text-purple-400 border-r-2 border-purple-500 cursor-pointer select-none">
+<div class="flex items-center gap-3">
+<div class="w-3 h-3 rounded-sm bg-surface"></div>
+<span class="text-xs font-mono">surface</span>
+</div>
+<span class="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">#0E0E0E</span>
+</div>
+<div class="group flex items-center justify-between px-4 py-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-all cursor-pointer select-none">
+<div class="flex items-center gap-3">
+<div class="w-3 h-3 rounded-sm bg-surface-container-low"></div>
+<span class="text-xs font-mono">surface-low</span>
+</div>
+<span class="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">#131313</span>
+</div>
+</div>
+</div>
+<!-- Group: Accents -->
+<div class="mb-6">
+<h3 class="px-4 text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-2">Accents</h3>
+<div class="space-y-0.5">
+<div class="group flex items-center justify-between px-4 py-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-all cursor-pointer select-none">
+<div class="flex items-center gap-3">
+<div class="w-3 h-3 rounded-sm bg-primary"></div>
+<span class="text-xs font-mono">primary</span>
+</div>
+<span class="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">#D0BCFF</span>
+</div>
+<div class="group flex items-center justify-between px-4 py-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-all cursor-pointer select-none">
+<div class="flex items-center gap-3">
+<div class="w-3 h-3 rounded-sm bg-primary-container"></div>
+<span class="text-xs font-mono">primary-container</span>
+</div>
+<span class="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">#522DA1</span>
+</div>
+</div>
+</div>
+<!-- Group: UI Elements -->
+<div class="mb-6">
+<h3 class="px-4 text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-2">UI Elements</h3>
+<div class="space-y-0.5">
+<div class="group flex items-center justify-between px-4 py-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-all cursor-pointer select-none">
+<div class="flex items-center gap-3">
+<div class="w-3 h-3 rounded-sm bg-outline-variant"></div>
+<span class="text-xs font-mono">outline-variant</span>
+</div>
+<span class="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">#484848</span>
+</div>
+</div>
+</div>
+</div>
+<div class="px-4 pt-4 mt-auto">
+<button class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-[10px] font-bold uppercase tracking-widest py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                    New Token
+                </button>
+</div>
+</aside>
+<!-- Center Canvas (Preview Area) -->
+<section class="flex-1 ml-64 mr-72 p-8 overflow-y-auto no-scrollbar">
+<div class="max-w-4xl mx-auto space-y-10">
+<!-- Component Stage -->
+<div class="bg-surface-container-lowest rounded-xl p-12 relative overflow-hidden group border border-outline-variant/5">
+<div class="absolute inset-0 opacity-10 pointer-events-none" data-alt="Subtle grid pattern background" style="background-image: radial-gradient(circle at 2px 2px, #484848 1px, transparent 0); background-size: 24px 24px;"></div>
+<div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-12">
+<!-- Left Column: Controls -->
+<div class="space-y-10">
+<!-- Buttons & Toggles -->
+<div class="space-y-6">
+<h4 class="text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant">Action Components</h4>
+<div class="flex flex-wrap gap-4 items-center">
+<button class="px-5 py-2 bg-primary text-on-primary font-bold text-xs rounded-lg hover:brightness-110 active:scale-95 transition-all">Primary</button>
+<button class="px-5 py-2 bg-secondary-container text-on-secondary-container font-bold text-xs rounded-lg hover:bg-secondary-container/80 active:scale-95 transition-all">Secondary</button>
+<button class="px-5 py-2 bg-transparent text-primary font-bold text-xs rounded-lg border border-primary/20 hover:bg-primary/5 active:scale-95 transition-all">Ghost</button>
+</div>
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-5 bg-primary rounded-full relative p-1 cursor-pointer">
+<div class="w-3 h-3 bg-on-primary rounded-full absolute right-1"></div>
+</div>
+<span class="text-[10px] font-medium text-on-surface">Enabled</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-5 bg-surface-container-highest rounded-full relative p-1 cursor-pointer">
+<div class="w-3 h-3 bg-zinc-600 rounded-full absolute left-1"></div>
+</div>
+<span class="text-[10px] font-medium text-on-surface-variant">Disabled</span>
+</div>
+</div>
+</div>
+<!-- Knobs & Sliders -->
+<div class="space-y-6">
+<h4 class="text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant">Audio Parameters</h4>
+<div class="flex gap-8">
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full custom-knob relative flex items-center justify-center shadow-lg">
+<div class="w-10 h-10 bg-surface-container-high rounded-full flex items-center justify-center">
+<div class="w-0.5 h-3 bg-primary rounded-full -mt-4 transform rotate-[45deg]"></div>
+</div>
+</div>
+<span class="text-[9px] font-bold text-on-surface uppercase tracking-tighter">Gain</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest border-2 border-primary/40 relative flex items-center justify-center">
+<div class="w-1 h-4 bg-primary rounded-full absolute top-1"></div>
+</div>
+<span class="text-[9px] font-bold text-on-surface uppercase tracking-tighter">Freq</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest border border-outline-variant/30 relative flex items-center justify-center">
+<div class="w-1 h-3 bg-zinc-600 rounded-full absolute top-1 transform rotate-[-30deg]"></div>
+</div>
+<span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-tighter">Q</span>
+</div>
+</div>
+<div class="space-y-4 pt-2">
+<div class="space-y-1">
+<div class="flex justify-between text-[9px] text-zinc-500 uppercase font-bold tracking-widest">
+<span>Opacity</span>
+<span>85%</span>
+</div>
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[85%]"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-[9px] text-zinc-500 uppercase font-bold tracking-widest">
+<span>Saturation</span>
+<span>42%</span>
+</div>
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[42%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Visualization -->
+<div class="space-y-10">
+<div class="space-y-6 h-full flex flex-col">
+<h4 class="text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant">Spectrum Analysis</h4>
+<div class="flex-1 min-h-[180px] bg-surface-container-high rounded-xl relative overflow-hidden border border-outline-variant/10">
+<!-- Waveform Visualization -->
+<svg class="absolute inset-0 w-full h-full" viewbox="0 0 400 200">
+<path d="M0,100 Q50,20 100,100 T200,100 T300,100 T400,80" fill="none" stroke="rgba(208, 188, 255, 0.2)" stroke-width="4"></path>
+<path d="M0,100 Q50,40 100,100 T200,100 T300,100 T400,90" fill="none" stroke="rgba(208, 188, 255, 0.5)" stroke-width="2"></path>
+<path d="M0,100 Q50,60 100,100 T200,100 T300,100 T400,100" fill="none" stroke="url(#gradient)" stroke-width="1.5"></path>
+<defs>
+<lineargradient id="gradient" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#d0bcff"></stop>
+<stop offset="100%" stop-color="#522da1"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="absolute bottom-4 left-4 right-4 flex justify-between">
+<span class="text-[8px] font-mono text-zinc-600">20Hz</span>
+<span class="text-[8px] font-mono text-zinc-600">1kHz</span>
+<span class="text-[8px] font-mono text-zinc-600">20kHz</span>
+</div>
+</div>
+<div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 space-y-3">
+<h4 class="text-[9px] font-bold text-primary uppercase tracking-widest">Metadata</h4>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1">
+<p class="text-[8px] text-zinc-500 uppercase">Latency</p>
+<p class="text-lg font-black tracking-tighter text-on-surface">1.2<span class="text-[10px] ml-1 font-medium text-zinc-500 italic">ms</span></p>
+</div>
+<div class="space-y-1">
+<p class="text-[8px] text-zinc-500 uppercase">Input</p>
+<p class="text-lg font-black tracking-tighter text-on-surface">-12.4<span class="text-[10px] ml-1 font-medium text-zinc-500 italic">dB</span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Info Cards / Bento Footer -->
+<div class="grid grid-cols-3 gap-6">
+<div class="col-span-1 bg-surface-container-high p-5 rounded-xl border border-outline-variant/5">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="palette">palette</span>
+<h5 class="text-xs font-bold text-on-surface mb-1">Color Consistency</h5>
+<p class="text-[11px] text-on-surface-variant leading-relaxed">System automatically normalizes contrast ratios for AA accessibility.</p>
+</div>
+<div class="col-span-2 bg-surface-container-high p-5 rounded-xl border border-outline-variant/5 flex items-center justify-between">
+<div class="max-w-[60%]">
+<h5 class="text-xs font-bold text-on-surface mb-1">JSON Schema Export</h5>
+<p class="text-[11px] text-on-surface-variant leading-relaxed">Directly compatible with JUCE, VST3, and CLAP plugin frameworks.</p>
+</div>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-zinc-900 rounded text-[9px] font-mono text-zinc-400">.json</span>
+<span class="px-2 py-1 bg-zinc-900 rounded text-[9px] font-mono text-zinc-400">.xml</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Right SideNavBar (Inspector) -->
+<aside class="fixed right-0 top-14 bottom-0 w-72 bg-zinc-900/90 flex flex-col p-4 border-l border-zinc-800/50 z-40">
+<div class="mb-6">
+<h2 class="text-zinc-100 font-bold">Inspector</h2>
+<p class="text-xs font-mono text-purple-400">Selected: primary_dim</p>
+</div>
+<div class="space-y-8 flex-1 overflow-y-auto no-scrollbar">
+<!-- Inspector Group: Color -->
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="text-xs font-mono font-bold text-zinc-300">Color</h3>
+<span class="material-symbols-outlined text-sm text-zinc-500" data-icon="colorize">colorize</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-center gap-3 bg-zinc-800/50 p-3 rounded-lg border border-outline-variant/20">
+<div class="w-8 h-8 rounded bg-primary shadow-inner"></div>
+<div class="flex-1">
+<p class="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter">Hex Code</p>
+<input class="bg-transparent border-none p-0 text-xs font-mono text-zinc-100 focus:ring-0 w-full" type="text" value="#D0BCFF"/>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="bg-zinc-800/30 p-2 rounded flex flex-col items-center">
+<span class="text-[8px] text-zinc-500 uppercase">R</span>
+<span class="text-xs font-mono">208</span>
+</div>
+<div class="bg-zinc-800/30 p-2 rounded flex flex-col items-center">
+<span class="text-[8px] text-zinc-500 uppercase">G</span>
+<span class="text-xs font-mono">188</span>
+</div>
+<div class="bg-zinc-800/30 p-2 rounded flex flex-col items-center">
+<span class="text-[8px] text-zinc-500 uppercase">B</span>
+<span class="text-xs font-mono">255</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Inspector Group: Opacity -->
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="text-xs font-mono text-zinc-500">Opacity</h3>
+<span class="material-symbols-outlined text-sm text-zinc-500" data-icon="opacity">opacity</span>
+</div>
+<div class="flex items-center gap-4">
+<input class="flex-1 accent-purple-400 bg-zinc-800 h-1 rounded-full appearance-none" type="range"/>
+<span class="text-xs font-mono text-zinc-300">100%</span>
+</div>
+</div>
+<!-- Inspector Group: Blend Mode -->
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="text-xs font-mono text-zinc-500">Blend Mode</h3>
+<span class="material-symbols-outlined text-sm text-zinc-500" data-icon="gradient">gradient</span>
+</div>
+<div class="relative group">
+<button class="w-full bg-zinc-800/50 text-left px-3 py-2 rounded border border-outline-variant/20 text-xs text-zinc-300 flex items-center justify-between hover:text-zinc-200 transition-opacity duration-150">
+                            Normal
+                            <span class="material-symbols-outlined text-xs" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Advanced Properties -->
+<div class="pt-6 border-t border-zinc-800/50 space-y-4">
+<h3 class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Logic</h3>
+<div class="flex items-center justify-between px-2">
+<span class="text-xs text-zinc-400">Interactive Glow</span>
+<div class="w-8 h-4 bg-purple-500/20 rounded-full relative p-0.5 cursor-pointer">
+<div class="w-3 h-3 bg-purple-400 rounded-full"></div>
+</div>
+</div>
+<div class="flex items-center justify-between px-2">
+<span class="text-xs text-zinc-400">Contrast Check</span>
+<span class="text-[9px] font-bold text-green-500/80 uppercase">Pass 8.4:1</span>
+</div>
+</div>
+</div>
+<div class="mt-4 flex gap-2">
+<button class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-all">Reset</button>
+<button class="flex-1 bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-all">Apply</button>
+</div>
+</aside>
+</main>
+<!-- Contextual FAB Suppression: FAB not rendered as per Suppression rule for Detail/Inspector views -->
+</body></html>
