@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visage Theme Designer</title>
+<style>
+/* ══════════════════════════════════════════════════════
+   STUDIO CONSOLE — Visage Theme Designer
+   A precision tool for audio plugin color systems
+   ══════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* App shell — the tool's own neutral UI */
+  --app-bg: #161619;
+  --app-surface: #1E1E23;
+  --app-panel: #242429;
+  --app-panel-raised: #2A2A30;
+  --app-border: #35353D;
+  --app-border-subtle: #2C2C33;
+  --app-text: #D4D4DC;
+  --app-text-muted: #76767F;
+  --app-text-dim: #55555E;
+  --app-accent: #A884F3;
+  --app-accent-hover: #BF9FFF;
+  --app-accent-dim: rgba(168, 132, 243, 0.12);
+  --app-danger: #E8594D;
+  --app-success: #4CAF50;
+  --app-warning: #E8A94D;
+  --app-radius: 6px;
+  --app-radius-sm: 4px;
+  --app-font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --app-mono: ui-monospace, "SF Mono", "Cascadia Code", "Segoe UI Mono", Menlo, monospace;
+  --left-width: 310px;
+  --right-width: 272px;
+  --toolbar-h: 44px;
+  --status-h: 28px;
+}
+
+html, body {
+  height: 100%; width: 100%;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: var(--app-font);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── APP LAYOUT ─────────────────────────── */
+#app {
+  display: grid;
+  grid-template-rows: var(--toolbar-h) 1fr var(--status-h);
+  grid-template-columns: var(--left-width) 1fr var(--right-width);
+  grid-template-areas:
+    "toolbar toolbar toolbar"
+    "left center right"
+    "status status status";
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ── TOOLBAR ────────────────────────────── */
+#toolbar {
+  grid-area: toolbar;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+  z-index: 10;
+}
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: var(--app-border);
+  margin: 0 6px;
+}
+.toolbar-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-text-muted);
+  margin-right: 4px;
+}
+#theme-name {
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text);
+  font-family: var(--app-font);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  width: 140px;
+  outline: none;
+}
+#theme-name:focus { border-color: var(--app-accent); }
+
+select.tb-select {
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text);
+  font-family: var(--app-font);
+  font-size: 11px;
+  padding: 4px 6px;
+  outline: none;
+  cursor: pointer;
+}
+button.tb-btn {
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text-muted);
+  font-family: var(--app-font);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+button.tb-btn:hover {
+  background: var(--app-panel-raised);
+  color: var(--app-text);
+  border-color: var(--app-accent);
+}
+button.tb-btn.active {
+  background: var(--app-accent-dim);
+  border-color: var(--app-accent);
+  color: var(--app-accent);
+}
+/* State scrubber pills */
+.state-pills {
+  display: flex;
+  gap: 2px;
+  background: var(--app-panel);
+  border-radius: var(--app-radius);
+  padding: 2px;
+  border: 1px solid var(--app-border-subtle);
+}
+.state-pill {
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--app-text-dim);
+  font-family: var(--app-font);
+  font-size: 10px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.state-pill:hover { color: var(--app-text-muted); }
+.state-pill.active {
+  background: var(--app-accent-dim);
+  color: var(--app-accent);
+}
+.toolbar-spacer { flex: 1; }
+button.tb-btn-accent {
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: #fff;
+  font-weight: 600;
+}
+button.tb-btn-accent:hover {
+  background: var(--app-accent-hover);
+  border-color: var(--app-accent-hover);
+  color: #fff;
+}
+
+/* ── LEFT PANEL (Token Browser) ─────────── */
+#left-panel {
+  grid-area: left;
+  background: var(--app-surface);
+  border-right: 1px solid var(--app-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#search-wrap {
+  padding: 8px;
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+#token-search {
+  width: 100%;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text);
+  font-family: var(--app-font);
+  font-size: 11px;
+  padding: 6px 8px 6px 28px;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2376767F' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 5L20.49 19l-5-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 8px center;
+}
+#token-search:focus { border-color: var(--app-accent); }
+#token-search::placeholder { color: var(--app-text-dim); }
+
+#token-groups {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+#token-groups::-webkit-scrollbar { width: 6px; }
+#token-groups::-webkit-scrollbar-track { background: transparent; }
+#token-groups::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 3px; }
+
+.token-section-header {
+  padding: 10px 10px 4px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--app-accent);
+  position: sticky;
+  top: 0;
+  background: var(--app-surface);
+  z-index: 2;
+}
+.token-group {
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+.token-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+.token-group-header:hover { background: rgba(255,255,255,0.02); }
+.token-group-header .arrow {
+  font-size: 8px;
+  color: var(--app-text-dim);
+  transition: transform 0.15s;
+  width: 10px;
+  text-align: center;
+}
+.token-group-header.expanded .arrow { transform: rotate(90deg); }
+.token-group-header .group-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--app-text-muted);
+  flex: 1;
+}
+.token-group-header .group-count {
+  font-size: 9px;
+  color: var(--app-text-dim);
+  font-family: var(--app-mono);
+}
+.token-group-body { display: none; padding-bottom: 4px; }
+.token-group.expanded .token-group-body { display: block; }
+
+.token-row {
+  display: grid;
+  grid-template-columns: 18px 1fr 68px;
+  gap: 4px;
+  align-items: center;
+  padding: 3px 10px 3px 26px;
+  cursor: pointer;
+  transition: background 0.08s;
+  min-height: 26px;
+}
+.token-row:hover { background: rgba(255,255,255,0.025); }
+.token-row.highlighted { background: var(--app-accent-dim); }
+
+.token-swatch {
+  width: 16px; height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  position: relative;
+}
+/* Checkerboard for alpha visibility */
+.token-swatch::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: repeating-conic-gradient(#3a3a3a 0 25%, transparent 0 50%) 0 0 / 6px 6px;
+  z-index: -1;
+}
+.token-name {
+  font-size: 10.5px;
+  color: var(--app-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.token-hex {
+  font-family: var(--app-mono);
+  font-size: 9.5px;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: 3px;
+  color: var(--app-text-dim);
+  padding: 2px 4px;
+  width: 64px;
+  outline: none;
+  text-transform: uppercase;
+}
+.token-hex:focus { border-color: var(--app-accent); color: var(--app-text); }
+
+/* Value token row */
+.token-row-value {
+  display: grid;
+  grid-template-columns: 1fr 52px;
+  gap: 4px;
+  align-items: center;
+  padding: 3px 10px 3px 26px;
+  min-height: 26px;
+}
+.token-row-value .token-name { grid-column: 1 / -1; margin-bottom: 2px; }
+.token-value-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--app-border);
+  border-radius: 2px;
+  outline: none;
+}
+.token-value-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--app-accent);
+  cursor: pointer;
+  border: 2px solid var(--app-surface);
+}
+.token-value-input {
+  font-family: var(--app-mono);
+  font-size: 9.5px;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: 3px;
+  color: var(--app-text-dim);
+  padding: 2px 4px;
+  width: 48px;
+  text-align: right;
+  outline: none;
+}
+.token-value-input:focus { border-color: var(--app-accent); color: var(--app-text); }
+
+/* Hidden native color picker */
+.hidden-picker { position: absolute; visibility: hidden; width: 0; height: 0; }
+
+/* ── CENTER (Preview) ───────────────────── */
+#center-panel {
+  grid-area: center;
+  background: var(--app-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: auto;
+}
+#plugin-chrome {
+  background: var(--app-panel);
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  width: 100%;
+  max-width: 720px;
+  min-width: 400px;
+  overflow: hidden;
+}
+#chrome-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  background: var(--app-panel-raised);
+  border-bottom: 1px solid var(--app-border-subtle);
+  user-select: none;
+}
+.traffic-lights {
+  display: flex;
+  gap: 6px;
+}
+.tl { width: 10px; height: 10px; border-radius: 50%; }
+.tl-close { background: #FF5F57; }
+.tl-min { background: #FFBD2E; }
+.tl-max { background: #28C840; }
+.chrome-title {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  color: var(--app-text-muted);
+  font-weight: 500;
+}
+
+#preview-area {
+  padding: 16px;
+  min-height: 300px;
+}
+.preview-section {
+  margin-bottom: 20px;
+}
+.preview-section-title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--app-text-dim);
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+/* ── Preview: Foundations ── */
+.bg-swatches {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bg-swatch {
+  flex: 1;
+  height: 40px;
+  border-radius: var(--app-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-family: var(--app-mono);
+  color: var(--app-text-muted);
+  border: 1px solid var(--app-border-subtle);
+}
+.text-hierarchy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.text-sample { font-size: 11px; }
+.accent-swatches {
+  display: flex;
+  gap: 6px;
+}
+.accent-swatch {
+  width: 32px; height: 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── Preview: Controls ── */
+.controls-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.knob-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.knob-canvas {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.knob-label {
+  font-size: 9px;
+  color: var(--app-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.preview-slider-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 120px;
+}
+.preview-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  width: 100%;
+}
+.preview-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--app-panel);
+}
+
+.btn-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.preview-btn {
+  padding: 6px 14px;
+  border: none;
+  font-family: var(--app-font);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.preview-btn-accent {
+  font-weight: 600;
+}
+
+.toggle-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.toggle-track {
+  width: 32px; height: 18px;
+  border-radius: 9px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+}
+.toggle-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: left 0.2s;
+}
+.toggle-track.on .toggle-thumb { left: 16px; }
+.toggle-label { font-size: 10px; color: var(--app-text-muted); }
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.preview-input {
+  font-family: var(--app-font);
+  font-size: 11px;
+  padding: 6px 8px;
+  border: 1px solid;
+  outline: none;
+  width: 140px;
+}
+.preview-input::placeholder { opacity: 0.5; }
+
+.dropdown-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid;
+  font-family: var(--app-font);
+  font-size: 11px;
+  cursor: default;
+}
+.dropdown-arrow { font-size: 8px; opacity: 0.5; }
+
+/* ── RIGHT PANEL (Inspector) ────────────── */
+#right-panel {
+  grid-area: right;
+  background: var(--app-surface);
+  border-left: 1px solid var(--app-border);
+  display: flex;
+  flex-direction: column;
+}
+.inspector-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--app-border-subtle);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-muted);
+}
+.inspector-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--app-text-dim);
+  font-size: 11px;
+  text-align: center;
+  padding: 20px;
+}
+.inspector-empty .shortcut {
+  font-family: var(--app-mono);
+  font-size: 10px;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--app-text-muted);
+}
+#inspector-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: none;
+}
+.inspector-component-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: 2px;
+}
+.inspector-framework {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+.inspector-framework.visage {
+  background: rgba(168,132,243,0.15);
+  color: var(--app-accent);
+}
+.inspector-framework.juce {
+  background: rgba(136,204,255,0.15);
+  color: #88CCFF;
+}
+.inspector-token {
+  display: grid;
+  grid-template-columns: 18px 1fr 60px;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 0;
+}
+
+/* ── STATUS BAR ─────────────────────────── */
+#status-bar {
+  grid-area: status;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--app-surface);
+  border-top: 1px solid var(--app-border);
+  font-size: 10px;
+  color: var(--app-text-dim);
+}
+#status-text { flex: 1; }
+#status-right { font-family: var(--app-mono); font-size: 9px; }
+
+/* ── EXPORT MODAL ───────────────────────── */
+#export-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+#export-overlay.visible { display: flex; }
+#export-panel {
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  width: 560px;
+  max-height: 80vh;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+}
+.export-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+.export-header h3 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.export-close {
+  background: none; border: none; color: var(--app-text-muted);
+  font-size: 18px; cursor: pointer; padding: 0 4px;
+}
+.export-close:hover { color: var(--app-text); }
+.export-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+.export-tab {
+  flex: 1;
+  padding: 8px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--app-text-muted);
+  font-family: var(--app-font);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.export-tab:hover { color: var(--app-text); }
+.export-tab.active {
+  color: var(--app-accent);
+  border-bottom-color: var(--app-accent);
+}
+#export-output {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  max-height: 400px;
+}
+#export-code {
+  font-family: var(--app-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--app-text);
+  white-space: pre;
+  tab-size: 4;
+}
+.export-actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--app-border-subtle);
+  justify-content: flex-end;
+}
+.export-actions button {
+  padding: 6px 14px;
+  border-radius: var(--app-radius-sm);
+  font-family: var(--app-font);
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--app-border);
+  background: var(--app-panel-raised);
+  color: var(--app-text);
+  transition: all 0.12s;
+}
+.export-actions button:hover { border-color: var(--app-accent); }
+.export-actions .btn-primary {
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: #fff;
+}
+.export-actions .btn-primary:hover { background: var(--app-accent-hover); }
+
+/* ── IMPORT INPUT ───────────────────────── */
+#import-input { display: none; }
+
+/* ── TOAST ──────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--app-panel-raised);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  padding: 8px 16px;
+  font-size: 11px;
+  color: var(--app-text);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  opacity: 0;
+  transition: all 0.2s;
+  z-index: 200;
+  pointer-events: none;
+}
+.toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOOLBAR -->
+  <header id="toolbar">
+    <div class="toolbar-group">
+      <input type="text" id="theme-name" value="Default Dark" spellcheck="false">
+    </div>
+    <div class="toolbar-separator"></div>
+    <div class="toolbar-group">
+      <span class="toolbar-label">Preset</span>
+      <select class="tb-select" id="preset-select">
+        <option value="default">Default Dark</option>
+        <option value="light">Light</option>
+        <option value="midnight">Midnight</option>
+        <option value="warm">Warm</option>
+      </select>
+    </div>
+    <div class="toolbar-separator"></div>
+    <div class="toolbar-group">
+      <div class="state-pills" id="state-pills">
+        <button class="state-pill active" data-state="default">Default</button>
+        <button class="state-pill" data-state="hover">Hover</button>
+        <button class="state-pill" data-state="focus">Focus</button>
+        <button class="state-pill" data-state="disabled">Disabled</button>
+        <button class="state-pill" data-state="error">Error</button>
+      </div>
+    </div>
+    <div class="toolbar-spacer"></div>
+    <div class="toolbar-group">
+      <button class="tb-btn" id="btn-import">Import</button>
+      <button class="tb-btn-accent tb-btn" id="btn-export">Export</button>
+    </div>
+  </header>
+
+  <!-- LEFT PANEL -->
+  <aside id="left-panel">
+    <div id="search-wrap">
+      <input type="search" id="token-search" placeholder="Search tokens...">
+    </div>
+    <div id="token-groups"></div>
+  </aside>
+
+  <!-- CENTER PANEL -->
+  <main id="center-panel">
+    <div id="plugin-chrome">
+      <div id="chrome-titlebar">
+        <div class="traffic-lights">
+          <div class="tl tl-close"></div>
+          <div class="tl tl-min"></div>
+          <div class="tl tl-max"></div>
+        </div>
+        <span class="chrome-title">Plugin Preview</span>
+      </div>
+      <div id="preview-area" data-preview-state="default"></div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside id="right-panel">
+    <div class="inspector-header">Inspector</div>
+    <div class="inspector-empty" id="inspector-empty">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      <div>Select a component to inspect its theme tokens</div>
+      <div>Hold <span class="shortcut">⌘</span> and click</div>
+    </div>
+    <div id="inspector-content"></div>
+  </aside>
+
+  <!-- STATUS BAR -->
+  <footer id="status-bar">
+    <span id="status-text">0 tokens modified</span>
+    <span id="status-right">visage-theme/v1</span>
+  </footer>
+
+</div>
+
+<!-- EXPORT MODAL -->
+<div id="export-overlay">
+  <div id="export-panel">
+    <div class="export-header">
+      <h3>Export Theme</h3>
+      <button class="export-close" id="export-close">&times;</button>
+    </div>
+    <div class="export-tabs">
+      <button class="export-tab active" data-tab="json">JSON</button>
+      <button class="export-tab" data-tab="css">CSS Vars</button>
+      <button class="export-tab" data-tab="cpp">C++ Header</button>
+      <button class="export-tab" data-tab="palette">C++ Palette</button>
+    </div>
+    <div id="export-output"><code id="export-code"></code></div>
+    <div class="export-actions">
+      <button id="export-download">Download</button>
+      <button class="btn-primary" id="export-copy">Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT -->
+<input type="file" id="import-input" accept=".json">
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- THEME DATA (embedded for file:// compatibility) -->
+<script id="theme-data" type="application/json">
+{
+  "$schema": "visage-theme/v1",
+  "meta": { "name": "Default Dark", "description": "Matches Visage compiled-in defaults.", "author": "", "version": "1.0.0", "base": null, "created": "2026-03-22", "modified": "2026-03-22" },
+  "colors": {
+    "UiButtonBackground": { "value": "#4C4F52", "alpha": 1.0 }, "UiButtonBackgroundHover": { "value": "#606265", "alpha": 1.0 }, "UiButtonText": { "value": "#DDDDDD", "alpha": 1.0 }, "UiButtonTextHover": { "value": "#FFFFFF", "alpha": 1.0 },
+    "UiActionButtonBackground": { "value": "#9977EE", "alpha": 1.0 }, "UiActionButtonBackgroundHover": { "value": "#AA88FF", "alpha": 1.0 }, "UiActionButtonText": { "value": "#DDDDDD", "alpha": 1.0 }, "UiActionButtonTextHover": { "value": "#FFFFFF", "alpha": 1.0 },
+    "TextButtonBackgroundOff": { "value": "#2C3033", "alpha": 1.0 }, "TextButtonBackgroundOffHover": { "value": "#3E4245", "alpha": 1.0 }, "TextButtonBackgroundOn": { "value": "#2C3033", "alpha": 1.0 }, "TextButtonBackgroundOnHover": { "value": "#3E4245", "alpha": 1.0 },
+    "TextButtonTextOff": { "value": "#848789", "alpha": 1.0 }, "TextButtonTextOffHover": { "value": "#AAACAD", "alpha": 1.0 }, "TextButtonTextOn": { "value": "#AA88FF", "alpha": 1.0 }, "TextButtonTextOnHover": { "value": "#BB99FF", "alpha": 1.0 },
+    "ToggleButtonDisabled": { "value": "#4C4F52", "alpha": 1.0 }, "ToggleButtonOff": { "value": "#848789", "alpha": 1.0 }, "ToggleButtonOffHover": { "value": "#AAACAD", "alpha": 1.0 }, "ToggleButtonOn": { "value": "#AA88FF", "alpha": 1.0 }, "ToggleButtonOnHover": { "value": "#BB99FF", "alpha": 1.0 },
+    "TextEditorBackground": { "value": "#2C3033", "alpha": 1.0 }, "TextEditorBorder": { "value": "#4C4F52", "alpha": 1.0 }, "TextEditorText": { "value": "#EEEEEE", "alpha": 1.0 }, "TextEditorDefaultText": { "value": "#848789", "alpha": 1.0 }, "TextEditorCaret": { "value": "#AA88FF", "alpha": 1.0 }, "TextEditorSelection": { "value": "#AA88FF", "alpha": 0.3 },
+    "PopupMenuBackground": { "value": "#262A2E", "alpha": 1.0 }, "PopupMenuBorder": { "value": "#606265", "alpha": 1.0 }, "PopupMenuText": { "value": "#EEEEEE", "alpha": 1.0 }, "PopupMenuDisabledText": { "value": "#888888", "alpha": 1.0 }, "PopupMenuSelection": { "value": "#AA88FF", "alpha": 1.0 }, "PopupMenuSelectionText": { "value": "#FFFFFF", "alpha": 1.0 },
+    "ScrollBarDefault": { "value": "#FFFFFF", "alpha": 0.13 }, "ScrollBarDown": { "value": "#FFFFFF", "alpha": 0.33 },
+    "ButtonShadow": { "value": "#000000", "alpha": 0.53 }
+  },
+  "values": {
+    "TextButtonRounding": { "value": 9.0, "min": 0, "max": 24 }, "UiButtonRounding": { "value": 9.0, "min": 0, "max": 24 }, "UiButtonHoverRoundingMult": { "value": 0.7, "min": 0, "max": 1 },
+    "TextEditorRounding": { "value": 9.0, "min": 0, "max": 24 }, "TextEditorMarginX": { "value": 9.0, "min": 0, "max": 32 }, "TextEditorMarginY": { "value": 9.0, "min": 0, "max": 32 },
+    "PopupOptionHeight": { "value": 22.0, "min": 16, "max": 40 }, "PopupMinWidth": { "value": 175.0, "min": 100, "max": 400 }, "PopupTextPadding": { "value": 9.0, "min": 0, "max": 24 }, "PopupFontSize": { "value": 14.0, "min": 10, "max": 24 }, "PopupSelectionPadding": { "value": 4.0, "min": 0, "max": 16 },
+    "ScrollBarWidth": { "value": 20.0, "min": 8, "max": 32 }, "PositionBulbWidth": { "value": 4.0, "min": 1, "max": 12 }
+  },
+  "custom": {
+    "PluginBackground": { "value": "#33393F", "alpha": 1.0 }, "PanelBackground": { "value": "#2C3033", "alpha": 1.0 }, "PanelBorder": { "value": "#4C4F52", "alpha": 1.0 },
+    "KnobArc": { "value": "#AA88FF", "alpha": 1.0 }, "KnobArcBackground": { "value": "#3E4245", "alpha": 1.0 }, "KnobThumb": { "value": "#FFFFFF", "alpha": 0.9 },
+    "SliderTrack": { "value": "#3E4245", "alpha": 1.0 }, "SliderFill": { "value": "#AA88FF", "alpha": 1.0 }, "SliderThumb": { "value": "#FFFFFF", "alpha": 1.0 },
+    "AccentPrimary": { "value": "#AA88FF", "alpha": 1.0 }, "AccentSecondary": { "value": "#88CCFF", "alpha": 1.0 }, "AccentTertiary": { "value": "#88FFAA", "alpha": 1.0 },
+    "MeterGreen": { "value": "#4CAF50", "alpha": 1.0 }, "MeterYellow": { "value": "#FFC107", "alpha": 1.0 }, "MeterRed": { "value": "#F44336", "alpha": 1.0 },
+    "WaveformLine": { "value": "#AA88FF", "alpha": 1.0 }, "WaveformFill": { "value": "#AA88FF", "alpha": 0.15 }, "WaveformPlayhead": { "value": "#FFFFFF", "alpha": 0.8 }, "WaveformGrid": { "value": "#4C4F52", "alpha": 0.6 }, "WaveformSelection": { "value": "#AA88FF", "alpha": 0.2 },
+    "OverlayBackground": { "value": "#000000", "alpha": 0.75 }, "ModalBackground": { "value": "#2C3033", "alpha": 1.0 }, "ModalBorder": { "value": "#606265", "alpha": 1.0 },
+    "TooltipBackground": { "value": "#262A2E", "alpha": 1.0 }, "TooltipText": { "value": "#EEEEEE", "alpha": 1.0 },
+    "TabActive": { "value": "#AA88FF", "alpha": 1.0 }, "TabInactive": { "value": "#4C4F52", "alpha": 1.0 },
+    "CardEmpty": { "value": "#2C3033", "alpha": 1.0 }, "CardLoading": { "value": "#3E4245", "alpha": 1.0 }, "CardReady": { "value": "#33393F", "alpha": 1.0 }, "CardError": { "value": "#F44336", "alpha": 0.15 },
+    "Success": { "value": "#4CAF50", "alpha": 1.0 }, "Error": { "value": "#F44336", "alpha": 1.0 }, "Warning": { "value": "#FFC107", "alpha": 1.0 },
+    "TextPrimary": { "value": "#EEEEEE", "alpha": 1.0 }, "TextSecondary": { "value": "#848789", "alpha": 1.0 }, "TextDisabled": { "value": "#4C4F52", "alpha": 1.0 }, "TextLink": { "value": "#AA88FF", "alpha": 1.0 },
+    "Divider": { "value": "#4C4F52", "alpha": 1.0 }, "FocusRing": { "value": "#AA88FF", "alpha": 0.5 }, "DragIndicator": { "value": "#AA88FF", "alpha": 0.3 },
+    "ProgressTrack": { "value": "#3E4245", "alpha": 1.0 }, "ProgressFill": { "value": "#AA88FF", "alpha": 1.0 }, "SpinnerColor": { "value": "#AA88FF", "alpha": 1.0 },
+    "GradientStart": { "value": "#AA88FF", "alpha": 1.0 }, "GradientEnd": { "value": "#88CCFF", "alpha": 1.0 },
+    "ShadowColor": { "value": "#000000", "alpha": 0.4 }, "BloomColor": { "value": "#AA88FF", "alpha": 0.3 }
+  },
+  "juce": {
+    "Slider::trackColourId": { "value": "#3E4245", "alpha": 1.0 }, "Slider::thumbColourId": { "value": "#FFFFFF", "alpha": 1.0 }, "Slider::rotarySliderFillColourId": { "value": "#AA88FF", "alpha": 1.0 }, "Slider::rotarySliderOutlineColourId": { "value": "#3E4245", "alpha": 1.0 },
+    "Slider::textBoxBackgroundColourId": { "value": "#2C3033", "alpha": 1.0 }, "Slider::textBoxTextColourId": { "value": "#EEEEEE", "alpha": 1.0 }, "Slider::textBoxOutlineColourId": { "value": "#4C4F52", "alpha": 1.0 },
+    "TextButton::buttonColourId": { "value": "#2C3033", "alpha": 1.0 }, "TextButton::buttonOnColourId": { "value": "#AA88FF", "alpha": 1.0 }, "TextButton::textColourOffId": { "value": "#848789", "alpha": 1.0 }, "TextButton::textColourOnId": { "value": "#FFFFFF", "alpha": 1.0 },
+    "ToggleButton::tickColourId": { "value": "#AA88FF", "alpha": 1.0 },
+    "ComboBox::backgroundColourId": { "value": "#2C3033", "alpha": 1.0 }, "ComboBox::textColourId": { "value": "#EEEEEE", "alpha": 1.0 }, "ComboBox::outlineColourId": { "value": "#4C4F52", "alpha": 1.0 }, "ComboBox::arrowColourId": { "value": "#848789", "alpha": 1.0 },
+    "Label::textColourId": { "value": "#EEEEEE", "alpha": 1.0 }, "Label::backgroundColourId": { "value": "#000000", "alpha": 0.0 },
+    "TextEditor::backgroundColourId": { "value": "#2C3033", "alpha": 1.0 }, "TextEditor::textColourId": { "value": "#EEEEEE", "alpha": 1.0 }, "TextEditor::outlineColourId": { "value": "#4C4F52", "alpha": 1.0 }, "TextEditor::focusedOutlineColourId": { "value": "#AA88FF", "alpha": 1.0 }
+  },
+  "overrides": {}
+}
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   VISAGE THEME DESIGNER — JavaScript Engine
+   ══════════════════════════════════════════════════════ */
+
+// ── Color Converter ──────────────────────
+const ColorConverter = {
+  hexAlphaToRgba(hex, alpha) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  },
+  hexAlphaToArgb(hex, alpha) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255);
+    return ((a << 24) | (r << 16) | (g << 8) | b) >>> 0;
+  },
+  argbToHex(argb) { return '0x' + (argb >>> 0).toString(16).toUpperCase().padStart(8, '0'); }
+};
+
+// ── Token Registry ───────────────────────
+const TokenRegistry = {
+  theme: null,
+  baseTheme: null,
+  edits: {},
+
+  load(themeData) {
+    this.theme = JSON.parse(JSON.stringify(themeData));
+    this.baseTheme = JSON.parse(JSON.stringify(themeData));
+    this.edits = {};
+  },
+
+  getColor(section, name) {
+    const token = this.theme[section]?.[name];
+    if (!token) return 'transparent';
+    return ColorConverter.hexAlphaToRgba(token.value, token.alpha ?? 1);
+  },
+
+  setColor(section, name, hex, alpha) {
+    if (!this.theme[section]?.[name]) return;
+    this.theme[section][name].value = hex;
+    if (alpha !== undefined) this.theme[section][name].alpha = alpha;
+    this.edits[`${section}.${name}`] = true;
+    CSSBridge.syncToken(section, name);
+    this.updateStatus();
+  },
+
+  setValue(name, val) {
+    if (!this.theme.values?.[name]) return;
+    this.theme.values[name].value = val;
+    this.edits[`values.${name}`] = true;
+    this.updateStatus();
+  },
+
+  updateStatus() {
+    const count = Object.keys(this.edits).length;
+    document.getElementById('status-text').textContent =
+      count === 0 ? 'No modifications' : `${count} token${count > 1 ? 's' : ''} modified`;
+  },
+
+  toJSON() { return JSON.stringify(this.theme, null, 2); }
+};
+
+// ── CSS Bridge ───────────────────────────
+const CSSBridge = {
+  syncAll() {
+    const preview = document.getElementById('preview-area');
+    for (const section of ['colors', 'custom']) {
+      for (const [name, token] of Object.entries(TokenRegistry.theme[section] || {})) {
+        const rgba = ColorConverter.hexAlphaToRgba(token.value, token.alpha ?? 1);
+        const prefix = section === 'colors' ? '--vt-' : '--vt-';
+        preview.style.setProperty(prefix + name, rgba);
+      }
+    }
+    for (const [name, token] of Object.entries(TokenRegistry.theme.juce || {})) {
+      const rgba = ColorConverter.hexAlphaToRgba(token.value, token.alpha ?? 1);
+      preview.style.setProperty('--jt-' + name.replace(/::/g, '-'), rgba);
+    }
+  },
+
+  syncToken(section, name) {
+    const preview = document.getElementById('preview-area');
+    const token = TokenRegistry.theme[section]?.[name];
+    if (!token) return;
+    const rgba = ColorConverter.hexAlphaToRgba(token.value, token.alpha ?? 1);
+    if (section === 'juce') {
+      preview.style.setProperty('--jt-' + name.replace(/::/g, '-'), rgba);
+    } else {
+      preview.style.setProperty('--vt-' + name, rgba);
+    }
+    CanvasRenderer.scheduleRedraw();
+  }
+};
+
+// ── Canvas Renderer (Knobs) ──────────────
+const CanvasRenderer = {
+  canvases: [],
+  pendingRedraw: false,
+
+  register(canvas, value, label) {
+    this.canvases.push({ canvas, value, label });
+    this.drawKnob(canvas, value);
+  },
+
+  scheduleRedraw() {
+    if (this.pendingRedraw) return;
+    this.pendingRedraw = true;
+    requestAnimationFrame(() => {
+      this.canvases.forEach(k => this.drawKnob(k.canvas, k.value));
+      this.pendingRedraw = false;
+    });
+  },
+
+  drawKnob(canvas, value) {
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const size = 56;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, size, size);
+
+    const preview = document.getElementById('preview-area');
+    const style = getComputedStyle(preview);
+    const arcColor = style.getPropertyValue('--vt-KnobArc').trim() || '#AA88FF';
+    const arcBg = style.getPropertyValue('--vt-KnobArcBackground').trim() || '#3E4245';
+    const thumbColor = style.getPropertyValue('--vt-KnobThumb').trim() || 'rgba(255,255,255,0.9)';
+
+    const cx = size / 2, cy = size / 2;
+    const r = size / 2 - 6;
+    const lineWidth = 4;
+    const startAngle = Math.PI * 0.75;
+    const endAngle = Math.PI * 2.25;
+    const valAngle = startAngle + (endAngle - startAngle) * value;
+
+    // Background arc
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.strokeStyle = arcBg;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Value arc
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, startAngle, valAngle);
+    ctx.strokeStyle = arcColor;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Thumb dot
+    const tx = cx + Math.cos(valAngle) * r;
+    const ty = cy + Math.sin(valAngle) * r;
+    ctx.beginPath();
+    ctx.arc(tx, ty, 4, 0, Math.PI * 2);
+    ctx.fillStyle = thumbColor;
+    ctx.fill();
+
+    // Center dot
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = arcBg;
+    ctx.fill();
+  }
+};
+
+// ── Left Panel ───────────────────────────
+const LeftPanel = {
+  groupOrder: {
+    colors: {
+      'UiButton': ['UiButtonBackground', 'UiButtonBackgroundHover', 'UiButtonText', 'UiButtonTextHover', 'UiActionButtonBackground', 'UiActionButtonBackgroundHover', 'UiActionButtonText', 'UiActionButtonTextHover'],
+      'TextButton': ['TextButtonBackgroundOff', 'TextButtonBackgroundOffHover', 'TextButtonBackgroundOn', 'TextButtonBackgroundOnHover', 'TextButtonTextOff', 'TextButtonTextOffHover', 'TextButtonTextOn', 'TextButtonTextOnHover'],
+      'Toggle': ['ToggleButtonDisabled', 'ToggleButtonOff', 'ToggleButtonOffHover', 'ToggleButtonOn', 'ToggleButtonOnHover'],
+      'TextEditor': ['TextEditorBackground', 'TextEditorBorder', 'TextEditorText', 'TextEditorDefaultText', 'TextEditorCaret', 'TextEditorSelection'],
+      'PopupMenu': ['PopupMenuBackground', 'PopupMenuBorder', 'PopupMenuText', 'PopupMenuDisabledText', 'PopupMenuSelection', 'PopupMenuSelectionText'],
+      'ScrollBar': ['ScrollBarDefault', 'ScrollBarDown'],
+      'Other': ['ButtonShadow']
+    }
+  },
+
+  render() {
+    const container = document.getElementById('token-groups');
+    let html = '';
+
+    // Visage colors
+    html += '<div class="token-section-header">Visage Tokens</div>';
+    for (const [groupName, tokenNames] of Object.entries(this.groupOrder.colors)) {
+      html += this.renderGroup(groupName, 'colors', tokenNames);
+    }
+
+    // Values
+    html += '<div class="token-section-header">Values</div>';
+    html += this.renderValueGroup('All Values', Object.keys(TokenRegistry.theme.values || {}));
+
+    // Custom
+    html += '<div class="token-section-header">Custom Tokens</div>';
+    const customGroups = this.groupCustomTokens(TokenRegistry.theme.custom || {});
+    for (const [groupName, tokenNames] of Object.entries(customGroups)) {
+      html += this.renderGroup(groupName, 'custom', tokenNames);
+    }
+
+    // JUCE
+    html += '<div class="token-section-header">JUCE Tokens</div>';
+    const juceGroups = this.groupJuceTokens(TokenRegistry.theme.juce || {});
+    for (const [groupName, tokenNames] of Object.entries(juceGroups)) {
+      html += this.renderGroup(groupName, 'juce', tokenNames);
+    }
+
+    container.innerHTML = html;
+    this.bindEvents();
+  },
+
+  groupCustomTokens(tokens) {
+    const groups = {};
+    for (const name of Object.keys(tokens)) {
+      const match = name.match(/^([A-Z][a-z]+)/);
+      const group = match ? match[1] : 'Other';
+      (groups[group] = groups[group] || []).push(name);
+    }
+    return groups;
+  },
+
+  groupJuceTokens(tokens) {
+    const groups = {};
+    for (const name of Object.keys(tokens)) {
+      const cls = name.split('::')[0];
+      (groups[cls] = groups[cls] || []).push(name);
+    }
+    return groups;
+  },
+
+  renderGroup(groupName, section, tokenNames) {
+    const tokens = tokenNames.filter(n => TokenRegistry.theme[section]?.[n]);
+    if (!tokens.length) return '';
+    let rows = tokens.map(name => {
+      const token = TokenRegistry.theme[section][name];
+      const rgba = ColorConverter.hexAlphaToRgba(token.value, token.alpha ?? 1);
+      const displayName = section === 'juce' ? name.split('::')[1] || name : name;
+      return `<div class="token-row" data-section="${section}" data-token="${name}">
+        <div class="token-swatch" style="background:${rgba}" title="${name}"></div>
+        <span class="token-name" title="${name}">${displayName}</span>
+        <input type="text" class="token-hex" value="${token.value}" data-section="${section}" data-token="${name}">
+        <input type="color" class="hidden-picker" value="${token.value}" data-section="${section}" data-token="${name}">
+      </div>`;
+    }).join('');
+
+    return `<div class="token-group">
+      <div class="token-group-header" data-group="${groupName}">
+        <span class="arrow">▶</span>
+        <span class="group-name">${groupName}</span>
+        <span class="group-count">${tokens.length}</span>
+      </div>
+      <div class="token-group-body">${rows}</div>
+    </div>`;
+  },
+
+  renderValueGroup(groupName, tokenNames) {
+    const tokens = tokenNames.filter(n => TokenRegistry.theme.values?.[n]);
+    if (!tokens.length) return '';
+    let rows = tokens.map(name => {
+      const token = TokenRegistry.theme.values[name];
+      return `<div class="token-row-value" data-token="${name}">
+        <span class="token-name" title="${name}">${name}</span>
+        <input type="range" class="token-value-slider" min="${token.min ?? 0}" max="${token.max ?? 100}" step="0.1" value="${token.value}" data-token="${name}">
+        <input type="text" class="token-value-input" value="${token.value}" data-token="${name}">
+      </div>`;
+    }).join('');
+
+    return `<div class="token-group">
+      <div class="token-group-header" data-group="${groupName}">
+        <span class="arrow">▶</span>
+        <span class="group-name">${groupName}</span>
+        <span class="group-count">${tokens.length}</span>
+      </div>
+      <div class="token-group-body">${rows}</div>
+    </div>`;
+  },
+
+  bindEvents() {
+    // Group headers toggle
+    document.querySelectorAll('.token-group-header').forEach(header => {
+      header.addEventListener('click', () => {
+        header.classList.toggle('expanded');
+        header.closest('.token-group').classList.toggle('expanded');
+      });
+    });
+
+    // Color swatch click → open native picker
+    document.querySelectorAll('.token-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        const row = swatch.closest('.token-row');
+        const picker = row.querySelector('.hidden-picker');
+        if (picker) picker.click();
+      });
+    });
+
+    // Native color picker change
+    document.querySelectorAll('.hidden-picker').forEach(picker => {
+      picker.addEventListener('input', (e) => {
+        const section = e.target.dataset.section;
+        const name = e.target.dataset.token;
+        const hex = e.target.value.toUpperCase();
+        const alpha = TokenRegistry.theme[section]?.[name]?.alpha ?? 1;
+        TokenRegistry.setColor(section, name, hex, alpha);
+        // Update row UI
+        const row = e.target.closest('.token-row');
+        row.querySelector('.token-swatch').style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+        row.querySelector('.token-hex').value = hex;
+      });
+    });
+
+    // Hex input change
+    document.querySelectorAll('.token-hex').forEach(input => {
+      input.addEventListener('change', (e) => {
+        let hex = e.target.value.trim();
+        if (!hex.startsWith('#')) hex = '#' + hex;
+        if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
+        hex = hex.toUpperCase();
+        e.target.value = hex;
+        const section = e.target.dataset.section;
+        const name = e.target.dataset.token;
+        const alpha = TokenRegistry.theme[section]?.[name]?.alpha ?? 1;
+        TokenRegistry.setColor(section, name, hex, alpha);
+        const row = e.target.closest('.token-row');
+        row.querySelector('.token-swatch').style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+        row.querySelector('.hidden-picker').value = hex;
+      });
+    });
+
+    // Value slider/input
+    document.querySelectorAll('.token-value-slider').forEach(slider => {
+      slider.addEventListener('input', (e) => {
+        const name = e.target.dataset.token;
+        const val = parseFloat(e.target.value);
+        TokenRegistry.setValue(name, val);
+        e.target.closest('.token-row-value').querySelector('.token-value-input').value = val;
+      });
+    });
+    document.querySelectorAll('.token-value-input').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const name = e.target.dataset.token;
+        const val = parseFloat(e.target.value);
+        if (isNaN(val)) return;
+        TokenRegistry.setValue(name, val);
+        e.target.closest('.token-row-value').querySelector('.token-value-slider').value = val;
+      });
+    });
+  },
+
+  filterBySearch(query) {
+    const q = query.toLowerCase();
+    document.querySelectorAll('.token-row, .token-row-value').forEach(row => {
+      const name = (row.dataset.token || '').toLowerCase();
+      row.style.display = !q || name.includes(q) ? '' : 'none';
+    });
+    document.querySelectorAll('.token-group').forEach(group => {
+      const visible = group.querySelectorAll('.token-row:not([style*="display: none"]), .token-row-value:not([style*="display: none"])');
+      group.style.display = visible.length ? '' : 'none';
+      if (q && visible.length) {
+        group.classList.add('expanded');
+        group.querySelector('.token-group-header')?.classList.add('expanded');
+      }
+    });
+  }
+};
+
+// ── Preview Renderer ─────────────────────
+const PreviewRenderer = {
+  render() {
+    const area = document.getElementById('preview-area');
+    area.innerHTML = `
+      <!-- Foundations -->
+      <div class="preview-section" data-tokens="PluginBackground,PanelBackground,PanelBorder" data-component="Backgrounds" data-framework="visage">
+        <div class="preview-section-title">Foundations</div>
+        <div class="bg-swatches">
+          <div class="bg-swatch" style="background:var(--vt-PluginBackground)">Plugin BG</div>
+          <div class="bg-swatch" style="background:var(--vt-PanelBackground)">Panel</div>
+          <div class="bg-swatch" style="background:var(--vt-PanelBorder)">Border</div>
+        </div>
+        <div class="text-hierarchy">
+          <span class="text-sample" style="color:var(--vt-TextPrimary);font-size:14px;font-weight:600">Primary Text — Heading</span>
+          <span class="text-sample" style="color:var(--vt-TextSecondary)">Secondary text — labels and descriptions</span>
+          <span class="text-sample" style="color:var(--vt-TextDisabled)">Disabled text</span>
+          <span class="text-sample" style="color:var(--vt-TextLink)">Link / accent text</span>
+          <span class="text-sample" style="color:var(--vt-Success)">Success message</span>
+          <span class="text-sample" style="color:var(--vt-Error)">Error message</span>
+          <span class="text-sample" style="color:var(--vt-Warning)">Warning message</span>
+        </div>
+        <div class="accent-swatches" data-tokens="AccentPrimary,AccentSecondary,AccentTertiary" data-component="Accent Colors" data-framework="visage">
+          <div class="accent-swatch" style="background:var(--vt-AccentPrimary)" title="AccentPrimary"></div>
+          <div class="accent-swatch" style="background:var(--vt-AccentSecondary)" title="AccentSecondary"></div>
+          <div class="accent-swatch" style="background:var(--vt-AccentTertiary)" title="AccentTertiary"></div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="preview-section">
+        <div class="preview-section-title">Controls</div>
+        <div class="controls-row" data-tokens="KnobArc,KnobArcBackground,KnobThumb" data-component="Rotary Knob" data-framework="visage">
+          <div class="knob-wrap">
+            <canvas class="knob-canvas" id="knob1" data-value="0.7"></canvas>
+            <span class="knob-label">Gain</span>
+          </div>
+          <div class="knob-wrap">
+            <canvas class="knob-canvas" id="knob2" data-value="0.35"></canvas>
+            <span class="knob-label">Freq</span>
+          </div>
+          <div class="knob-wrap">
+            <canvas class="knob-canvas" id="knob3" data-value="0.5"></canvas>
+            <span class="knob-label">Q</span>
+          </div>
+          <div class="knob-wrap">
+            <canvas class="knob-canvas" id="knob4" data-value="0.85"></canvas>
+            <span class="knob-label">Mix</span>
+          </div>
+        </div>
+
+        <div class="preview-slider-wrap" data-tokens="SliderTrack,SliderFill,SliderThumb" data-component="Slider" data-framework="visage">
+          <input type="range" class="preview-slider" value="65" style="background:linear-gradient(to right, var(--vt-SliderFill) 65%, var(--vt-SliderTrack) 65%); --thumb-color:var(--vt-SliderThumb)">
+          <input type="range" class="preview-slider" value="30" style="background:linear-gradient(to right, var(--vt-SliderFill) 30%, var(--vt-SliderTrack) 30%)">
+        </div>
+
+        <div class="btn-row" style="margin-top:12px" data-tokens="UiButtonBackground,UiButtonBackgroundHover,UiButtonText,UiButtonTextHover" data-component="UI Button" data-framework="visage">
+          <button class="preview-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);border-radius:var(--app-radius)">Normal</button>
+          <button class="preview-btn" style="background:var(--vt-UiButtonBackgroundHover);color:var(--vt-UiButtonTextHover);border-radius:var(--app-radius)">Hover</button>
+          <button class="preview-btn preview-btn-accent" style="background:var(--vt-UiActionButtonBackground);color:var(--vt-UiActionButtonText);border-radius:var(--app-radius)">Action</button>
+          <button class="preview-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);border-radius:var(--app-radius);opacity:0.4" disabled>Disabled</button>
+        </div>
+
+        <div class="toggle-row" style="margin-top:12px" data-tokens="ToggleButtonOn,ToggleButtonOff,ToggleButtonDisabled" data-component="Toggle" data-framework="visage">
+          <div class="toggle-wrap">
+            <div class="toggle-track on" style="background:var(--vt-ToggleButtonOn)">
+              <div class="toggle-thumb"></div>
+            </div>
+            <span class="toggle-label">Enabled</span>
+          </div>
+          <div class="toggle-wrap">
+            <div class="toggle-track" style="background:var(--vt-ToggleButtonOff)">
+              <div class="toggle-thumb"></div>
+            </div>
+            <span class="toggle-label">Disabled</span>
+          </div>
+        </div>
+
+        <div class="input-row" data-tokens="TextEditorBackground,TextEditorBorder,TextEditorText,TextEditorDefaultText,TextEditorCaret" data-component="Text Input" data-framework="visage">
+          <input type="text" class="preview-input" value="Some text" style="background:var(--vt-TextEditorBackground);border-color:var(--vt-TextEditorBorder);color:var(--vt-TextEditorText);border-radius:var(--app-radius)">
+          <input type="text" class="preview-input" placeholder="Placeholder..." style="background:var(--vt-TextEditorBackground);border-color:var(--vt-TextEditorBorder);color:var(--vt-TextEditorDefaultText);border-radius:var(--app-radius)">
+        </div>
+
+        <div style="margin-top:12px" data-tokens="PopupMenuBackground,PopupMenuBorder,PopupMenuText" data-component="Dropdown" data-framework="visage">
+          <div class="dropdown-preview" style="background:var(--vt-PopupMenuBackground);border-color:var(--vt-PopupMenuBorder);color:var(--vt-PopupMenuText);border-radius:var(--app-radius)">
+            <span>Select preset...</span>
+            <span class="dropdown-arrow">▼</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Display -->
+      <div class="preview-section">
+        <div class="preview-section-title">Data Display</div>
+        <div class="controls-row">
+          <div style="flex:1;min-width:200px" data-tokens="WaveformLine,WaveformFill,WaveformGrid,WaveformPlayhead" data-component="Waveform" data-framework="visage">
+            <canvas id="waveform-canvas" width="400" height="80" style="width:100%;height:80px;border-radius:var(--app-radius);background:var(--vt-PanelBackground)"></canvas>
+          </div>
+          <div style="display:flex;gap:4px;height:80px" data-tokens="MeterGreen,MeterYellow,MeterRed" data-component="VU Meter" data-framework="visage">
+            <canvas id="meter-l" width="12" height="80" style="width:12px;border-radius:2px"></canvas>
+            <canvas id="meter-r" width="12" height="80" style="width:12px;border-radius:2px"></canvas>
+          </div>
+        </div>
+        <div style="margin-top:8px" data-tokens="ProgressTrack,ProgressFill" data-component="Progress Bar" data-framework="visage">
+          <div style="height:4px;background:var(--vt-ProgressTrack);border-radius:2px;overflow:hidden">
+            <div style="width:65%;height:100%;background:var(--vt-ProgressFill);border-radius:2px"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Init canvases
+    CSSBridge.syncAll();
+    document.querySelectorAll('.knob-canvas').forEach(c => {
+      CanvasRenderer.register(c, parseFloat(c.dataset.value));
+    });
+    this.drawWaveform();
+    this.drawMeters();
+
+    // Toggle click
+    document.querySelectorAll('.toggle-track').forEach(track => {
+      track.addEventListener('click', () => {
+        track.classList.toggle('on');
+        const isOn = track.classList.contains('on');
+        track.style.background = isOn
+          ? getComputedStyle(document.getElementById('preview-area')).getPropertyValue('--vt-ToggleButtonOn')
+          : getComputedStyle(document.getElementById('preview-area')).getPropertyValue('--vt-ToggleButtonOff');
+      });
+    });
+
+    // Slider visual update
+    document.querySelectorAll('.preview-slider').forEach(slider => {
+      slider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        e.target.style.background = `linear-gradient(to right, var(--vt-SliderFill) ${val}%, var(--vt-SliderTrack) ${val}%)`;
+      });
+    });
+  },
+
+  drawWaveform() {
+    const canvas = document.getElementById('waveform-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.offsetWidth;
+    const h = canvas.offsetHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const style = getComputedStyle(document.getElementById('preview-area'));
+    const lineColor = style.getPropertyValue('--vt-WaveformLine').trim() || '#AA88FF';
+    const fillColor = style.getPropertyValue('--vt-WaveformFill').trim() || 'rgba(170,136,255,0.15)';
+    const gridColor = style.getPropertyValue('--vt-WaveformGrid').trim() || 'rgba(76,79,82,0.6)';
+    const playheadColor = style.getPropertyValue('--vt-WaveformPlayhead').trim() || 'rgba(255,255,255,0.8)';
+
+    // Grid
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 0.5;
+    for (let y = h * 0.25; y < h; y += h * 0.25) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    // Waveform
+    const mid = h / 2;
+    ctx.beginPath();
+    ctx.moveTo(0, mid);
+    for (let x = 0; x < w; x++) {
+      const t = x / w;
+      const y = mid + Math.sin(t * 12) * mid * 0.4 + Math.sin(t * 31) * mid * 0.15 + Math.sin(t * 67) * mid * 0.08;
+      ctx.lineTo(x, y);
+    }
+    // Fill
+    const fillPath = new Path2D();
+    fillPath.moveTo(0, mid);
+    for (let x = 0; x < w; x++) {
+      const t = x / w;
+      const y = mid + Math.sin(t * 12) * mid * 0.4 + Math.sin(t * 31) * mid * 0.15 + Math.sin(t * 67) * mid * 0.08;
+      fillPath.lineTo(x, y);
+    }
+    fillPath.lineTo(w, mid);
+    fillPath.closePath();
+    ctx.fillStyle = fillColor;
+    ctx.fill(fillPath);
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Playhead
+    const px = w * 0.6;
+    ctx.strokeStyle = playheadColor;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke();
+    ctx.setLineDash([]);
+  },
+
+  drawMeters() {
+    ['meter-l', 'meter-r'].forEach((id, i) => {
+      const canvas = document.getElementById(id);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const w = 12, h = 80;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.scale(dpr, dpr);
+
+      const style = getComputedStyle(document.getElementById('preview-area'));
+      const green = style.getPropertyValue('--vt-MeterGreen').trim() || '#4CAF50';
+      const yellow = style.getPropertyValue('--vt-MeterYellow').trim() || '#FFC107';
+      const red = style.getPropertyValue('--vt-MeterRed').trim() || '#F44336';
+
+      const level = i === 0 ? 0.72 : 0.58;
+      const grad = ctx.createLinearGradient(0, h, 0, 0);
+      grad.addColorStop(0, green);
+      grad.addColorStop(0.6, yellow);
+      grad.addColorStop(0.85, red);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, h * (1 - level), w, h * level);
+    });
+  }
+};
+
+// ── Export Panel ──────────────────────────
+const ExportPanel = {
+  currentTab: 'json',
+
+  show() {
+    document.getElementById('export-overlay').classList.add('visible');
+    this.generate();
+  },
+  hide() { document.getElementById('export-overlay').classList.remove('visible'); },
+
+  generate() {
+    const code = document.getElementById('export-code');
+    switch (this.currentTab) {
+      case 'json': code.textContent = TokenRegistry.toJSON(); break;
+      case 'css': code.textContent = this.generateCSS(); break;
+      case 'cpp': code.textContent = this.generateCppHeader(); break;
+      case 'palette': code.textContent = this.generateCppPalette(); break;
+    }
+  },
+
+  generateCSS() {
+    let lines = [':root {'];
+    for (const section of ['colors', 'custom']) {
+      for (const [name, t] of Object.entries(TokenRegistry.theme[section] || {})) {
+        lines.push(`  --vt-${name}: ${ColorConverter.hexAlphaToRgba(t.value, t.alpha ?? 1)};`);
+      }
+    }
+    for (const [name, t] of Object.entries(TokenRegistry.theme.juce || {})) {
+      lines.push(`  --jt-${name.replace(/::/g, '-')}: ${ColorConverter.hexAlphaToRgba(t.value, t.alpha ?? 1)};`);
+    }
+    lines.push('}');
+    return lines.join('\n');
+  },
+
+  generateCppHeader() {
+    const meta = TokenRegistry.theme.meta;
+    const ns = meta.name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    let lines = [
+      '#pragma once',
+      `// Generated by Visage Theme Designer`,
+      `// Theme: ${meta.name}`,
+      '', '#include "visage_graphics/theme.h"', '', `namespace ${ns} {`, ''
+    ];
+    for (const section of ['colors', 'custom']) {
+      for (const [name, t] of Object.entries(TokenRegistry.theme[section] || {})) {
+        if (typeof t.value !== 'string') continue;
+        const argb = ColorConverter.hexAlphaToArgb(t.value, t.alpha ?? 1);
+        lines.push(`VISAGE_THEME_COLOR(${name}, ${ColorConverter.argbToHex(argb)});`);
+      }
+    }
+    lines.push('');
+    for (const [name, t] of Object.entries(TokenRegistry.theme.values || {})) {
+      lines.push(`VISAGE_THEME_VALUE(${name}, ${t.value}f);`);
+    }
+    lines.push('', `} // namespace ${ns}`, '');
+    return lines.join('\n');
+  },
+
+  generateCppPalette() {
+    const meta = TokenRegistry.theme.meta;
+    const ns = meta.name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    let lines = [`// Palette init for: ${meta.name}`, `inline void initThemePalette(visage::Palette& palette) {`];
+    for (const section of ['colors', 'custom']) {
+      for (const [name, t] of Object.entries(TokenRegistry.theme[section] || {})) {
+        if (typeof t.value !== 'string') continue;
+        const argb = ColorConverter.hexAlphaToArgb(t.value, t.alpha ?? 1);
+        lines.push(`  palette.setColor(${ns}::${name}, visage::Color(${ColorConverter.argbToHex(argb)}));`);
+      }
+    }
+    lines.push('}', '');
+    return lines.join('\n');
+  }
+};
+
+// ── Import / Export ──────────────────────
+const ImportExport = {
+  importJSON() {
+    document.getElementById('import-input').click();
+  },
+  handleFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        TokenRegistry.load(data);
+        document.getElementById('theme-name').value = data.meta?.name || 'Imported';
+        LeftPanel.render();
+        PreviewRenderer.render();
+        Toast.show('Theme loaded: ' + (data.meta?.name || 'Imported'));
+      } catch (err) {
+        Toast.show('Invalid theme JSON: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  },
+  downloadJSON() {
+    const json = TokenRegistry.toJSON();
+    const name = TokenRegistry.theme.meta?.name || 'theme';
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${slug}.json`; a.click();
+    URL.revokeObjectURL(url);
+  }
+};
+
+// ── Toast ────────────────────────────────
+const Toast = {
+  timeout: null,
+  show(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('visible');
+    clearTimeout(this.timeout);
+    this.timeout = setTimeout(() => el.classList.remove('visible'), 2500);
+  }
+};
+
+// ── Select & Tweak (Inspector) ───────────
+const SelectAndTweak = {
+  init() {
+    const preview = document.getElementById('preview-area');
+    preview.addEventListener('click', (e) => {
+      const component = e.target.closest('[data-tokens]');
+      if (!component) return;
+      this.inspectComponent(component);
+    });
+  },
+
+  inspectComponent(el) {
+    const tokens = el.dataset.tokens.split(',');
+    const name = el.dataset.component || 'Component';
+    const framework = el.dataset.framework || 'visage';
+
+    document.getElementById('inspector-empty').style.display = 'none';
+    const content = document.getElementById('inspector-content');
+    content.style.display = 'block';
+
+    let html = `<div class="inspector-component-name">${name}</div>`;
+    html += `<span class="inspector-framework ${framework}">${framework}</span>`;
+
+    tokens.forEach(tokenName => {
+      // Find which section this token is in
+      let section = 'custom';
+      let token = TokenRegistry.theme.custom?.[tokenName];
+      if (!token) { section = 'colors'; token = TokenRegistry.theme.colors?.[tokenName]; }
+      if (!token) { section = 'juce'; token = TokenRegistry.theme.juce?.[tokenName]; }
+      if (!token) return;
+
+      const rgba = ColorConverter.hexAlphaToRgba(token.value, token.alpha ?? 1);
+      html += `<div class="inspector-token">
+        <div class="token-swatch" style="background:${rgba}"></div>
+        <span class="token-name">${tokenName}</span>
+        <input type="text" class="token-hex" value="${token.value}" data-section="${section}" data-token="${tokenName}" style="width:58px">
+      </div>`;
+    });
+
+    content.innerHTML = html;
+
+    // Bind inspector hex inputs
+    content.querySelectorAll('.token-hex').forEach(input => {
+      input.addEventListener('change', (e) => {
+        let hex = e.target.value.trim().toUpperCase();
+        if (!hex.startsWith('#')) hex = '#' + hex;
+        if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
+        e.target.value = hex;
+        const section = e.target.dataset.section;
+        const tokenName = e.target.dataset.token;
+        const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
+        TokenRegistry.setColor(section, tokenName, hex, alpha);
+        e.target.previousElementSibling?.previousElementSibling &&
+          (e.target.closest('.inspector-token').querySelector('.token-swatch').style.background = ColorConverter.hexAlphaToRgba(hex, alpha));
+        // Re-render left panel swatch
+        LeftPanel.render();
+        PreviewRenderer.render();
+      });
+    });
+  }
+};
+
+// ── State Controller ─────────────────────
+const StateController = {
+  init() {
+    document.querySelectorAll('.state-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('.state-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        document.getElementById('preview-area').dataset.previewState = pill.dataset.state;
+      });
+    });
+  }
+};
+
+// ── App Controller ───────────────────────
+const App = {
+  init() {
+    // Load embedded theme
+    const themeData = JSON.parse(document.getElementById('theme-data').textContent);
+    TokenRegistry.load(themeData);
+
+    // Render
+    LeftPanel.render();
+    PreviewRenderer.render();
+    SelectAndTweak.init();
+    StateController.init();
+
+    // Search
+    document.getElementById('token-search').addEventListener('input', (e) => {
+      LeftPanel.filterBySearch(e.target.value);
+    });
+
+    // Theme name
+    document.getElementById('theme-name').addEventListener('change', (e) => {
+      TokenRegistry.theme.meta.name = e.target.value;
+    });
+
+    // Export
+    document.getElementById('btn-export').addEventListener('click', () => ExportPanel.show());
+    document.getElementById('export-close').addEventListener('click', () => ExportPanel.hide());
+    document.getElementById('export-overlay').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) ExportPanel.hide();
+    });
+    document.querySelectorAll('.export-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.export-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        ExportPanel.currentTab = tab.dataset.tab;
+        ExportPanel.generate();
+      });
+    });
+    document.getElementById('export-copy').addEventListener('click', () => {
+      const code = document.getElementById('export-code').textContent;
+      navigator.clipboard?.writeText(code).then(() => Toast.show('Copied to clipboard'));
+    });
+    document.getElementById('export-download').addEventListener('click', () => {
+      ImportExport.downloadJSON();
+    });
+
+    // Import
+    document.getElementById('btn-import').addEventListener('click', () => ImportExport.importJSON());
+    document.getElementById('import-input').addEventListener('change', (e) => {
+      if (e.target.files[0]) ImportExport.handleFile(e.target.files[0]);
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
+        e.preventDefault();
+        ExportPanel.show();
+      }
+    });
+  }
+};
+
+// Boot
+document.addEventListener('DOMContentLoaded', App.init);
+</script>
+</body>
+</html>
