@@ -742,7 +742,8 @@ button.tb-btn-accent:hover {
 /* ── State scrubber overrides ── */
 [data-preview-state="hover"] .preview-btn { background: var(--vt-UiButtonBackgroundHover) !important; color: var(--vt-UiButtonTextHover) !important; }
 [data-preview-state="hover"] .preview-btn-accent { background: var(--vt-UiActionButtonBackgroundHover) !important; color: var(--vt-UiActionButtonTextHover) !important; }
-[data-preview-state="hover"] .toggle-track { background: var(--vt-ToggleButtonOnHover) !important; }
+[data-preview-state="hover"] .toggle-track.on { background: var(--vt-ToggleButtonOnHover) !important; }
+[data-preview-state="hover"] .toggle-track:not(.on) { background: var(--vt-ToggleButtonOffHover) !important; }
 [data-preview-state="hover"] .preview-input { border-color: var(--vt-TextEditorCaret) !important; }
 [data-preview-state="hover"] .dropdown-preview { border-color: var(--vt-TextEditorCaret) !important; }
 [data-preview-state="hover"] .preview-card { border-color: var(--vt-AccentPrimary) !important; }
@@ -753,11 +754,11 @@ button.tb-btn-accent:hover {
 
 [data-preview-state="disabled"] .preview-btn,
 [data-preview-state="disabled"] .preview-btn-accent,
-[data-preview-state="disabled"] .toggle-track,
 [data-preview-state="disabled"] .preview-input,
 [data-preview-state="disabled"] .dropdown-preview,
 [data-preview-state="disabled"] .preview-slider,
 [data-preview-state="disabled"] .preview-card { opacity: 0.4 !important; pointer-events: none !important; }
+[data-preview-state="disabled"] .toggle-track { background: var(--vt-ToggleButtonDisabled) !important; pointer-events: none !important; }
 
 [data-preview-state="error"] .preview-input { border-color: var(--vt-Error) !important; }
 [data-preview-state="error"] .preview-btn { border: 1px solid var(--vt-Error) !important; }
@@ -1296,6 +1297,8 @@ const TokenRegistry = {
     this.theme = JSON.parse(JSON.stringify(themeData));
     this.baseTheme = JSON.parse(JSON.stringify(themeData));
     this.edits = {};
+    UndoManager.reset();
+    this.updateStatus();
   },
 
   getColor(section, name) {
@@ -1321,9 +1324,16 @@ const TokenRegistry = {
     this.updateStatus();
   },
 
-  setValue(name, val) {
-    if (!this.theme.values?.[name]) return;
-    this.theme.values[name].value = val;
+  setValue(name, val, skipUndo) {
+    const token = this.theme.values?.[name];
+    if (!token) return;
+    if (!skipUndo) {
+      UndoManager.push({
+        type: 'value', section: 'values', name,
+        prevValue: token.value, newValue: val
+      });
+    }
+    token.value = val;
     this.edits[`values.${name}`] = true;
     this.updateStatus();
   },
@@ -1487,6 +1497,9 @@ const LeftPanel = {
 
     container.innerHTML = html;
     this.bindEvents();
+    // Reapply search filter if active
+    const q = document.getElementById('token-search')?.value;
+    if (q) this.filterBySearch(q);
   },
 
   groupCustomTokens(tokens) {
@@ -1695,7 +1708,7 @@ const PreviewRenderer = {
         </div>
 
         <div class="preview-slider-wrap" data-tokens="SliderTrack,SliderFill,SliderThumb" data-component="Slider" data-framework="visage">
-          <input type="range" class="preview-slider" value="65" style="background:linear-gradient(to right, var(--vt-SliderFill) 65%, var(--vt-SliderTrack) 65%); --thumb-color:var(--vt-SliderThumb)">
+          <input type="range" class="preview-slider" value="65" style="background:linear-gradient(to right, var(--vt-SliderFill) 65%, var(--vt-SliderTrack) 65%)">
           <input type="range" class="preview-slider" value="30" style="background:linear-gradient(to right, var(--vt-SliderFill) 30%, var(--vt-SliderTrack) 30%)">
         </div>
 
@@ -1890,6 +1903,7 @@ const PreviewRenderer = {
 
     // Init canvases
     CSSBridge.syncAll();
+    CanvasRenderer.canvases = [];
     document.querySelectorAll('.knob-canvas').forEach(c => {
       CanvasRenderer.register(c, parseFloat(c.dataset.value));
     });
@@ -2089,7 +2103,9 @@ const ExportPanel = {
 // ── Import / Export ──────────────────────
 const ImportExport = {
   importJSON() {
-    document.getElementById('import-input').click();
+    const input = document.getElementById('import-input');
+    input.value = '';  // Allow re-selecting the same file
+    input.click();
   },
   handleFile(file) {
     const reader = new FileReader();
@@ -2145,6 +2161,12 @@ const UndoManager = {
     this.updateButtons();
   },
 
+  reset() {
+    this.stack = [];
+    this.index = -1;
+    this.updateButtons();
+  },
+
   undo() {
     if (this.index < 0) return;
     const action = this.stack[this.index--];
@@ -2152,9 +2174,10 @@ const UndoManager = {
     if (token) {
       token.value = action.prevValue;
       if (action.prevAlpha !== undefined) token.alpha = action.prevAlpha;
-      CSSBridge.syncToken(action.section, action.name);
+      if (action.section !== 'values') CSSBridge.syncToken(action.section, action.name);
       CanvasRenderer.scheduleRedraw();
     }
+    TokenRegistry.updateStatus();
     this.updateButtons();
   },
 
@@ -2165,9 +2188,10 @@ const UndoManager = {
     if (token) {
       token.value = action.newValue;
       if (action.newAlpha !== undefined) token.alpha = action.newAlpha;
-      CSSBridge.syncToken(action.section, action.name);
+      if (action.section !== 'values') CSSBridge.syncToken(action.section, action.name);
       CanvasRenderer.scheduleRedraw();
     }
+    TokenRegistry.updateStatus();
     this.updateButtons();
   },
 
@@ -2184,6 +2208,7 @@ const SelectAndTweak = {
   init() {
     const preview = document.getElementById('preview-area');
     preview.addEventListener('click', (e) => {
+      if (!e.metaKey && !e.ctrlKey) return;
       const component = e.target.closest('[data-tokens]');
       if (!component) return;
       this.inspectComponent(component);
