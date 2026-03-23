@@ -3542,6 +3542,9 @@ const ColorSystemUI = {
         if (!palette) return;
         if (param === 'H') {
           palette.baseColor.H = parseFloat(e.target.value);
+          // Clamp C to new gamut at current L (dot stays inside triangle)
+          const maxCAtL = GamutPicker.maxChromaAtL(palette.baseColor.L, palette.baseColor.H);
+          if (palette.baseColor.C > maxCAtL) palette.baseColor.C = maxCAtL;
           // Redraw gamut triangle for new hue
           const canvas = document.getElementById(`gamut-${key}`);
           const dot = document.getElementById(`gamut-dot-${key}`);
@@ -3550,9 +3553,10 @@ const ColorSystemUI = {
             GamutPicker.positionDot(dot, canvas, palette.baseColor.L, palette.baseColor.C);
             dot.style.background = OklchEngine.oklchToHex(palette.baseColor.L, palette.baseColor.C, palette.baseColor.H);
           }
-          // Update chroma slider gradient for new hue
+          // Update chroma slider gradient and value for new hue
           const chromaSlider = e.target.closest('.cs-palette-editor')?.querySelector('[data-param="C"]');
           if (chromaSlider) {
+            chromaSlider.value = palette.baseColor.C; // reflect clamped value
             const grayHex = OklchEngine.oklchToHex(palette.baseColor.L, 0, palette.baseColor.H);
             const satHex = OklchEngine.oklchToHex(palette.baseColor.L, 0.25, palette.baseColor.H);
             chromaSlider.style.background = `linear-gradient(to right, ${grayHex}, ${satHex})`;
