@@ -233,6 +233,8 @@ Beyond Tailwind 4, add these templates by converting their published hex values 
 
 For Phase 1, ship only Tailwind 4 + Audio Studio. Add others in follow-up.
 
+**To capture additional templates from supacolors free tier:** The free tier allows only 1 system at a time. To get another template's data: delete the current system at https://supacolors.studio/system (select → Delete), then Create Your First System → choose the template → export CSS Variables → capture the OKLCH values → convert to our format. Repeat for each template.
+
 ## Implementation Order
 
 1. First: `OklchEngine` module (pure math, no UI)
