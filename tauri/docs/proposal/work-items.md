@@ -11,14 +11,14 @@
 - [x] 0 Commit scaffold
 
 ## Phase 1: Style System JSON Format
-- [ ] 1.1 Create Tools/themes/default.stylesystem.json with geometry, effects, gradients, typography sections
-- [ ] 1.2 Add CSS custom properties (--st-*) to theme-designer.html for geometry/style tokens
-- [ ] 1.3 Canvas knobs read --st-knob-arc-width for arc thickness
-- [ ] 1.4 Buttons read --st-button-rounding for border-radius
-- [ ] 1.5 Toggles, sliders, text inputs read their respective --st-* vars
-- [ ] 1.6 Embed style system in HTML via <script id="style-system-data">
-- [ ] 1.7 Export panel adds Style System tab
-- [ ] 1.8 Commit Phase 1
+- [x] 1.1 Create Tools/themes/default.stylesystem.json with geometry, effects, gradients, typography sections
+- [x] 1.2 Add CSS custom properties (--st-*) to theme-designer.html for geometry/style tokens
+- [x] 1.3 Canvas knobs read --st-knob-arc-width for arc thickness
+- [x] 1.4 Buttons read --st-button-rounding for border-radius
+- [x] 1.5 Toggles, sliders, text inputs read their respective --st-* vars
+- [x] 1.6 Embed style system in HTML via <script id="style-system-data">
+- [x] 1.7 Export panel adds Style System tab
+- [x] 1.8 Commit Phase 1
 
 ## Phase 2: Chat UI
 - [ ] 2.1 Add tab switcher: Inspector | Chat in right panel

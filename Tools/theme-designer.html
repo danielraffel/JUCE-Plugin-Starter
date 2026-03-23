@@ -1390,6 +1390,158 @@ button.tb-btn:disabled:hover {
 }
 .palette-apply-btn:hover { background: var(--app-accent-hover); }
 
+/* ── RIGHT PANEL TABS ──────────────────── */
+.right-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+.right-tab {
+  flex: 1;
+  padding: 8px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--app-text-muted);
+  font-family: var(--app-font);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.right-tab:hover { color: var(--app-text); }
+.right-tab.active { color: var(--app-accent); border-bottom-color: var(--app-accent); }
+.right-tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.right-tab-content.active { display: flex; }
+
+/* ── CHAT UI ───────────────────────────── */
+#chat-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.chat-context-bar {
+  padding: 6px 10px;
+  font-size: 9px;
+  color: var(--app-text-dim);
+  border-bottom: 1px solid var(--app-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.chat-context-badge {
+  background: var(--app-accent-dim);
+  color: var(--app-accent);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+}
+#chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#chat-messages::-webkit-scrollbar { width: 4px; }
+#chat-messages::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 2px; }
+.chat-msg {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+.chat-msg.user {
+  align-self: flex-end;
+  background: var(--app-accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.chat-msg.agent {
+  align-self: flex-start;
+  background: var(--app-panel-raised);
+  color: var(--app-text);
+  border-bottom-left-radius: 4px;
+}
+.chat-msg .chat-thumb {
+  width: 100%;
+  max-width: 200px;
+  border-radius: 6px;
+  margin-top: 6px;
+  cursor: pointer;
+  border: 1px solid var(--app-border-subtle);
+  transition: border-color 0.12s;
+}
+.chat-msg .chat-thumb:hover { border-color: var(--app-accent); }
+.chat-msg .chat-img-preview {
+  max-width: 120px;
+  max-height: 80px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+.chat-typing {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  align-self: flex-start;
+}
+.chat-typing-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--app-text-dim);
+  animation: chat-bounce 1.2s ease-in-out infinite;
+}
+.chat-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.chat-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes chat-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-4px); }
+}
+#chat-input-area {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-top: 1px solid var(--app-border-subtle);
+  align-items: flex-end;
+}
+#chat-input {
+  flex: 1;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  color: var(--app-text);
+  font-family: var(--app-font);
+  font-size: 11px;
+  padding: 8px 10px;
+  outline: none;
+  resize: none;
+  min-height: 36px;
+  max-height: 80px;
+}
+#chat-input:focus { border-color: var(--app-accent); }
+#chat-input::placeholder { color: var(--app-text-dim); }
+.chat-btn {
+  width: 32px; height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--app-border);
+  background: var(--app-panel);
+  color: var(--app-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.12s;
+}
+.chat-btn:hover { border-color: var(--app-accent); color: var(--app-accent); }
+.chat-btn.send { background: var(--app-accent); border-color: var(--app-accent); color: #fff; }
+.chat-btn.send:hover { background: var(--app-accent-hover); }
+
 /* ── INFO MODAL + ICON ─────────────────── */
 #info-overlay {
   position: fixed;
@@ -1576,13 +1728,41 @@ button.tb-btn:disabled:hover {
 
   <!-- RIGHT PANEL -->
   <aside id="right-panel">
-    <div class="inspector-header">Inspector</div>
-    <div class="inspector-empty" id="inspector-empty">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-      <div>Select a component to inspect its theme tokens</div>
-      <div>Hold <span class="shortcut">⌘</span> and click</div>
+    <div class="right-tabs">
+      <button class="right-tab active" data-tab="inspector">Inspector</button>
+      <button class="right-tab" data-tab="chat">Chat</button>
     </div>
-    <div id="inspector-content"></div>
+
+    <!-- Inspector Tab -->
+    <div class="right-tab-content active" id="tab-inspector">
+      <div class="inspector-empty" id="inspector-empty">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        <div>Select a component to inspect its theme tokens</div>
+        <div>Hold <span class="shortcut">⌘</span> and click</div>
+      </div>
+      <div id="inspector-content"></div>
+    </div>
+
+    <!-- Chat Tab -->
+    <div class="right-tab-content" id="tab-chat">
+      <div id="chat-panel">
+        <div class="chat-context-bar">
+          <span class="chat-context-badge" id="chat-context">Editing: All Components</span>
+          <button class="tb-btn" style="font-size:9px;padding:2px 6px" id="chat-export-btn">Export</button>
+        </div>
+        <div id="chat-messages"></div>
+        <div id="chat-input-area">
+          <button class="chat-btn" id="chat-upload-btn" title="Upload image">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </button>
+          <textarea id="chat-input" rows="1" placeholder="Describe a style..."></textarea>
+          <button class="chat-btn send" id="chat-send-btn" title="Send (Enter)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+          </button>
+        </div>
+        <input type="file" id="chat-file-input" accept="image/*" style="display:none">
+      </div>
+    </div>
   </aside>
 
   <!-- STATUS BAR -->
@@ -3730,6 +3910,9 @@ const SelectAndTweak = {
     const name = el.dataset.component || 'Component';
     const framework = el.dataset.framework || 'visage';
 
+    // Update chat context
+    ChatUI.updateContext(name);
+
     document.getElementById('inspector-empty').style.display = 'none';
     const content = document.getElementById('inspector-content');
     content.style.display = 'block';
@@ -4702,6 +4885,142 @@ const StateController = {
   }
 };
 
+// ── Chat UI ──────────────────────────────
+const ChatUI = {
+  messages: [],
+  selectedComponent: null,
+  pendingImage: null,
+
+  init() {
+    // Tab switcher
+    document.querySelectorAll('.right-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.right-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.right-tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Send button
+    document.getElementById('chat-send-btn').addEventListener('click', () => this.send());
+
+    // Enter to send (Shift+Enter for newline)
+    document.getElementById('chat-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this.send();
+      }
+    });
+
+    // Image upload
+    document.getElementById('chat-upload-btn').addEventListener('click', () => {
+      document.getElementById('chat-file-input').click();
+    });
+    document.getElementById('chat-file-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        this.pendingImage = ev.target.result; // base64 data URL
+        this.addMessage('user', `[Image: ${file.name}]`, this.pendingImage);
+      };
+      reader.readAsDataURL(file);
+      e.target.value = ''; // allow re-upload
+    });
+
+    // Export button in chat
+    document.getElementById('chat-export-btn').addEventListener('click', () => {
+      ExportPanel.show();
+    });
+  },
+
+  send() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    this.addMessage('user', text);
+    input.value = '';
+
+    // Show typing indicator
+    this.showTyping(true);
+
+    // In Tauri mode, this would call the backend via invoke()
+    // For now, show a placeholder response
+    setTimeout(() => {
+      this.showTyping(false);
+      this.addMessage('agent', 'Style changes would be applied here. (Connect Claude agent in Phase 3)');
+    }, 1000);
+
+    this.pendingImage = null;
+  },
+
+  addMessage(role, text, imageDataUrl) {
+    const msg = { role, text, imageDataUrl, timestamp: Date.now() };
+    this.messages.push(msg);
+    this.renderMessages();
+  },
+
+  renderMessages() {
+    const container = document.getElementById('chat-messages');
+    container.innerHTML = this.messages.map(m => {
+      let html = `<div class="chat-msg ${m.role}">${this.escapeHtml(m.text)}`;
+      if (m.imageDataUrl) {
+        html += `<br><img class="chat-img-preview" src="${m.imageDataUrl}" alt="uploaded">`;
+      }
+      if (m.thumbnail) {
+        html += `<br><img class="chat-thumb" src="${m.thumbnail}" alt="preview" data-timestamp="${m.timestamp}">`;
+      }
+      html += '</div>';
+      return html;
+    }).join('');
+
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+
+    // Bind thumbnail clicks
+    container.querySelectorAll('.chat-thumb').forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        const ts = parseInt(thumb.dataset.timestamp);
+        const msg = this.messages.find(m => m.timestamp === ts);
+        if (msg?.styleSnapshot) {
+          // Restore style from snapshot
+          StyleSystem.load(msg.styleSnapshot);
+          Toast.show('Restored style from chat history');
+        }
+      });
+    });
+  },
+
+  showTyping(show) {
+    const container = document.getElementById('chat-messages');
+    const existing = container.querySelector('.chat-typing');
+    if (existing) existing.remove();
+    if (show) {
+      const typing = document.createElement('div');
+      typing.className = 'chat-typing';
+      typing.innerHTML = '<div class="chat-typing-dot"></div><div class="chat-typing-dot"></div><div class="chat-typing-dot"></div>';
+      container.appendChild(typing);
+      container.scrollTop = container.scrollHeight;
+    }
+  },
+
+  updateContext(componentName) {
+    this.selectedComponent = componentName;
+    const badge = document.getElementById('chat-context');
+    if (badge) {
+      badge.textContent = componentName ? `Editing: ${componentName}` : 'Editing: All Components';
+    }
+  },
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+};
+
 // ── App Controller ───────────────────────
 const App = {
   init() {
@@ -4721,6 +5040,7 @@ const App = {
     SelectAndTweak.init();
     StateController.init();
     ColorSystemUI.init();
+    ChatUI.init();
 
     // Search
     document.getElementById('token-search').addEventListener('input', (e) => {
