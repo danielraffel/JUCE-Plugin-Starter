@@ -426,17 +426,50 @@ button.tb-btn-accent:hover {
 }
 .pp-eyedropper:hover { color: var(--app-accent); }
 .pp-eyedropper svg { width: 12px; height: 12px; }
-.pp-undo {
-  font-size: 9px;
-  color: var(--app-accent);
-  cursor: pointer;
-  float: right;
-  opacity: 0;
-  transition: opacity 0.15s;
-  padding: 2px 4px;
+.pp-undo-bar {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 18px;
+  margin-bottom: 2px;
 }
-.pp-undo.visible { opacity: 1; }
-.pp-undo:hover { text-decoration: underline; }
+.pp-undo-btn {
+  font-size: 9px;
+  color: var(--app-text-dim);
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: transparent;
+  border: none;
+  font-family: var(--app-font);
+  display: none;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.12s;
+}
+.pp-undo-btn.visible { display: inline-flex; }
+.pp-undo-btn:hover { background: var(--app-accent-dim); color: var(--app-accent); }
+.pp-undo-btn svg { width: 10px; height: 10px; }
+.pp-reset-btn {
+  font-size: 8px;
+  color: var(--app-text-dim);
+  cursor: pointer;
+  padding: 2px 4px;
+  display: none;
+}
+.pp-reset-btn.visible { display: inline; }
+.pp-reset-btn:hover { color: var(--app-danger); }
+
+/* Flash animation for changed components */
+@keyframes token-flash {
+  0% { box-shadow: 0 0 0 0 var(--app-accent); }
+  50% { box-shadow: 0 0 8px 2px var(--app-accent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.token-changed-flash {
+  animation: token-flash 0.6s ease-out;
+}
 .pp-mini-picker {
   display: none;
   margin-top: 6px;
@@ -2609,7 +2642,18 @@ const LeftPanel = {
         // Build dropdown with palette shade swatches
         const dd = document.createElement('div');
         dd.className = 'palette-picker-dropdown open-down';
-        let html = `<span class="pp-undo" title="Revert to ${originalHex}">undo</span>`;
+        let prevHex = originalHex; // for redo
+        let html = `<div class="pp-undo-bar">
+          <button class="pp-undo-btn pp-do-undo" title="Undo to ${originalHex}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 10h10a5 5 0 015 5v0a5 5 0 01-5 5H8"/><path d="M7 6L3 10l4 4"/></svg>
+            undo
+          </button>
+          <button class="pp-undo-btn pp-do-redo" title="Redo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10H11a5 5 0 00-5 5v0a5 5 0 005 5h5"/><path d="M17 6l4 4-4 4"/></svg>
+            redo
+          </button>
+          <button class="pp-reset-btn pp-do-reset" title="Reset to original">reset</button>
+        </div>`;
 
         const cs = ColorSystemModel.current;
         if (cs?.palettes) {
@@ -2746,22 +2790,68 @@ const LeftPanel = {
           }
         });
 
-        // Undo button — revert to original color
-        const undoBtn = dd.querySelector('.pp-undo');
-        const showUndo = () => { if (undoBtn) undoBtn.classList.add('visible'); };
+        // Undo/redo/reset
+        const undoBtn = dd.querySelector('.pp-do-undo');
+        const redoBtn = dd.querySelector('.pp-do-redo');
+        const resetBtn = dd.querySelector('.pp-do-reset');
+
+        const flashPreview = () => {
+          // Flash components in preview that use this token
+          document.querySelectorAll(`[data-tokens*="${tokenName}"]`).forEach(el => {
+            el.classList.remove('token-changed-flash');
+            void el.offsetWidth; // force reflow
+            el.classList.add('token-changed-flash');
+          });
+        };
+
+        const showUndo = () => {
+          if (undoBtn) undoBtn.classList.add('visible');
+          if (resetBtn) resetBtn.classList.add('visible');
+          flashPreview();
+        };
+
+        const applyColor = (hex, alpha) => {
+          TokenRegistry.setColor(section, tokenName, hex, alpha);
+          swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+          row.querySelector('.token-hex').value = hex;
+          row.querySelector('.hidden-picker').value = hex;
+        };
+
         undoBtn?.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          TokenRegistry.setColor(section, tokenName, originalHex, originalAlpha);
-          swatch.style.background = ColorConverter.hexAlphaToRgba(originalHex, originalAlpha);
-          row.querySelector('.token-hex').value = originalHex;
-          row.querySelector('.hidden-picker').value = originalHex;
+          prevHex = TokenRegistry.theme[section]?.[tokenName]?.value || prevHex;
+          applyColor(originalHex, originalAlpha);
           undoBtn.classList.remove('visible');
+          if (redoBtn) redoBtn.classList.add('visible');
+          flashPreview();
+        });
+
+        redoBtn?.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (prevHex && prevHex !== originalHex) {
+            applyColor(prevHex, originalAlpha);
+            redoBtn.classList.remove('visible');
+            if (undoBtn) undoBtn.classList.add('visible');
+            flashPreview();
+          }
+        });
+
+        resetBtn?.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          prevHex = TokenRegistry.theme[section]?.[tokenName]?.value || prevHex;
+          applyColor(originalHex, originalAlpha);
+          undoBtn.classList.remove('visible');
+          resetBtn.classList.remove('visible');
+          if (redoBtn) redoBtn.classList.add('visible');
+          flashPreview();
         });
 
         // Show undo when any swatch is picked
         dd.querySelectorAll('.pp-swatch').forEach(sw => {
-          const origClick = sw.onclick;
-          sw.addEventListener('click', showUndo, true);
+          sw.addEventListener('click', () => {
+            prevHex = sw.dataset.hex;
+            showUndo();
+          }, true);
         });
 
         // Close on click outside
