@@ -1202,6 +1202,79 @@ button.tb-btn:disabled:hover {
   margin-top: 4px;
 }
 .palette-apply-btn:hover { background: var(--app-accent-hover); }
+
+/* ── INFO MODAL + ICON ─────────────────── */
+#info-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#info-panel {
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  width: 480px;
+  max-height: 85vh;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+}
+#info-body h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-accent);
+  margin: 14px 0 6px;
+}
+#info-body h4:first-child { margin-top: 0; }
+#info-body p { margin: 0 0 8px; color: var(--app-text-muted); }
+#info-body strong { color: var(--app-text); }
+#info-body .info-example {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 4px 0 8px;
+  padding: 6px 8px;
+  background: var(--app-surface);
+  border-radius: var(--app-radius-sm);
+}
+#info-body .info-dot {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+#info-body .info-label {
+  font-size: 10px;
+  color: var(--app-text-dim);
+}
+.info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--app-border);
+  background: transparent;
+  color: var(--app-text-dim);
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--app-font);
+  cursor: pointer;
+  margin-left: 4px;
+  padding: 0;
+  line-height: 1;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+.info-btn:hover {
+  border-color: var(--app-accent);
+  color: var(--app-accent);
+  background: var(--app-accent-dim);
+}
 </style>
 </head>
 <body>
@@ -1252,6 +1325,7 @@ button.tb-btn:disabled:hover {
       <div id="cs-header" class="expanded">
         <span class="arrow">&#9654;</span>
         Color System
+        <button class="info-btn" onclick="event.stopPropagation();InfoModal.show('palettes')" title="How palettes work" style="margin-left:auto">?</button>
       </div>
       <div id="cs-body">
         <div class="palette-mode-row">
@@ -1260,6 +1334,7 @@ button.tb-btn:disabled:hover {
             <option value="audio-studio">Audio Studio</option>
             <option value="tailwind4">Tailwind 4 (22)</option>
           </select>
+          <button class="info-btn" onclick="InfoModal.show('template')" title="What are templates?">?</button>
         </div>
         <div class="palette-mode-row">
           <span class="palette-mode-label">Harmony</span>
@@ -1270,6 +1345,7 @@ button.tb-btn:disabled:hover {
             <option value="splitComplementary">Split Comp.</option>
             <option value="none">None (manual)</option>
           </select>
+          <button class="info-btn" onclick="InfoModal.show('harmony')" title="How does harmony work?">?</button>
         </div>
         <div class="palette-mode-row">
           <span class="palette-mode-label">Mode</span>
@@ -1277,6 +1353,7 @@ button.tb-btn:disabled:hover {
             <option value="dark">Dark</option>
             <option value="light">Light</option>
           </select>
+          <button class="info-btn" onclick="InfoModal.show('mode')" title="Dark vs Light mode">?</button>
         </div>
         <div id="cs-palettes"></div>
         <div style="display:flex;gap:4px;margin-top:6px">
@@ -1354,6 +1431,17 @@ button.tb-btn:disabled:hover {
 
 <!-- IMPORT -->
 <input type="file" id="import-input" accept=".json">
+
+<!-- INFO MODAL -->
+<div id="info-overlay" style="display:none">
+  <div id="info-panel">
+    <div class="export-header">
+      <h3 id="info-title">Info</h3>
+      <button class="export-close" onclick="document.getElementById('info-overlay').style.display='none'">&times;</button>
+    </div>
+    <div id="info-body" style="padding:16px;font-size:12px;line-height:1.6;color:var(--app-text);max-height:70vh;overflow-y:auto"></div>
+  </div>
+</div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
@@ -1751,14 +1839,33 @@ const ShadeGenerator = {
 const ColorSystemModel = {
   current: null,
 
+  // Nudge a semantic hue toward the accent hue by a small amount
+  // Keeps the color recognizable but adds subtle warmth/coolness
+  _harmonizeSemanticHue(baseH, accentH, amount) {
+    // Find shortest angular distance
+    let diff = accentH - baseH;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    // Nudge by `amount` fraction of the difference (0.1 = 10% shift)
+    let newH = baseH + diff * amount;
+    if (newH < 0) newH += 360;
+    if (newH >= 360) newH -= 360;
+    return newH;
+  },
+
   createDefault(harmonyMode) {
     // Default Audio Studio palette — violet accent with monochromatic harmony
     const accent = OklchEngine.hexToOklch('#AA88FF');
     const hMode = harmonyMode || 'monochromatic';
     const neutral = OklchEngine.deriveNeutral(accent.L, accent.C, accent.H, hMode);
-    const success = OklchEngine.hexToOklch('#4CAF50');
-    const warning = OklchEngine.hexToOklch('#FFC107');
-    const error = OklchEngine.hexToOklch('#F44336');
+    // Semantic colors: keep their band but nudge hue slightly toward accent
+    const successBase = OklchEngine.hexToOklch('#4CAF50');
+    const warningBase = OklchEngine.hexToOklch('#FFC107');
+    const errorBase = OklchEngine.hexToOklch('#F44336');
+    const nudge = 0.08; // 8% hue shift toward accent
+    const success = { ...successBase, H: this._harmonizeSemanticHue(successBase.H, accent.H, nudge) };
+    const warning = { ...warningBase, H: this._harmonizeSemanticHue(warningBase.H, accent.H, nudge) };
+    const error = { ...errorBase, H: this._harmonizeSemanticHue(errorBase.H, accent.H, nudge) };
 
     return {
       meta: {
@@ -3138,6 +3245,17 @@ const ColorSystemUI = {
       accent.baseColor.L, accent.baseColor.C, accent.baseColor.H, harmonyMode
     );
     ColorSystemModel.updatePaletteBase(neutralKey, derived.L, derived.C, derived.H);
+
+    // Nudge semantic colors slightly toward accent hue (keeps them recognizable)
+    const nudge = 0.08;
+    const semanticPalettes = { success: 142, warning: 75, error: 25 }; // base hues
+    for (const [name, baseHue] of Object.entries(semanticPalettes)) {
+      const pal = cs.palettes[name];
+      if (!pal) continue;
+      const newH = ColorSystemModel._harmonizeSemanticHue(baseHue, accent.baseColor.H, nudge);
+      ColorSystemModel.updatePaletteBase(name, pal.baseColor.L, pal.baseColor.C, newH);
+    }
+
     cs.meta.harmony = harmonyMode;
   },
 
@@ -3229,6 +3347,122 @@ const ColorSystemUI = {
 
     // Render initial state
     this.render();
+  }
+};
+
+// ── Info Modal ───────────────────────────
+const InfoModal = {
+  show(topic) {
+    const overlay = document.getElementById('info-overlay');
+    const title = document.getElementById('info-title');
+    const body = document.getElementById('info-body');
+    overlay.style.display = 'flex';
+    title.textContent = this.topics[topic]?.title || 'Info';
+    body.innerHTML = this.topics[topic]?.html || '';
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.style.display = 'none';
+    }, { once: true });
+  },
+
+  topics: {
+    template: {
+      title: 'Templates',
+      html: `
+        <h4>What is a Template?</h4>
+        <p>A template is a <strong>starting set of color palettes</strong> — pre-designed color families that work well together. Instead of picking colors from scratch, you start from a professional color system and customize from there.</p>
+
+        <h4>Audio Studio (5 palettes)</h4>
+        <p>Designed specifically for audio plugin UIs. Includes <strong>accent</strong> (your brand color — default violet), <strong>neutral</strong> (backgrounds and text), plus <strong>success</strong>, <strong>warning</strong>, and <strong>error</strong> for status indicators.</p>
+
+        <h4>Tailwind 4 (22 palettes)</h4>
+        <p>The full Tailwind CSS color system with 22 named color families (slate, red, orange, blue, violet, etc.). Each family has 11 shades from light to dark. Great if you need a broad palette for a complex UI or want web-compatible colors.</p>
+
+        <h4>What happens when I switch?</h4>
+        <p>Switching templates <strong>replaces all palettes</strong> with the template's colors. Your previous customizations will be lost unless you Save your color system first.</p>
+      `
+    },
+
+    harmony: {
+      title: 'Color Harmony',
+      html: `
+        <h4>What does Harmony do?</h4>
+        <p>Harmony automatically adjusts your <strong>neutral palette</strong> (backgrounds, borders, text) to complement your <strong>accent color</strong>. This ensures your UI colors feel cohesive without you having to manually coordinate them.</p>
+
+        <h4>What gets affected?</h4>
+        <p><strong>Accent</strong> — You pick this freely. It's your brand/highlight color (knobs, buttons, links).</p>
+        <p><strong>Neutral</strong> — <strong>Auto-derived from accent</strong> based on harmony mode. Controls backgrounds, panels, borders, text.</p>
+        <p><strong>Success, Warning, Error</strong> — <strong>Subtly nudged</strong>. These stay green, yellow, and red (their meaning is universal), but their hue shifts ~8% toward your accent for a cohesive feel. A warm orange accent makes greens slightly warmer, reds slightly more orange. They're always recognizable.</p>
+
+        <h4>Harmony Modes</h4>
+        <div class="info-example">
+          <div class="info-dot" style="background:#AA88FF"></div>
+          <div class="info-dot" style="background:#3A3545"></div>
+          <span class="info-label"><strong>Monochromatic</strong> (default) — Neutral gets a subtle tint of the accent hue. Creates a warm, cohesive feel. Best for most plugins.</span>
+        </div>
+        <div class="info-example">
+          <div class="info-dot" style="background:#AA88FF"></div>
+          <div class="info-dot" style="background:#353545"></div>
+          <span class="info-label"><strong>Analogous</strong> — Neutral shifts 30 degrees on the color wheel from accent. Similar family, slight variation.</span>
+        </div>
+        <div class="info-example">
+          <div class="info-dot" style="background:#AA88FF"></div>
+          <div class="info-dot" style="background:#3D4535"></div>
+          <span class="info-label"><strong>Complementary</strong> — Neutral uses the opposite hue (180 degrees). Creates subtle contrast between accent and background.</span>
+        </div>
+        <div class="info-example">
+          <div class="info-dot" style="background:#AA88FF"></div>
+          <div class="info-dot" style="background:#3A4540"></div>
+          <span class="info-label"><strong>Split Comp.</strong> — Neutral offsets 150 degrees. Between analogous and complementary.</span>
+        </div>
+        <div class="info-example">
+          <div class="info-dot" style="background:#AA88FF"></div>
+          <div class="info-dot" style="background:#3A3A3A"></div>
+          <span class="info-label"><strong>None</strong> — Pure gray neutral, no tinting. Full manual control.</span>
+        </div>
+
+        <h4>Can I still tweak after harmony?</h4>
+        <p>Yes. Harmony sets the starting point for your neutral. You can expand the neutral palette and manually adjust its hue/chroma sliders. Your override stays until you change the accent hue again.</p>
+      `
+    },
+
+    mode: {
+      title: 'Dark / Light Mode',
+      html: `
+        <h4>What does Mode do?</h4>
+        <p>Mode controls how palette shades map to UI roles. The same palette families are used in both modes — only the <strong>shade assignments</strong> change.</p>
+
+        <h4>Dark Mode</h4>
+        <p>Dark shades (800-950) for backgrounds. Light shades (50-200) for text. Accent at shade 500. This is the default for audio plugins.</p>
+
+        <h4>Light Mode</h4>
+        <p>Light shades (50-100) for backgrounds. Dark shades (800-950) for text. Accent at shade 600 (slightly darker for readability on light backgrounds).</p>
+
+        <h4>Both use the same palettes</h4>
+        <p>You don't need separate colors for dark and light. The color system automatically picks the right shade from each palette based on the mode. Change your accent color once and both modes update.</p>
+      `
+    },
+
+    palettes: {
+      title: 'Palettes & Shades',
+      html: `
+        <h4>What is a Palette?</h4>
+        <p>A palette is a <strong>family of 11 shades</strong> generated from a single base color. The shades range from very light (50) to very dark (950), with perceptually uniform steps.</p>
+
+        <h4>The 5 Default Palettes</h4>
+        <p><strong>Accent</strong> — Your primary brand/highlight color. Used for knobs, active buttons, links, toggles, sliders, focus rings.</p>
+        <p><strong>Neutral</strong> — Backgrounds, panels, borders, text. Auto-tinted by harmony to match your accent.</p>
+        <p><strong>Success</strong> — Green. Used for success states and the "safe" level on VU meters.</p>
+        <p><strong>Warning</strong> — Amber/yellow. Used for warnings and "caution" on meters.</p>
+        <p><strong>Error</strong> — Red. Used for errors and "clipping" on meters.</p>
+
+        <h4>How Shades Work</h4>
+        <p>Each palette has 11 shades numbered 50 to 950. Lower numbers are lighter, higher numbers are darker. The shades are generated using <strong>OKLCH</strong> — a perceptually uniform color space that ensures equal lightness steps look equal to the human eye.</p>
+
+        <h4>Shade Numbers</h4>
+        <p>50 = near white, 500 = mid-tone (the "base" color), 950 = near black. When you adjust the hue or chroma sliders, all 11 shades regenerate automatically.</p>
+      `
+    }
   }
 };
 
