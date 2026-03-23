@@ -1165,73 +1165,6 @@ button.tb-btn:disabled:hover {
 }
 .cs-oklch-input input:focus { border-color: var(--app-accent); }
 
-.palette-color-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.palette-color-label {
-  font-size: 10px;
-  color: var(--app-text-muted);
-  width: 56px;
-  flex-shrink: 0;
-}
-.palette-color-picker {
-  width: 28px;
-  height: 28px;
-  border: 2px solid var(--app-border);
-  border-radius: 6px;
-  cursor: pointer;
-  padding: 0;
-  background: none;
-  -webkit-appearance: none;
-}
-.palette-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
-.palette-color-picker::-webkit-color-swatch { border: none; border-radius: 4px; }
-.palette-color-hex {
-  font-family: var(--app-mono);
-  font-size: 10px;
-  background: var(--app-surface);
-  border: 1px solid var(--app-border-subtle);
-  border-radius: 3px;
-  color: var(--app-text-dim);
-  padding: 3px 5px;
-  width: 66px;
-  outline: none;
-  text-transform: uppercase;
-}
-.palette-color-hex:focus { border-color: var(--app-accent); color: var(--app-text); }
-
-.shade-ramp {
-  display: flex;
-  gap: 2px;
-  margin: 4px 0 8px;
-  height: 18px;
-}
-.shade-swatch {
-  flex: 1;
-  border-radius: 2px;
-  cursor: pointer;
-  position: relative;
-}
-.shade-swatch:hover::after {
-  content: attr(title);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--app-panel-raised);
-  border: 1px solid var(--app-border);
-  border-radius: 3px;
-  padding: 2px 5px;
-  font-size: 8px;
-  color: var(--app-text);
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 5;
-}
-
 .palette-mode-row {
   display: flex;
   align-items: center;
@@ -1920,10 +1853,23 @@ const ColorSystemModel = {
           shades: ShadeGenerator.generateRamp(base.L, base.C, base.H)
         };
       }
+      // Remap semantic roles to use Tailwind palette names
+      const baseRoles = this.createDefault().semanticRoles;
+      const remapPalette = (roles, map) => {
+        const remapped = {};
+        for (const [k, v] of Object.entries(roles)) {
+          remapped[k] = { ...v, palette: map[v.palette] || v.palette };
+        }
+        return remapped;
+      };
+      const nameMap = { accent: 'violet', neutral: 'slate', success: 'green', warning: 'amber', error: 'red' };
       return {
         meta: { name: 'Tailwind 4', version: '1.0.0', description: '22 palette families from Tailwind CSS v4', template: 'tailwind4' },
         palettes,
-        semanticRoles: this.createDefault().semanticRoles
+        semanticRoles: {
+          dark: remapPalette(baseRoles.dark, nameMap),
+          light: remapPalette(baseRoles.light, nameMap)
+        }
       };
     }
     return this.createDefault();
