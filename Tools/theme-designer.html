@@ -2596,21 +2596,21 @@ const PreviewRenderer = {
           <input type="range" class="preview-slider" value="30" style="background:linear-gradient(to right, var(--vt-SliderFill) 30%, var(--vt-SliderTrack) 30%)">
         </div>
 
-        <div class="btn-row" style="margin-top:12px" data-tokens="UiButtonBackground,UiButtonBackgroundHover,UiButtonText,UiButtonTextHover" data-component="UI Button" data-framework="visage">
-          <button class="preview-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);border-radius:var(--app-radius)">Normal</button>
-          <button class="preview-btn" style="background:var(--vt-UiButtonBackgroundHover);color:var(--vt-UiButtonTextHover);border-radius:var(--app-radius)">Hover</button>
-          <button class="preview-btn preview-btn-accent" style="background:var(--vt-UiActionButtonBackground);color:var(--vt-UiActionButtonText);border-radius:var(--app-radius)">Action</button>
-          <button class="preview-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);border-radius:var(--app-radius);opacity:0.4" disabled>Disabled</button>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="preview-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);border-radius:var(--app-radius)" data-tokens="UiButtonBackground,UiButtonText" data-component="Button (Normal)" data-framework="visage">Normal</button>
+          <button class="preview-btn" style="background:var(--vt-UiButtonBackgroundHover);color:var(--vt-UiButtonTextHover);border-radius:var(--app-radius)" data-tokens="UiButtonBackgroundHover,UiButtonTextHover" data-component="Button (Hover)" data-framework="visage">Hover</button>
+          <button class="preview-btn preview-btn-accent" style="background:var(--vt-UiActionButtonBackground);color:var(--vt-UiActionButtonText);border-radius:var(--app-radius)" data-tokens="UiActionButtonBackground,UiActionButtonBackgroundHover,UiActionButtonText,UiActionButtonTextHover" data-component="Action Button" data-framework="visage">Action</button>
+          <button class="preview-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);border-radius:var(--app-radius);opacity:0.4" disabled data-tokens="UiButtonBackground,UiButtonText,ToggleButtonDisabled" data-component="Button (Disabled)" data-framework="visage">Disabled</button>
         </div>
 
-        <div class="toggle-row" style="margin-top:12px" data-tokens="ToggleButtonOn,ToggleButtonOff,ToggleButtonDisabled" data-component="Toggle" data-framework="visage">
-          <div class="toggle-wrap">
+        <div class="toggle-row" style="margin-top:12px">
+          <div class="toggle-wrap" data-tokens="ToggleButtonOn,ToggleButtonOnHover" data-component="Toggle (On)" data-framework="visage">
             <div class="toggle-track on" style="background:var(--vt-ToggleButtonOn)">
               <div class="toggle-thumb"></div>
             </div>
             <span class="toggle-label">Enabled</span>
           </div>
-          <div class="toggle-wrap">
+          <div class="toggle-wrap" data-tokens="ToggleButtonOff,ToggleButtonOffHover,ToggleButtonDisabled" data-component="Toggle (Off)" data-framework="visage">
             <div class="toggle-track" style="background:var(--vt-ToggleButtonOff)">
               <div class="toggle-thumb"></div>
             </div>
