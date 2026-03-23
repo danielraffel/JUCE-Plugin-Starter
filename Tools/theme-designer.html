@@ -3205,22 +3205,36 @@ const GamutPicker = {
     const boundary = this._gamutBoundary(hue, h, maxC);
 
     // Supacolors-style gamut triangle:
+    // CONFIRMED from chrome-devtools analysis:
     // - X axis = chroma (left=0, right=max)
-    // - Y axis = lightness (top=1/white, bottom=0/black)
-    // - Triangle: white at top-left (L=1,C=0), black at bottom-left (L=0,C=0),
-    //   max chroma fans out to the right
-    // - The triangle boundary curves because max chroma varies with lightness
+    // - Y axis = lightness DIRECTLY (top=0/BLACK, bottom=1/WHITE)
+    //   (dot at y=153/200 maps to L=0.766)
+    // - Triangle: black at top-left, white at bottom-left,
+    //   gamut boundary curves to the right
+    // - Top of canvas is DARK, bottom is LIGHT
 
-    // Dark background with subtle dots pattern
     ctx.fillStyle = '#1C1C20';
     ctx.fillRect(0, 0, w, h);
+
+    // Recompute boundary with REVERSED L mapping (top=0, bottom=1)
+    const boundaryRev = [];
+    for (let py = 0; py < h; py++) {
+      const L = py / h; // top=0(black), bottom=1(white)
+      let lo = 0, hi = maxC;
+      for (let i = 0; i < 14; i++) {
+        const mid = (lo + hi) / 2;
+        if (OklchEngine.isInGamut(L, mid, hue)) lo = mid;
+        else hi = mid;
+      }
+      boundaryRev.push(lo);
+    }
 
     // Render gamut pixels
     const imgData = ctx.createImageData(w, h);
     const data = imgData.data;
     for (let py = 0; py < h; py++) {
-      const L = 1 - (py / h);
-      const maxCAtL = boundary[Math.min(py, boundary.length - 1)] || 0;
+      const L = py / h; // top=0(black), bottom=1(white)
+      const maxCAtL = boundaryRev[py] || 0;
       const maxPxAtL = Math.ceil((maxCAtL / maxC) * w);
       for (let px = 0; px < w; px++) {
         const i = (py * w + px) * 4;
@@ -3238,25 +3252,23 @@ const GamutPicker = {
     }
     ctx.putImageData(imgData, 0, 0);
 
-    // Gamut boundary line — the triangle edge
+    // Gamut boundary line
     ctx.beginPath();
     ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 1;
-    ctx.moveTo(0, 0); // white (L=1, C=0) = top-left
-    for (let py = 0; py < h; py += 1) {
-      const bnd = boundary[Math.min(py, boundary.length - 1)] || 0;
-      ctx.lineTo(Math.min(w, (bnd / maxC) * w), py);
+    ctx.moveTo(0, 0); // black (L=0, C=0) = top-left
+    for (let py = 0; py < h; py++) {
+      ctx.lineTo(Math.min(w, (boundaryRev[py] / maxC) * w), py);
     }
-    ctx.lineTo(0, h); // black (L=0, C=0) = bottom-left
+    ctx.lineTo(0, h); // white (L=1, C=0) = bottom-left
     ctx.closePath();
     ctx.stroke();
 
-    // Crosshair lines (dashed, subtle like supacolors)
+    // Crosshair lines
     const dotX = (currentC / maxC) * w;
-    const dotY = (1 - currentL) * h;
+    const dotY = currentL * h; // L maps directly to Y (top=0, bottom=1)
     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 0.5;
-    ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(dotX, 0); ctx.lineTo(dotX, h);
     ctx.moveTo(0, dotY); ctx.lineTo(w, dotY);
@@ -3264,15 +3276,15 @@ const GamutPicker = {
   },
 
   // Position the dot on the canvas based on L and C
+  // Supacolors mapping: X=chroma, Y=lightness directly (top=0/black, bottom=1/white)
   positionDot(dotEl, canvas, L, C) {
     const w = canvas.offsetWidth;
     const h = canvas.offsetHeight;
     const maxC = 0.35;
     const px = (C / maxC) * w;
-    const py = (1 - L) * h;
+    const py = L * h; // L maps directly: top=0(black), bottom=1(white)
     dotEl.style.left = `${Math.max(0, Math.min(w, px))}px`;
     dotEl.style.top = `${Math.max(0, Math.min(h, py))}px`;
-    dotEl.style.background = OklchEngine.oklchToHex(L, C, 0); // approximate
   },
 
   // Get L and C from mouse position on canvas
@@ -3282,7 +3294,7 @@ const GamutPicker = {
     const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
     const maxC = 0.35;
     return {
-      L: 1 - y,
+      L: y, // Y maps directly to L: top=0(black), bottom=1(white)
       C: x * maxC
     };
   },
