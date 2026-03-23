@@ -4946,21 +4946,29 @@ const ChatUI = {
     // Show typing indicator
     this.showTyping(true);
 
-    // In Tauri mode, this would call the backend via invoke()
-    // For now, show a placeholder response
-    setTimeout(() => {
+    // Call agent via Tauri IPC or fallback to mock
+    this.callAgent(text, this.pendingImage).then(response => {
       this.showTyping(false);
-      this.addMessage('agent', 'Style changes would be applied here. (Connect Claude agent in Phase 3)');
-    }, 1000);
+      if (response.diff && Object.keys(response.diff).length > 0) {
+        // Apply the style diff
+        this.applyStyleDiff(response.diff);
+        // Capture thumbnail
+        const thumbnail = this.capturePreviewThumbnail();
+        const msg = this.messages[this.messages.length] || {};
+        // Add agent message with thumbnail
+        this.addMessage('agent', response.message || 'Style updated', null, response.diff, thumbnail);
+      } else {
+        this.addMessage('agent', response.message || 'No changes applied');
+      }
+    }).catch(err => {
+      this.showTyping(false);
+      this.addMessage('agent', 'Error: ' + (err.message || err));
+    });
 
     this.pendingImage = null;
   },
 
-  addMessage(role, text, imageDataUrl) {
-    const msg = { role, text, imageDataUrl, timestamp: Date.now() };
-    this.messages.push(msg);
-    this.renderMessages();
-  },
+  // addMessage defined below with diff/thumbnail support
 
   renderMessages() {
     const container = document.getElementById('chat-messages');
@@ -5012,6 +5020,127 @@ const ChatUI = {
     if (badge) {
       badge.textContent = componentName ? `Editing: ${componentName}` : 'Editing: All Components';
     }
+  },
+
+  async callAgent(prompt, imageBase64) {
+    // Try Tauri IPC first
+    if (window.__TAURI__) {
+      try {
+        const result = await window.__TAURI__.core.invoke('chat_send', {
+          prompt,
+          styleJson: StyleSystem.toJSON(),
+          selectedComponent: this.selectedComponent,
+          imageBase64: imageBase64 || null,
+        });
+        return JSON.parse(result);
+      } catch (e) {
+        return { message: 'Tauri agent error: ' + e, diff: {} };
+      }
+    }
+
+    // Browser fallback: simulate an agent response for testing
+    return new Promise(resolve => {
+      setTimeout(() => {
+        // Mock: generate a plausible diff based on keywords in the prompt
+        const diff = this.mockStyleDiff(prompt);
+        resolve({
+          message: Object.keys(diff).length > 0
+            ? `Applied ${Object.keys(diff).length} style changes (mock mode — connect Tauri agent for real AI)`
+            : 'No style changes detected (mock mode)',
+          diff
+        });
+      }, 800);
+    });
+  },
+
+  // Mock agent for browser testing
+  mockStyleDiff(prompt) {
+    const p = prompt.toLowerCase();
+    const diff = {};
+    if (p.includes('round') || p.includes('soft')) {
+      diff.geometry = { global: { cornerRadius: 16 }, button: { cornerRadius: 16 }, toggle: { trackRounding: 12 } };
+    }
+    if (p.includes('sharp') || p.includes('flat') || p.includes('pixel') || p.includes('retro') || p.includes('80s') || p.includes('mac')) {
+      diff.geometry = { global: { cornerRadius: 0 }, button: { cornerRadius: 0 }, toggle: { trackRounding: 2 }, slider: { trackRounding: 0 } };
+      diff.effects = { bloom: { enabled: false }, shadows: { enabled: false } };
+    }
+    if (p.includes('glow') || p.includes('neon') || p.includes('cyber')) {
+      diff.effects = { bloom: { enabled: true, size: 20, intensity: 3 }, shadows: { enabled: true, blur: 16, alpha: 0.6 } };
+    }
+    if (p.includes('skeuomorphic') || p.includes('3d') || p.includes('depth')) {
+      diff.effects = { shadows: { enabled: true, blur: 12, offsetY: 6, alpha: 0.5 } };
+      diff.geometry = { global: { borderWidth: 2 } };
+    }
+    if (p.includes('big') || p.includes('large')) {
+      diff.typography = { headingSize: 20, bodySize: 16, labelSize: 13 };
+    }
+    if (p.includes('small') || p.includes('compact')) {
+      diff.typography = { headingSize: 13, bodySize: 11, labelSize: 9 };
+    }
+    return diff;
+  },
+
+  applyStyleDiff(diff) {
+    if (!StyleSystem.current) return;
+    // Deep merge diff into current style
+    const merge = (target, source) => {
+      for (const key of Object.keys(source)) {
+        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+          if (!target[key]) target[key] = {};
+          merge(target[key], source[key]);
+        } else {
+          target[key] = source[key];
+        }
+      }
+    };
+    merge(StyleSystem.current, diff);
+    StyleSystem.applyToCSS();
+    // Flash preview
+    document.querySelectorAll('.preview-section').forEach(el => {
+      el.classList.remove('token-changed-flash');
+      void el.offsetWidth;
+      el.classList.add('token-changed-flash');
+    });
+  },
+
+  capturePreviewThumbnail() {
+    // Capture the preview area as a small thumbnail
+    try {
+      const preview = document.getElementById('plugin-chrome');
+      // Use html2canvas-like approach: create a small canvas snapshot
+      // For now, return a colored rectangle as placeholder
+      const canvas = document.createElement('canvas');
+      canvas.width = 200; canvas.height = 120;
+      const ctx = canvas.getContext('2d');
+      // Draw a simplified preview representation
+      const bg = getComputedStyle(document.getElementById('preview-area')).getPropertyValue('--vt-PluginBackground')?.trim() || '#33393F';
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, 200, 120);
+      // Draw accent color bar
+      const accent = getComputedStyle(document.getElementById('preview-area')).getPropertyValue('--vt-AccentPrimary')?.trim() || '#AA88FF';
+      ctx.fillStyle = accent;
+      ctx.fillRect(10, 10, 60, 8);
+      ctx.fillRect(10, 25, 40, 6);
+      // Draw some circles (knobs)
+      ctx.beginPath();
+      ctx.arc(30, 55, 12, 0, Math.PI * 2);
+      ctx.arc(70, 55, 12, 0, Math.PI * 2);
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      return canvas.toDataURL('image/png', 0.5);
+    } catch (e) {
+      return null;
+    }
+  },
+
+  addMessage(role, text, imageDataUrl, diff, thumbnail) {
+    const msg = { role, text, imageDataUrl, diff, thumbnail, timestamp: Date.now() };
+    if (diff && Object.keys(diff).length > 0) {
+      msg.styleSnapshot = JSON.parse(JSON.stringify(StyleSystem.current));
+    }
+    this.messages.push(msg);
+    this.renderMessages();
   },
 
   escapeHtml(text) {

@@ -1,0 +1,9 @@
+{
+  "name": "style-agent-sidecar",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Node.js sidecar for Claude Code Agent SDK",
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^1.0.25"
+  }
+}

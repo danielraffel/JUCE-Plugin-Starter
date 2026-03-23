@@ -21,15 +21,15 @@
 - [x] 1.8 Commit Phase 1
 
 ## Phase 2: Chat UI
-- [ ] 2.1 Add tab switcher: Inspector | Chat in right panel
-- [ ] 2.2 Chat panel with message list, text input, send button
-- [ ] 2.3 Image upload button with base64 conversion and thumbnail preview
-- [ ] 2.4 User messages right-aligned, agent messages left-aligned, rounded bubbles
-- [ ] 2.5 Show "Editing: [component]" or "Editing: All" based on inspector selection
-- [ ] 2.6 Loading/typing indicator animation
-- [ ] 2.7 Chat history persists during session (in memory)
-- [ ] 2.8 "Export current" button in chat header
-- [ ] 2.9 Commit Phase 2
+- [x] 2.1 Add tab switcher: Inspector | Chat in right panel
+- [x] 2.2 Chat panel with message list, text input, send button
+- [x] 2.3 Image upload button with base64 conversion and thumbnail preview
+- [x] 2.4 User messages right-aligned, agent messages left-aligned, rounded bubbles
+- [x] 2.5 Show "Editing: [component]" or "Editing: All" based on inspector selection
+- [x] 2.6 Loading/typing indicator animation
+- [x] 2.7 Chat history persists during session (in memory)
+- [x] 2.8 "Export current" button in chat header
+- [x] 2.9 Commit Phase 2
 
 ## Phase 3: Tauri Backend + Claude Agent
 - [ ] 3.1 Rust backend: chat_send IPC command (accepts prompt, style_json, selected_component, image_base64)
