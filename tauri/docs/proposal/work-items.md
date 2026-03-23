@@ -54,8 +54,8 @@
 - [x] 3b.5 Commit Phase 3b
 
 ## Phase 3c: Extended Export
-- [ ] 3c.1 .stylesystem.json export includes all sections
-- [ ] 3c.2 Update generate_theme.py to read geometry/effects sections
-- [ ] 3c.3 Generate Visage C++ code for widget params, post-effects, layout
-- [ ] 3c.4 Update visage-theme skill documentation with style system knowledge
-- [ ] 3c.5 Commit Phase 3c
+- [x] 3c.1 .stylesystem.json export includes all sections
+- [x] 3c.2 Update generate_theme.py to read geometry/effects sections
+- [x] 3c.3 Generate Visage C++ code for widget params, post-effects, layout
+- [x] 3c.4 Update visage-theme skill documentation with style system knowledge
+- [x] 3c.5 Commit Phase 3c
