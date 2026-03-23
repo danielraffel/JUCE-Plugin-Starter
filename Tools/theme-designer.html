@@ -401,26 +401,64 @@ button.tb-btn-accent:hover {
   z-index: 1;
 }
 .pp-custom-row {
-  display: flex;
-  gap: 4px;
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid var(--app-border-subtle);
-  align-items: center;
 }
-.pp-custom-row input[type="color"] {
-  width: 24px; height: 24px;
-  border: 1px solid var(--app-border);
-  border-radius: 4px;
-  padding: 0;
-  cursor: pointer;
-  -webkit-appearance: none;
-}
-.pp-custom-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
-.pp-custom-row input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 .pp-custom-label {
   font-size: 9px;
   color: var(--app-text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pp-custom-label:hover { color: var(--app-text-muted); }
+.pp-mini-picker {
+  display: none;
+  margin-top: 6px;
+}
+.pp-mini-picker.visible { display: block; }
+.pp-mini-canvas {
+  width: 100%;
+  height: 100px;
+  border-radius: 4px;
+  cursor: crosshair;
+  display: block;
+}
+.pp-mini-gamut-wrap {
+  position: relative;
+}
+.pp-mini-dot {
+  position: absolute;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.9);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  background: transparent;
+}
+.pp-mini-hue {
+  width: 100%;
+  height: 12px;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 6px;
+  margin-top: 4px;
+  outline: none;
+  background: linear-gradient(to right,
+    oklch(65% 0.25 0), oklch(65% 0.25 60), oklch(65% 0.25 120),
+    oklch(65% 0.25 180), oklch(65% 0.25 240), oklch(65% 0.25 300), oklch(65% 0.25 360));
+}
+.pp-mini-hue::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--app-panel);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  cursor: pointer;
 }
 
 /* ── CENTER (Preview) ───────────────────── */
@@ -2558,10 +2596,16 @@ const LeftPanel = {
           }
         }
 
-        // Custom color option (fallback to OS picker)
+        // Custom color — mini gamut picker
         html += `<div class="pp-custom-row">
-          <input type="color" class="pp-custom-color" value="${row.querySelector('.token-hex')?.value || '#888888'}">
-          <span class="pp-custom-label">Custom color...</span>
+          <span class="pp-custom-label pp-expand-custom">&#9654; Custom color picker</span>
+          <div class="pp-mini-picker">
+            <div class="pp-mini-gamut-wrap">
+              <canvas class="pp-mini-canvas"></canvas>
+              <div class="pp-mini-dot"></div>
+            </div>
+            <input type="range" class="pp-mini-hue" min="0" max="360" step="1" value="295">
+          </div>
         </div>`;
 
         dd.innerHTML = html;
@@ -2581,13 +2625,58 @@ const LeftPanel = {
           });
         });
 
-        // Custom color picker
-        dd.querySelector('.pp-custom-color')?.addEventListener('input', (ev) => {
-          const hex = ev.target.value.toUpperCase();
-          const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
-          TokenRegistry.setColor(section, tokenName, hex, alpha);
-          swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
-          row.querySelector('.token-hex').value = hex;
+        // Mini gamut picker — expand/collapse + draw + interact
+        dd.querySelector('.pp-expand-custom')?.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const picker = dd.querySelector('.pp-mini-picker');
+          picker.classList.toggle('visible');
+          if (picker.classList.contains('visible')) {
+            const miniCanvas = dd.querySelector('.pp-mini-canvas');
+            const miniDot = dd.querySelector('.pp-mini-dot');
+            const miniHue = dd.querySelector('.pp-mini-hue');
+            let currentHue = parseFloat(miniHue.value);
+            const currentOklch = OklchEngine.hexToOklch(row.querySelector('.token-hex')?.value || '#AA88FF');
+            currentHue = currentOklch.H;
+            miniHue.value = currentHue;
+
+            const drawMini = () => {
+              GamutPicker.draw(miniCanvas, currentHue, currentOklch.L, currentOklch.C);
+              GamutPicker.positionDot(miniDot, miniCanvas, currentOklch.L, currentOklch.C);
+            };
+            drawMini();
+
+            // Mini hue slider
+            miniHue.addEventListener('input', () => {
+              currentHue = parseFloat(miniHue.value);
+              const maxC = GamutPicker.maxChromaAtL(currentOklch.L, currentHue);
+              if (currentOklch.C > maxC) currentOklch.C = maxC;
+              currentOklch.H = currentHue;
+              drawMini();
+              const hex = OklchEngine.oklchToHex(currentOklch.L, currentOklch.C, currentHue);
+              const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
+              TokenRegistry.setColor(section, tokenName, hex, alpha);
+              swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+              row.querySelector('.token-hex').value = hex;
+            });
+
+            // Mini canvas drag
+            let dragging = false;
+            miniCanvas.addEventListener('mousedown', (me) => { dragging = true; handleMiniDrag(me); me.preventDefault(); });
+            document.addEventListener('mousemove', (me) => { if (dragging) handleMiniDrag(me); });
+            document.addEventListener('mouseup', () => { dragging = false; });
+
+            function handleMiniDrag(me) {
+              const { L, C } = GamutPicker.getLCFromPosition(miniCanvas, me.clientX, me.clientY, currentHue);
+              currentOklch.L = L;
+              currentOklch.C = C;
+              GamutPicker.positionDot(miniDot, miniCanvas, L, C);
+              const hex = OklchEngine.oklchToHex(L, C, currentHue);
+              const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
+              TokenRegistry.setColor(section, tokenName, hex, alpha);
+              swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+              row.querySelector('.token-hex').value = hex;
+            }
+          }
         });
 
         // Close on click outside
@@ -3341,8 +3430,14 @@ const SelectAndTweak = {
           }
         }
         html += `<div class="pp-custom-row">
-          <input type="color" class="pp-custom-color" value="${tokenRow.querySelector('.token-hex')?.value || '#888888'}">
-          <span class="pp-custom-label">Custom color...</span>
+          <span class="pp-custom-label pp-expand-custom">&#9654; Custom color picker</span>
+          <div class="pp-mini-picker">
+            <div class="pp-mini-gamut-wrap">
+              <canvas class="pp-mini-canvas"></canvas>
+              <div class="pp-mini-dot"></div>
+            </div>
+            <input type="range" class="pp-mini-hue" min="0" max="360" step="1" value="295">
+          </div>
         </div>`;
 
         dd.innerHTML = html;
@@ -3362,12 +3457,55 @@ const SelectAndTweak = {
           });
         });
 
-        dd.querySelector('.pp-custom-color')?.addEventListener('input', (ev) => {
-          const hex = ev.target.value.toUpperCase();
-          const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
-          TokenRegistry.setColor(section, tokenName, hex, alpha);
-          swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
-          tokenRow.querySelector('.token-hex').value = hex;
+        // Mini gamut picker for inspector
+        dd.querySelector('.pp-expand-custom')?.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const picker = dd.querySelector('.pp-mini-picker');
+          picker.classList.toggle('visible');
+          if (picker.classList.contains('visible')) {
+            const miniCanvas = dd.querySelector('.pp-mini-canvas');
+            const miniDot = dd.querySelector('.pp-mini-dot');
+            const miniHue = dd.querySelector('.pp-mini-hue');
+            const currentOklch = OklchEngine.hexToOklch(tokenRow.querySelector('.token-hex')?.value || '#AA88FF');
+            let currentHue = currentOklch.H;
+            miniHue.value = currentHue;
+            const maxC = GamutPicker.maxChromaAtL(currentOklch.L, currentHue);
+            if (currentOklch.C > maxC) currentOklch.C = maxC;
+
+            const drawMini = () => {
+              GamutPicker.draw(miniCanvas, currentHue, currentOklch.L, currentOklch.C);
+              GamutPicker.positionDot(miniDot, miniCanvas, currentOklch.L, currentOklch.C);
+            };
+            drawMini();
+
+            miniHue.addEventListener('input', () => {
+              currentHue = parseFloat(miniHue.value);
+              const maxC2 = GamutPicker.maxChromaAtL(currentOklch.L, currentHue);
+              if (currentOklch.C > maxC2) currentOklch.C = maxC2;
+              currentOklch.H = currentHue;
+              drawMini();
+              const hex = OklchEngine.oklchToHex(currentOklch.L, currentOklch.C, currentHue);
+              const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
+              TokenRegistry.setColor(section, tokenName, hex, alpha);
+              swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+              tokenRow.querySelector('.token-hex').value = hex;
+            });
+
+            let dragging = false;
+            miniCanvas.addEventListener('mousedown', (me) => { dragging = true; handleDrag(me); me.preventDefault(); });
+            document.addEventListener('mousemove', (me) => { if (dragging) handleDrag(me); });
+            document.addEventListener('mouseup', () => { dragging = false; });
+            function handleDrag(me) {
+              const { L, C } = GamutPicker.getLCFromPosition(miniCanvas, me.clientX, me.clientY, currentHue);
+              currentOklch.L = L; currentOklch.C = C;
+              GamutPicker.positionDot(miniDot, miniCanvas, L, C);
+              const hex = OklchEngine.oklchToHex(L, C, currentHue);
+              const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
+              TokenRegistry.setColor(section, tokenName, hex, alpha);
+              swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+              tokenRow.querySelector('.token-hex').value = hex;
+            }
+          }
         });
 
         const closeHandler = (ev) => {
