@@ -1748,6 +1748,7 @@ button.tb-btn:disabled:hover {
       <div id="chat-panel">
         <div class="chat-context-bar">
           <span class="chat-context-badge" id="chat-context">Editing: All Components</span>
+          <button class="tb-btn" style="font-size:8px;padding:1px 4px;display:none" id="chat-clear-context" title="Clear selection">✕</button>
           <button class="tb-btn" style="font-size:9px;padding:2px 6px" id="chat-export-btn">Export</button>
         </div>
         <div id="chat-messages"></div>
@@ -4902,6 +4903,11 @@ const ChatUI = {
       });
     });
 
+    // Clear context button
+    document.getElementById('chat-clear-context')?.addEventListener('click', () => {
+      this.updateContext(null);
+    });
+
     // Send button
     document.getElementById('chat-send-btn').addEventListener('click', () => this.send());
 
@@ -5017,8 +5023,12 @@ const ChatUI = {
   updateContext(componentName) {
     this.selectedComponent = componentName;
     const badge = document.getElementById('chat-context');
+    const clearBtn = document.getElementById('chat-clear-context');
     if (badge) {
       badge.textContent = componentName ? `Editing: ${componentName}` : 'Editing: All Components';
+    }
+    if (clearBtn) {
+      clearBtn.style.display = componentName ? 'inline' : 'none';
     }
   },
 
