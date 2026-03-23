@@ -68,9 +68,26 @@ Add a chat panel to the right side of the theme designer.
 - Image previews shown inline
 - Typing indicator animation
 
-## Phase 3: Local Agent Server
+## Phase 3: Tauri App with Agent Backend
 
-Create `tools/style-agent-server.mjs` — a minimal Node.js HTTP server:
+Create a Tauri 2 app that bundles the theme designer as frontend and runs the Claude Code Agent SDK in a sidecar Node.js process (or directly in Rust via the Anthropic API).
+
+**Architecture:**
+```
+┌─────────────────────────────────┐
+│ Tauri App (single binary)       │
+│                                 │
+│ Frontend: theme-designer.html   │
+│   ↕ Tauri IPC (invoke/events)   │
+│ Backend: Rust + Node.js sidecar │
+│   ↕ Claude Code Agent SDK      │
+│   ↕ Uses Max account auth      │
+└─────────────────────────────────┘
+```
+
+**Scaffold:** Use the Assembly proposal at `/Users/danielraffel/Code/Assembly/docs/proposal/` as reference for Tauri 2 + React setup. But our frontend is the existing vanilla HTML theme designer (not React).
+
+Create `apps/desktop/` with:
 
 ```javascript
 import { query } from '@anthropic-ai/claude-code';
