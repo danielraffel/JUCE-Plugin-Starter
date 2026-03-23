@@ -1925,10 +1925,25 @@ const ColorSystemModel = {
   },
 
   // Apply semantic roles to TokenRegistry
+  // Full apply: updates tokens + re-renders entire UI
   applyToTheme(mode) {
+    this._applyTokens(mode);
+    CSSBridge.syncAll();
+    LeftPanel.render();
+    PreviewRenderer.render();
+    Toast.show(`Color system applied (${mode || 'dark'} mode)`);
+  },
+
+  // Lightweight apply: updates tokens + CSS vars only (no DOM rebuild)
+  applyLive(mode) {
+    this._applyTokens(mode);
+    CSSBridge.syncAll();
+    CanvasRenderer.scheduleRedraw();
+  },
+
+  _applyTokens(mode) {
     const roles = this.current.semanticRoles[mode || 'dark'];
     if (!roles) return;
-
     for (const [tokenName, mapping] of Object.entries(roles)) {
       const palette = this.current.palettes[mapping.palette];
       if (!palette) continue;
@@ -1937,11 +1952,6 @@ const ColorSystemModel = {
       const alpha = mapping.alpha ?? 1.0;
       TokenRegistry.setColor(mapping.section, tokenName, shade.hex, alpha, true);
     }
-
-    CSSBridge.syncAll();
-    LeftPanel.render();
-    PreviewRenderer.render();
-    Toast.show(`Color system applied (${mode || 'dark'} mode)`);
   },
 
   // Update a palette's base color and regenerate shades
@@ -3054,6 +3064,9 @@ const ColorSystemUI = {
     }
     container.innerHTML = html;
     this.bindEvents();
+    // Auto-apply to preview on every change (lightweight — no DOM rebuild)
+    const mode = document.getElementById('cs-mode')?.value || 'dark';
+    ColorSystemModel.applyLive(mode);
   },
 
   bindEvents() {
