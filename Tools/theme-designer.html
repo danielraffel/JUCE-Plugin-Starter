@@ -1729,21 +1729,21 @@ const OklchEngine = {
   // ── Color Harmony ──────────────────
   // Derive a harmonious neutral from an accent color
   harmony: {
-    // Monochromatic: same hue, very low chroma (tinted gray)
+    // Monochromatic: same hue, visible tint
     monochromatic(accentH) {
-      return { H: accentH, C: 0.012 };
+      return { H: accentH, C: 0.025 };
     },
-    // Analogous: nearby hue, low chroma
+    // Analogous: nearby hue, visible tint
     analogous(accentH) {
-      return { H: (accentH + 30) % 360, C: 0.015 };
+      return { H: (accentH + 30) % 360, C: 0.025 };
     },
-    // Complementary: opposite hue, low chroma
+    // Complementary: opposite hue, visible tint
     complementary(accentH) {
-      return { H: (accentH + 180) % 360, C: 0.015 };
+      return { H: (accentH + 180) % 360, C: 0.025 };
     },
     // Split-complementary: offset from opposite
     splitComplementary(accentH) {
-      return { H: (accentH + 150) % 360, C: 0.015 };
+      return { H: (accentH + 150) % 360, C: 0.025 };
     },
     // No harmony: pure neutral (zero chroma)
     none() {
@@ -1862,7 +1862,7 @@ const ColorSystemModel = {
     const successBase = OklchEngine.hexToOklch('#4CAF50');
     const warningBase = OklchEngine.hexToOklch('#FFC107');
     const errorBase = OklchEngine.hexToOklch('#F44336');
-    const nudge = 0.08; // 8% hue shift toward accent
+    const nudge = 0.18; // 18% hue shift toward accent — visible but still recognizable
     const success = { ...successBase, H: this._harmonizeSemanticHue(successBase.H, accent.H, nudge) };
     const warning = { ...warningBase, H: this._harmonizeSemanticHue(warningBase.H, accent.H, nudge) };
     const error = { ...errorBase, H: this._harmonizeSemanticHue(errorBase.H, accent.H, nudge) };
@@ -3246,8 +3246,8 @@ const ColorSystemUI = {
     );
     ColorSystemModel.updatePaletteBase(neutralKey, derived.L, derived.C, derived.H);
 
-    // Nudge semantic colors slightly toward accent hue (keeps them recognizable)
-    const nudge = 0.08;
+    // Nudge semantic colors toward accent hue — visible but still recognizable
+    const nudge = 0.18;
     const semanticPalettes = { success: 142, warning: 75, error: 25 }; // base hues
     for (const [name, baseHue] of Object.entries(semanticPalettes)) {
       const pal = cs.palettes[name];
@@ -3563,6 +3563,7 @@ const App = {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         ExportPanel.hide();
+        document.getElementById('info-overlay').style.display = 'none';
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
         e.preventDefault();
