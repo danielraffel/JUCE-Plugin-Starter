@@ -1101,22 +1101,24 @@ button.tb-btn:disabled:hover {
   background: linear-gradient(to right, var(--app-text-dim), var(--app-accent));
 }
 .cs-shade-ramp-large {
-  display: flex;
-  gap: 2px;
-  margin: 6px 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin: 8px 0 4px;
 }
 .cs-shade-large {
-  flex: 1;
-  height: 28px;
-  border-radius: 3px;
+  aspect-ratio: 1;
+  border-radius: 6px;
   position: relative;
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: transform 0.1s, box-shadow 0.1s;
+  min-height: 32px;
 }
-.cs-shade-large:hover { transform: scaleY(1.15); z-index: 1; }
+.cs-shade-large:hover { transform: scale(1.08); z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+.cs-shade-large.anchor { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.6); }
 .cs-shade-large .shade-label {
   position: absolute;
-  bottom: -14px;
+  bottom: -13px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 7px;
@@ -1125,14 +1127,16 @@ button.tb-btn:disabled:hover {
 }
 .cs-shade-large .contrast-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 6px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 7px;
   font-weight: 700;
-  padding: 0 2px;
+  padding: 1px 3px;
   border-radius: 2px;
-  background: rgba(0,0,0,0.3);
-  color: #fff;
+  background: rgba(0,0,0,0.35);
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
 }
 .cs-oklch-inputs {
   display: flex;
@@ -1179,13 +1183,14 @@ button.tb-btn:disabled:hover {
 }
 .cs-gamut-dot {
   position: absolute;
-  width: 16px; height: 16px;
+  width: 18px; height: 18px;
   border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.5);
+  border: 2px solid rgba(255,255,255,0.9);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.5);
   pointer-events: none;
   transform: translate(-50%, -50%);
   z-index: 2;
+  background: transparent;
 }
 
 .palette-mode-row {
@@ -1380,8 +1385,7 @@ button.tb-btn:disabled:hover {
         </div>
         <div id="cs-palettes"></div>
         <div style="display:flex;gap:4px;margin-top:6px">
-          <button class="palette-apply-btn" id="cs-apply" style="flex:1">Apply to Theme</button>
-          <button class="palette-apply-btn" id="cs-generate-inverse" style="flex:1;background:var(--app-panel-raised);border:1px solid var(--app-border);color:var(--app-text)" title="Auto-generate the opposite mode from current colors">Generate Light/Dark</button>
+          <button class="palette-apply-btn" id="cs-generate-inverse" style="flex:1">Generate Light/Dark</button>
         </div>
         <div style="display:flex;gap:4px;margin-top:4px">
           <button class="palette-apply-btn" id="cs-save" style="flex:1;background:var(--app-panel);border:1px solid var(--app-border);color:var(--app-text-muted)">Save</button>
@@ -2059,6 +2063,7 @@ const ColorSystemModel = {
   // Full apply: updates tokens + re-renders entire UI
   applyToTheme(mode) {
     this._applyTokens(mode);
+    this._fixContrast();
     CSSBridge.syncAll();
     LeftPanel.render();
     PreviewRenderer.render();
@@ -2068,8 +2073,37 @@ const ColorSystemModel = {
   // Lightweight apply: updates tokens + CSS vars only (no DOM rebuild)
   applyLive(mode) {
     this._applyTokens(mode);
+    this._fixContrast();
     CSSBridge.syncAll();
     CanvasRenderer.scheduleRedraw();
+  },
+
+  // Fix text/background contrast issues automatically
+  _fixContrast() {
+    const pairs = [
+      ['TextPrimary', 'PluginBackground', 'custom', 'custom'],
+      ['TextSecondary', 'PanelBackground', 'custom', 'custom'],
+      ['UiButtonText', 'UiButtonBackground', 'colors', 'colors'],
+      ['UiButtonTextHover', 'UiButtonBackgroundHover', 'colors', 'colors'],
+      ['PopupMenuText', 'PopupMenuBackground', 'colors', 'colors'],
+      ['TooltipText', 'TooltipBackground', 'custom', 'custom'],
+      ['TextEditorText', 'TextEditorBackground', 'colors', 'colors'],
+    ];
+    for (const [textToken, bgToken, textSection, bgSection] of pairs) {
+      const text = this.current?.palettes ? null : TokenRegistry.theme[textSection]?.[textToken];
+      const bg = this.current?.palettes ? null : TokenRegistry.theme[bgSection]?.[bgToken];
+      // Use token registry directly
+      const textTok = TokenRegistry.theme[textSection]?.[textToken];
+      const bgTok = TokenRegistry.theme[bgSection]?.[bgToken];
+      if (!textTok || !bgTok) continue;
+      const ratio = OklchEngine.contrastRatio(textTok.value, bgTok.value);
+      if (ratio < 4.5) {
+        // Auto-fix: make text white or black depending on background luminance
+        const bgLum = OklchEngine.relativeLuminance(bgTok.value);
+        const fixHex = bgLum > 0.18 ? '#1A1A1E' : '#F0F0F4';
+        TokenRegistry.theme[textSection][textToken].value = fixHex;
+      }
+    }
   },
 
   _applyTokens(mode) {
@@ -3141,6 +3175,22 @@ const SelectAndTweak = {
 
 // ── Gamut Triangle Picker ─────────────────
 const GamutPicker = {
+  // Precomputed gamut boundary for speed
+  _gamutBoundary(hue, h, maxC) {
+    const boundary = [];
+    for (let py = 0; py < h; py++) {
+      const L = 1 - (py / h);
+      let lo = 0, hi = maxC;
+      for (let i = 0; i < 14; i++) {
+        const mid = (lo + hi) / 2;
+        if (OklchEngine.isInGamut(L, mid, hue)) lo = mid;
+        else hi = mid;
+      }
+      boundary.push(lo);
+    }
+    return boundary;
+  },
+
   // Draw the OKLCH gamut for a given hue onto a canvas
   draw(canvas, hue, currentL, currentC) {
     const ctx = canvas.getContext('2d');
@@ -3151,58 +3201,53 @@ const GamutPicker = {
     canvas.height = h * dpr;
     ctx.scale(dpr, dpr);
 
-    // Draw pixel-by-pixel: X = chroma (0 to maxC), Y = lightness (1 at top, 0 at bottom)
     const maxC = 0.35;
-    const imgData = ctx.createImageData(w * dpr, h * dpr);
-    const data = imgData.data;
 
-    for (let py = 0; py < h; py++) {
-      const L = 1 - (py / h); // top = 1 (white), bottom = 0 (black)
-      for (let px = 0; px < w; px++) {
+    // Precompute gamut boundary
+    const boundary = this._gamutBoundary(hue, h, maxC);
+
+    // Dark background
+    ctx.fillStyle = '#141417';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw in-gamut pixels
+    // Use step=2 for speed during drag, full resolution on idle
+    const step = 2;
+    for (let py = 0; py < h; py += step) {
+      const L = 1 - (py / h);
+      const maxCAtL = boundary[py] || 0;
+      const maxPx = (maxCAtL / maxC) * w;
+      for (let px = 0; px < maxPx; px += step) {
         const C = (px / w) * maxC;
         const { r, g, b } = OklchEngine.oklchToSrgb(L, C, hue);
-        const inGamut = r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255;
-        const idx = ((py * dpr | 0) * w * dpr + (px * dpr | 0)) * 4;
-
-        // Fill each dpr x dpr block
-        for (let dy = 0; dy < dpr; dy++) {
-          for (let dx = 0; dx < dpr; dx++) {
-            const i = ((py * dpr + dy) * w * dpr + (px * dpr + dx)) * 4;
-            if (inGamut) {
-              data[i] = r;
-              data[i + 1] = g;
-              data[i + 2] = b;
-              data[i + 3] = 255;
-            } else {
-              // Out of gamut — dark with subtle pattern
-              data[i] = 18;
-              data[i + 1] = 18;
-              data[i + 2] = 22;
-              data[i + 3] = 255;
-            }
-          }
-        }
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(px, py, step, step);
       }
     }
-    ctx.putImageData(imgData, 0, 0);
 
-    // Draw gamut boundary line
+    // Draw gamut boundary line (triangular shape)
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 1;
+    // Top: white point (L=1, C=0) = top-left
+    ctx.moveTo(0, 0);
     for (let py = 0; py < h; py++) {
-      const L = 1 - (py / h);
-      // Find max chroma at this lightness via binary search
-      let lo = 0, hi = maxC;
-      for (let i = 0; i < 12; i++) {
-        const mid = (lo + hi) / 2;
-        if (OklchEngine.isInGamut(L, mid, hue)) lo = mid;
-        else hi = mid;
-      }
-      const px = (lo / maxC) * w;
-      if (py === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+      const px = (boundary[py] / maxC) * w;
+      ctx.lineTo(px, py);
     }
+    // Bottom: black point (L=0, C=0) = bottom-left
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Crosshair lines through current position
+    const dotX = (currentC / maxC) * w;
+    const dotY = (1 - currentL) * h;
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(dotX, 0); ctx.lineTo(dotX, h); // vertical
+    ctx.moveTo(0, dotY); ctx.lineTo(w, dotY); // horizontal
     ctx.stroke();
   },
 
@@ -3313,6 +3358,11 @@ const ColorSystemUI = {
           <span class="cs-slider-label">H</span>
           <input type="range" class="cs-slider cs-slider-hue" min="0" max="360" step="0.1" value="${base.H}" data-palette="${key}" data-param="H">
         </div>
+        <div class="cs-slider-row">
+          <span class="cs-slider-label">C</span>
+          <input type="range" class="cs-slider cs-slider-chroma" min="0" max="0.35" step="0.001" value="${base.C}" data-palette="${key}" data-param="C"
+            style="background:linear-gradient(to right, ${OklchEngine.oklchToHex(base.L, 0, base.H)}, ${OklchEngine.oklchToHex(base.L, Math.min(0.3, base.C * 1.5 || 0.2), base.H)})">
+        </div>
         <div class="cs-oklch-inputs">
           <div class="cs-oklch-input"><label>L</label><input type="text" value="${(base.L * 100).toFixed(1)}" data-palette="${key}" data-param="L"></div>
           <div class="cs-oklch-input"><label>C</label><input type="text" value="${base.C.toFixed(3)}" data-palette="${key}" data-param="C-input"></div>
@@ -3323,7 +3373,8 @@ const ColorSystemUI = {
           const s = palette.shades[step];
           const contrast = OklchEngine.contrastRatio(s.hex, '#FFFFFF');
           const level = OklchEngine.contrastLevel(contrast);
-          html += `<div class="cs-shade-large" style="background:${s.hex}" title="${step}: ${s.hex}&#10;L:${(s.L*100).toFixed(1)}% C:${s.C.toFixed(3)} H:${s.H.toFixed(0)}">
+          const isAnchor = step === 500;
+          html += `<div class="cs-shade-large ${isAnchor ? 'anchor' : ''}" style="background:${s.hex}" title="${step}: ${s.hex}&#10;L:${(s.L*100).toFixed(1)}% C:${s.C.toFixed(3)} H:${s.H.toFixed(0)}">
             <span class="shade-label">${step}</span>
             ${level !== 'fail' ? `<span class="contrast-badge">${level}</span>` : ''}
           </div>`;
