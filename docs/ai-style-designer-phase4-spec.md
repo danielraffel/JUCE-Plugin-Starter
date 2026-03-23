@@ -16,9 +16,12 @@
 
 #### 4.1 Install and Configure Claude Code Agent SDK
 - Install `@anthropic-ai/claude-code` in `tauri/sidecar/`
-- The SDK uses the user's existing Claude Code authentication
-- Auth check: `claude-code --version` should work if authenticated
-- If not authenticated, show a settings panel with instructions
+- **IMPORTANT**: The SDK requires `ANTHROPIC_API_KEY` environment variable
+- It does NOT use Claude Max/claude.ai login (Anthropic policy for third-party apps)
+- **Alternative**: Shell out to `claude` CLI which DOES use Max account auth
+- Settings panel: API key input (stored securely) OR "Use Claude Code CLI" toggle
+- Key stored in OS keychain via Tauri's secure storage, never in plain text
+- If no key: show setup instructions with link to platform.claude.com
 
 #### 4.2 Model Selection UI
 - Add model dropdown in chat header (between context badge and Export button)
@@ -76,13 +79,20 @@
 
 ### Phase 5: Tauri WebDriver Testing
 
-#### 5.1 Enable WebDriver in Tauri
-- Check /Users/danielraffel/Code/mcp-tauri-automation for setup patterns
-- Check /Users/danielraffel/Code/tauri-plugin-webdriver for plugin
-- Add tauri-plugin-webdriver to Cargo.toml dependencies
-- Configure automation mode in tauri.conf.json
+The tauri-plugin-webdriver plugin provides full W3C WebDriver compliance. Zero config — just register the plugin and it starts a server on port 4445.
 
-#### 5.2 E2E Test Suite
+#### 5.1 Enable WebDriver in Tauri
+- Add `tauri-plugin-webdriver` (from `/Users/danielraffel/Code/tauri-plugin-webdriver`) as dependency
+- Register in lib.rs: `builder.plugin(tauri_plugin_webdriver::init())` (debug builds only)
+- The plugin auto-starts a WebDriver server on `127.0.0.1:4445`
+- Works on macOS (WKWebView), Windows (WebView2), Linux (WebKitGTK)
+
+#### 5.2 MCP-Based Testing
+- The `mcp-tauri-automation` MCP server can control the app via Claude Code
+- Tools: launch_app, click_element, type_text, capture_screenshot, execute_script
+- Can run Tauri IPC commands via execute_tauri_command
+
+#### 5.3 E2E Test Suite
 - Test: app launches and shows theme designer
 - Test: chat tab switch works
 - Test: typing in chat input and sending
