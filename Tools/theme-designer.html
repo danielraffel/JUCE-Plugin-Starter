@@ -1731,9 +1731,21 @@ const OklchEngine = {
   },
 
   // Check if OKLCH is within sRGB gamut
+  // Must check LINEAR RGB values BEFORE clamping (linearToSrgb clamps to 0-255)
   isInGamut(L, C, H) {
-    const { r, g, b } = this.oklchToSrgb(L, C, H);
-    return r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255;
+    const lab = this.oklchToOklab(L, C, H);
+    const l_ = lab.L + 0.3963377774 * lab.a + 0.2158037573 * lab.b;
+    const m_ = lab.L - 0.1055613458 * lab.a - 0.0638541728 * lab.b;
+    const s_ = lab.L - 0.0894841775 * lab.a - 1.2914855480 * lab.b;
+    const l = l_ * l_ * l_;
+    const m = m_ * m_ * m_;
+    const s = s_ * s_ * s_;
+    // Raw linear RGB — NOT clamped
+    const lr = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+    const lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+    const lb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+    const eps = -0.002; // tiny tolerance for floating point
+    return lr >= eps && lr <= 1.002 && lg >= eps && lg <= 1.002 && lb >= eps && lb <= 1.002;
   },
 
   // Gamut map: reduce chroma until in sRGB
