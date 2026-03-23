@@ -1381,6 +1381,7 @@ button.tb-btn:disabled:hover {
         <div id="cs-palettes"></div>
         <div style="display:flex;gap:4px;margin-top:6px">
           <button class="palette-apply-btn" id="cs-apply" style="flex:1">Apply to Theme</button>
+          <button class="palette-apply-btn" id="cs-generate-inverse" style="flex:1;background:var(--app-panel-raised);border:1px solid var(--app-border);color:var(--app-text)" title="Auto-generate the opposite mode from current colors">Generate Light/Dark</button>
         </div>
         <div style="display:flex;gap:4px;margin-top:4px">
           <button class="palette-apply-btn" id="cs-save" style="flex:1;background:var(--app-panel);border:1px solid var(--app-border);color:var(--app-text-muted)">Save</button>
@@ -3561,7 +3562,63 @@ const ColorSystemUI = {
 
     // Mode change — auto-apply immediately
     document.getElementById('cs-mode').addEventListener('change', () => {
-      this.render(); // render() auto-applies via applyLive()
+      this.render();
+    });
+
+    // Generate inverse mode (dark→light or light→dark)
+    document.getElementById('cs-generate-inverse').addEventListener('click', () => {
+      const currentMode = document.getElementById('cs-mode').value;
+      const targetMode = currentMode === 'dark' ? 'light' : 'dark';
+      const cs = ColorSystemModel.current;
+      const source = cs.semanticRoles[currentMode];
+      if (!source) return;
+
+      // Shade inversion map: dark shade → light shade
+      const invertShade = (shade) => {
+        const map = { 50: 950, 100: 900, 200: 800, 300: 700, 400: 600, 500: 500, 600: 400, 700: 300, 800: 200, 900: 100, 950: 50 };
+        return map[shade] ?? shade;
+      };
+
+      // Accent shades shift slightly: 500→600 in light (darker for readability)
+      const invertAccentShade = (shade) => {
+        const map = { 300: 700, 400: 600, 500: 600, 600: 500, 700: 400 };
+        return map[shade] ?? invertShade(shade);
+      };
+
+      // Generate the target mode roles by inverting the source
+      const generated = {};
+      const neutralKeys = [this.getNeutralKey()];
+      const accentKey = this.getAccentKey();
+
+      for (const [role, mapping] of Object.entries(source)) {
+        const isNeutral = neutralKeys.includes(mapping.palette);
+        const isAccent = mapping.palette === accentKey;
+        const isSemantic = ['success', 'warning', 'error', 'green', 'amber', 'red'].includes(mapping.palette);
+
+        let newShade;
+        if (isNeutral) {
+          newShade = invertShade(mapping.shade);
+        } else if (isAccent) {
+          newShade = invertAccentShade(mapping.shade);
+        } else if (isSemantic) {
+          // Semantic colors shift slightly darker in light mode for readability
+          newShade = mapping.shade <= 500 ? Math.min(mapping.shade + 100, 700) : mapping.shade;
+        } else {
+          newShade = invertShade(mapping.shade);
+        }
+
+        generated[role] = {
+          ...mapping,
+          shade: newShade
+        };
+      }
+
+      cs.semanticRoles[targetMode] = generated;
+
+      // Switch to the generated mode
+      document.getElementById('cs-mode').value = targetMode;
+      this.render();
+      Toast.show('Generated ' + targetMode + ' mode from ' + currentMode);
     });
 
     // Template selector
