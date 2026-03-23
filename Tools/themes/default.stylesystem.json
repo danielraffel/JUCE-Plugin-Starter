@@ -1,0 +1,111 @@
+{
+  "$schema": "style-system/v1",
+  "meta": {
+    "name": "Default Studio",
+    "description": "Default aesthetic style for audio plugin UIs",
+    "version": "1.0.0",
+    "prompt": "",
+    "parentVersion": null
+  },
+
+  "geometry": {
+    "global": {
+      "cornerRadius": 6,
+      "borderWidth": 1,
+      "shadowBlur": 8,
+      "shadowOffsetX": 0,
+      "shadowOffsetY": 4,
+      "shadowAlpha": 0.4
+    },
+    "knob": {
+      "arcWidth": 4,
+      "arcStyle": "rounded",
+      "thumbSize": 4,
+      "thumbShape": "circle",
+      "size": 56
+    },
+    "button": {
+      "cornerRadius": 6,
+      "borderWidth": 0,
+      "paddingX": 14,
+      "paddingY": 6,
+      "depth": "flat"
+    },
+    "toggle": {
+      "trackWidth": 32,
+      "trackHeight": 18,
+      "trackRounding": 9,
+      "thumbSize": 14,
+      "thumbRounding": 7
+    },
+    "slider": {
+      "trackHeight": 6,
+      "trackRounding": 3,
+      "thumbSize": 14,
+      "thumbRounding": 7
+    },
+    "textInput": {
+      "cornerRadius": 6,
+      "borderWidth": 1,
+      "paddingX": 8,
+      "paddingY": 6
+    },
+    "card": {
+      "cornerRadius": 6,
+      "borderWidth": 1
+    },
+    "panel": {
+      "cornerRadius": 6,
+      "borderWidth": 1
+    }
+  },
+
+  "effects": {
+    "bloom": {
+      "enabled": false,
+      "size": 0,
+      "intensity": 0
+    },
+    "shadows": {
+      "enabled": true,
+      "blur": 8,
+      "offsetX": 0,
+      "offsetY": 4,
+      "alpha": 0.4
+    },
+    "blur": {
+      "enabled": false,
+      "radius": 0
+    }
+  },
+
+  "gradients": {
+    "buttonGradient": {
+      "enabled": false,
+      "type": "linear",
+      "angle": 180,
+      "stops": []
+    },
+    "knobGradient": {
+      "enabled": false,
+      "type": "radial",
+      "stops": []
+    },
+    "accentGradient": {
+      "enabled": false,
+      "type": "linear",
+      "angle": 135,
+      "stops": []
+    }
+  },
+
+  "typography": {
+    "headingSize": 16,
+    "bodySize": 13,
+    "labelSize": 10,
+    "smallSize": 9,
+    "fontWeight": "normal",
+    "letterSpacing": 0,
+    "lineHeight": 1.4
+  }
+}

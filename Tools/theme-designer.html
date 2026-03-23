@@ -653,8 +653,8 @@ button.tb-btn-accent:hover {
 .preview-slider {
   -webkit-appearance: none;
   appearance: none;
-  height: 6px;
-  border-radius: 3px;
+  height: var(--st-slider-track-height, 6px);
+  border-radius: var(--st-slider-track-rounding, 3px);
   outline: none;
   width: 100%;
 }
@@ -673,10 +673,11 @@ button.tb-btn-accent:hover {
   flex-wrap: wrap;
 }
 .preview-btn {
-  padding: 6px 14px;
+  padding: var(--st-button-padding-y, 6px) var(--st-button-padding-x, 14px);
   border: none;
+  border-radius: var(--st-button-rounding, var(--app-radius));
   font-family: var(--app-font);
-  font-size: 11px;
+  font-size: var(--st-body-size, 11px);
   cursor: pointer;
   transition: all 0.12s;
 }
@@ -695,14 +696,16 @@ button.tb-btn-accent:hover {
   gap: 6px;
 }
 .toggle-track {
-  width: 32px; height: 18px;
-  border-radius: 9px;
+  width: var(--st-toggle-track-width, 32px);
+  height: var(--st-toggle-track-height, 18px);
+  border-radius: var(--st-toggle-track-rounding, 9px);
   cursor: pointer;
   position: relative;
   transition: background 0.2s;
 }
 .toggle-thumb {
-  width: 14px; height: 14px;
+  width: var(--st-toggle-thumb-size, 14px);
+  height: var(--st-toggle-thumb-size, 14px);
   border-radius: 50%;
   background: #fff;
   position: absolute;
@@ -720,9 +723,10 @@ button.tb-btn-accent:hover {
 }
 .preview-input {
   font-family: var(--app-font);
-  font-size: 11px;
-  padding: 6px 8px;
-  border: 1px solid;
+  font-size: var(--st-body-size, 11px);
+  padding: var(--st-input-padding-y, 6px) var(--st-input-padding-x, 8px);
+  border: var(--st-input-border-width, 1px) solid;
+  border-radius: var(--st-input-rounding, var(--app-radius));
   outline: none;
   width: 140px;
 }
@@ -1603,6 +1607,7 @@ button.tb-btn:disabled:hover {
       <button class="export-tab" data-tab="palette">C++ Palette</button>
       <button class="export-tab" data-tab="oklch">OKLCH CSS</button>
       <button class="export-tab" data-tab="colorsystem">Color System</button>
+      <button class="export-tab" data-tab="stylesystem">Style System</button>
     </div>
     <div id="export-output"><code id="export-code"></code></div>
     <div class="export-actions">
@@ -1679,6 +1684,35 @@ button.tb-btn:disabled:hover {
     "TextEditor::backgroundColourId": { "value": "#2C3033", "alpha": 1.0 }, "TextEditor::textColourId": { "value": "#EEEEEE", "alpha": 1.0 }, "TextEditor::outlineColourId": { "value": "#4C4F52", "alpha": 1.0 }, "TextEditor::focusedOutlineColourId": { "value": "#AA88FF", "alpha": 1.0 }
   },
   "overrides": {}
+}
+</script>
+
+<!-- STYLE SYSTEM DATA (geometry, effects, gradients, typography) -->
+<script id="style-system-data" type="application/json">
+{
+  "geometry": {
+    "global": { "cornerRadius": 6, "borderWidth": 1, "shadowBlur": 8, "shadowOffsetX": 0, "shadowOffsetY": 4, "shadowAlpha": 0.4 },
+    "knob": { "arcWidth": 4, "arcStyle": "rounded", "thumbSize": 4, "thumbShape": "circle", "size": 56 },
+    "button": { "cornerRadius": 6, "borderWidth": 0, "paddingX": 14, "paddingY": 6, "depth": "flat" },
+    "toggle": { "trackWidth": 32, "trackHeight": 18, "trackRounding": 9, "thumbSize": 14, "thumbRounding": 7 },
+    "slider": { "trackHeight": 6, "trackRounding": 3, "thumbSize": 14, "thumbRounding": 7 },
+    "textInput": { "cornerRadius": 6, "borderWidth": 1, "paddingX": 8, "paddingY": 6 },
+    "card": { "cornerRadius": 6, "borderWidth": 1 },
+    "panel": { "cornerRadius": 6, "borderWidth": 1 }
+  },
+  "effects": {
+    "bloom": { "enabled": false, "size": 0, "intensity": 0 },
+    "shadows": { "enabled": true, "blur": 8, "offsetX": 0, "offsetY": 4, "alpha": 0.4 },
+    "blur": { "enabled": false, "radius": 0 }
+  },
+  "gradients": {
+    "buttonGradient": { "enabled": false, "type": "linear", "angle": 180, "stops": [] },
+    "knobGradient": { "enabled": false, "type": "radial", "stops": [] },
+    "accentGradient": { "enabled": false, "type": "linear", "angle": 135, "stops": [] }
+  },
+  "typography": {
+    "headingSize": 16, "bodySize": 13, "labelSize": 10, "smallSize": 9, "fontWeight": "normal", "letterSpacing": 0, "lineHeight": 1.4
+  }
 }
 </script>
 
@@ -1791,6 +1825,83 @@ const PresetLibrary = {
 };
 
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// STYLE SYSTEM — Geometry, Effects, Typography
+// ══════════════════════════════════════════
+
+const StyleSystem = {
+  current: null,
+
+  load(data) {
+    this.current = JSON.parse(JSON.stringify(data));
+    this.applyToCSS();
+  },
+
+  applyToCSS() {
+    if (!this.current) return;
+    const preview = document.getElementById('preview-area');
+    if (!preview) return;
+    const g = this.current.geometry;
+    const e = this.current.effects;
+    const t = this.current.typography;
+
+    // Global geometry
+    if (g?.global) {
+      preview.style.setProperty('--st-corner-radius', g.global.cornerRadius + 'px');
+      preview.style.setProperty('--st-border-width', g.global.borderWidth + 'px');
+      preview.style.setProperty('--st-shadow-blur', g.global.shadowBlur + 'px');
+      preview.style.setProperty('--st-shadow-offset-x', g.global.shadowOffsetX + 'px');
+      preview.style.setProperty('--st-shadow-offset-y', g.global.shadowOffsetY + 'px');
+      preview.style.setProperty('--st-shadow-alpha', g.global.shadowAlpha);
+    }
+    // Knob
+    if (g?.knob) {
+      preview.style.setProperty('--st-knob-arc-width', g.knob.arcWidth);
+      preview.style.setProperty('--st-knob-thumb-size', g.knob.thumbSize);
+      preview.style.setProperty('--st-knob-size', g.knob.size + 'px');
+    }
+    // Button
+    if (g?.button) {
+      preview.style.setProperty('--st-button-rounding', g.button.cornerRadius + 'px');
+      preview.style.setProperty('--st-button-padding-x', g.button.paddingX + 'px');
+      preview.style.setProperty('--st-button-padding-y', g.button.paddingY + 'px');
+    }
+    // Toggle
+    if (g?.toggle) {
+      preview.style.setProperty('--st-toggle-track-width', g.toggle.trackWidth + 'px');
+      preview.style.setProperty('--st-toggle-track-height', g.toggle.trackHeight + 'px');
+      preview.style.setProperty('--st-toggle-track-rounding', g.toggle.trackRounding + 'px');
+      preview.style.setProperty('--st-toggle-thumb-size', g.toggle.thumbSize + 'px');
+    }
+    // Slider
+    if (g?.slider) {
+      preview.style.setProperty('--st-slider-track-height', g.slider.trackHeight + 'px');
+      preview.style.setProperty('--st-slider-track-rounding', g.slider.trackRounding + 'px');
+      preview.style.setProperty('--st-slider-thumb-size', g.slider.thumbSize + 'px');
+    }
+    // Text input
+    if (g?.textInput) {
+      preview.style.setProperty('--st-input-rounding', g.textInput.cornerRadius + 'px');
+      preview.style.setProperty('--st-input-border-width', g.textInput.borderWidth + 'px');
+      preview.style.setProperty('--st-input-padding-x', g.textInput.paddingX + 'px');
+      preview.style.setProperty('--st-input-padding-y', g.textInput.paddingY + 'px');
+    }
+    // Typography
+    if (t) {
+      preview.style.setProperty('--st-heading-size', t.headingSize + 'px');
+      preview.style.setProperty('--st-body-size', t.bodySize + 'px');
+      preview.style.setProperty('--st-label-size', t.labelSize + 'px');
+      preview.style.setProperty('--st-small-size', t.smallSize + 'px');
+    }
+    // Trigger canvas redraws (knobs read vars)
+    CanvasRenderer.scheduleRedraw();
+  },
+
+  toJSON() {
+    return JSON.stringify(this.current, null, 2);
+  }
+};
+
 // OKLCH COLOR ENGINE — Platform-agnostic
 // ══════════════════════════════════════════
 
@@ -2461,7 +2572,7 @@ const CanvasRenderer = {
 
     const cx = size / 2, cy = size / 2;
     const r = size / 2 - 6;
-    const lineWidth = 4;
+    const lineWidth = parseFloat(style.getPropertyValue('--st-knob-arc-width')) || 4;
     const startAngle = Math.PI * 0.75;
     const endAngle = Math.PI * 2.25;
     const valAngle = startAngle + (endAngle - startAngle) * value;
@@ -2486,7 +2597,8 @@ const CanvasRenderer = {
     const tx = cx + Math.cos(valAngle) * r;
     const ty = cy + Math.sin(valAngle) * r;
     ctx.beginPath();
-    ctx.arc(tx, ty, 4, 0, Math.PI * 2);
+    const thumbR = parseFloat(style.getPropertyValue('--st-knob-thumb-size')) || 4;
+    ctx.arc(tx, ty, thumbR, 0, Math.PI * 2);
     ctx.fillStyle = thumbColor;
     ctx.fill();
 
@@ -3333,6 +3445,7 @@ const ExportPanel = {
       case 'palette': code.textContent = this.generateCppPalette(); break;
       case 'oklch': code.textContent = this.generateOklchCSS(); break;
       case 'colorsystem': code.textContent = ColorSystemModel.toJSON(); break;
+      case 'stylesystem': code.textContent = StyleSystem.toJSON(); break;
     }
   },
 
@@ -4596,6 +4709,12 @@ const App = {
     const themeData = JSON.parse(document.getElementById('theme-data').textContent);
     TokenRegistry.load(themeData);
 
+    // Load style system (geometry, effects, gradients, typography)
+    const styleData = document.getElementById('style-system-data');
+    if (styleData) {
+      StyleSystem.load(JSON.parse(styleData.textContent));
+    }
+
     // Render
     LeftPanel.render();
     PreviewRenderer.render();
@@ -4655,8 +4774,8 @@ const App = {
       const code = document.getElementById('export-code').textContent;
       const tab = ExportPanel.currentTab;
       const name = (TokenRegistry.theme.meta?.name || 'theme').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const ext = { json: '.json', css: '.css', cpp: '.h', palette: '.h', oklch: '.css', colorsystem: '.colorsystem.json' }[tab] || '.txt';
-      const mime = { json: 'application/json', css: 'text/css', cpp: 'text/plain', palette: 'text/plain', oklch: 'text/css', colorsystem: 'application/json' }[tab] || 'text/plain';
+      const ext = { json: '.json', css: '.css', cpp: '.h', palette: '.h', oklch: '.css', colorsystem: '.colorsystem.json', stylesystem: '.stylesystem.json' }[tab] || '.txt';
+      const mime = { json: 'application/json', css: 'text/css', cpp: 'text/plain', palette: 'text/plain', oklch: 'text/css', colorsystem: 'application/json', stylesystem: 'application/json' }[tab] || 'text/plain';
       const filename = tab === 'palette' ? `${name}-palette${ext}` : tab === 'colorsystem' ? `${name}${ext}` : `${name}${ext}`;
       const blob = new Blob([code], { type: mime });
       const url = URL.createObjectURL(blob);

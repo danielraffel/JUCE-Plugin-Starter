@@ -1,14 +1,14 @@
 # Work Items — AI Style Designer
 
 ## Phase 0: Scaffold
-- [ ] 0.1 Create tauri/ directory structure
-- [ ] 0.2 Create tauri/CLAUDE.md with project conventions
-- [ ] 0.3 Create tauri/docs/proposal/work-items.md (this file)
-- [ ] 0.4 Create tauri/docs/LEARNINGS.md
-- [ ] 0.5 Initialize Tauri 2 project with vanilla frontend
-- [ ] 0.6 Copy/adapt Tools/theme-designer.html as Tauri frontend
-- [ ] 0.7 Verify pnpm install and pnpm tauri dev opens theme designer
-- [ ] 0.8 Commit scaffold
+- [x] 0.1 Create tauri/ directory structure
+- [x] 0 Create tauri/CLAUDE.md with project conventions
+- [x] 0 Create tauri/docs/proposal/work-items.md (this file)
+- [x] 0 Create tauri/docs/LEARNINGS.md
+- [x] 0 Initialize Tauri 2 project with vanilla frontend
+- [x] 0 Copy/adapt Tools/theme-designer.html as Tauri frontend
+- [x] 0 Verify pnpm install and pnpm tauri dev opens theme designer
+- [x] 0 Commit scaffold
 
 ## Phase 1: Style System JSON Format
 - [ ] 1.1 Create Tools/themes/default.stylesystem.json with geometry, effects, gradients, typography sections
