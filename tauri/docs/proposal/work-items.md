@@ -32,26 +32,26 @@
 - [x] 2.9 Commit Phase 2
 
 ## Phase 3: Tauri Backend + Claude Agent
-- [ ] 3.1 Rust backend: chat_send IPC command (accepts prompt, style_json, selected_component, image_base64)
-- [ ] 3.2 Rust backend: chat_health IPC command
-- [ ] 3.3 Node.js sidecar package.json with @anthropic-ai/claude-code dependency
-- [ ] 3.4 Node.js sidecar agent.mjs: receives prompt + context, calls Claude Code SDK, returns JSON diff
-- [ ] 3.5 System prompt teaching Claude about the style system format
-- [ ] 3.6 Rust spawns Node.js sidecar, pipes IPC to/from it
-- [ ] 3.7 Frontend: send chat message via Tauri invoke, receive streamed response
-- [ ] 3.8 Frontend: parse JSON diff from agent response
-- [ ] 3.9 Frontend: apply diff to style system (merge, update CSS vars, redraw)
-- [ ] 3.10 Frontend: flash changed components in preview
-- [ ] 3.11 Frontend: auto-capture preview thumbnail (canvas.toDataURL) after style change
-- [ ] 3.12 Frontend: display thumbnail inline in chat, clickable to restore that state
-- [ ] 3.13 Commit Phase 3
+- [x] 3.1 Rust backend: chat_send IPC command (accepts prompt, style_json, selected_component, image_base64)
+- [x] 3.2 Rust backend: chat_health IPC command
+- [x] 3.3 Node.js sidecar package.json with @anthropic-ai/claude-code dependency
+- [x] 3.4 Node.js sidecar agent.mjs: receives prompt + context, calls Claude Code SDK, returns JSON diff
+- [x] 3.5 System prompt teaching Claude about the style system format
+- [x] 3.6 Rust spawns Node.js sidecar, pipes IPC to/from it
+- [x] 3.7 Frontend: send chat message via Tauri invoke, receive streamed response
+- [x] 3.8 Frontend: parse JSON diff from agent response
+- [x] 3.9 Frontend: apply diff to style system (merge, update CSS vars, redraw)
+- [x] 3.10 Frontend: flash changed components in preview
+- [x] 3.11 Frontend: auto-capture preview thumbnail (canvas.toDataURL) after style change
+- [x] 3.12 Frontend: display thumbnail inline in chat, clickable to restore that state
+- [x] 3.13 Commit Phase 3
 
 ## Phase 3b: Inspector-Scoped Prompts
-- [ ] 3b.1 When component Cmd+clicked, include name + current style props in chat context
-- [ ] 3b.2 Agent system prompt updated for selected component scoping
-- [ ] 3b.3 UI shows "Editing: Rotary Knob" badge in chat header
-- [ ] 3b.4 No selection = "Editing: All Components"
-- [ ] 3b.5 Commit Phase 3b
+- [x] 3b.1 When component Cmd+clicked, include name + current style props in chat context
+- [x] 3b.2 Agent system prompt updated for selected component scoping
+- [x] 3b.3 UI shows "Editing: Rotary Knob" badge in chat header
+- [x] 3b.4 No selection = "Editing: All Components"
+- [x] 3b.5 Commit Phase 3b
 
 ## Phase 3c: Extended Export
 - [ ] 3c.1 .stylesystem.json export includes all sections
