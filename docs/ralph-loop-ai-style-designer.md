@@ -137,14 +137,36 @@ When the agent returns a style diff JSON:
 7. Flash changed components
 8. Save to undo history
 
-## Phase 5: Version History
+## Phase 5: Chat-Based Version History
 
-- Save named style variations: `{ name, prompt, styleJSON, timestamp }`
-- Dropdown to switch between variations
-- Compare two variations side-by-side (extend A/B compare)
-- Each variation preserves the prompt that created it
-- "Fork" button to create a new variation from the current state
-- Variations stored in localStorage and exportable as .stylesystem.json
+The chat IS the version history. No separate version management UI needed.
+
+**Each agent response that changes the style automatically:**
+1. Captures a small preview thumbnail (canvas snapshot of the preview area)
+2. Saves the complete style JSON at that point
+3. Displays the thumbnail inline in the chat
+
+**UX:**
+```
+You: "Make it look like warm analog synth"
+Agent: Applied warm analog style (12 changes)
+[Preview thumbnail — clickable]
+
+You: "Make the knobs more metallic"
+Agent: Updated knob gradients (3 changes)
+[Preview thumbnail — clickable]
+
+You: "Try neon cyberpunk instead"
+Agent: Applied neon cyberpunk style (18 changes)
+[Preview thumbnail — clickable]
+```
+
+- Click any thumbnail → restores that exact style state in the preview
+- Current state highlighted with a border
+- Chat scrolls naturally — version history grows with the conversation
+- "Export current" button exports whatever version is currently active
+- Thumbnails stored as small data URLs in the chat history
+- Chat history persisted to localStorage (survives page reload)
 
 ## Phase 6: Inspector-Scoped Prompts
 
