@@ -359,20 +359,19 @@ button.tb-btn-accent:hover {
 
 /* Inline palette color picker dropdown */
 .palette-picker-dropdown {
-  position: absolute;
-  left: 0;
-  z-index: 50;
+  position: fixed;
+  z-index: 200;
   background: var(--app-panel-raised);
   border: 1px solid var(--app-border);
   border-radius: 8px;
   padding: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.6);
   width: 230px;
   max-height: 420px;
   overflow-y: auto;
 }
-.palette-picker-dropdown.open-down { top: 100%; }
-.palette-picker-dropdown.open-up { bottom: 100%; }
+.token-row.has-change .token-name { color: var(--app-accent); }
+.token-row.has-change .token-name::after { content: ' *'; font-size: 8px; }
 .palette-picker-dropdown::-webkit-scrollbar { width: 4px; }
 .palette-picker-dropdown::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 2px; }
 .pp-section-label {
@@ -2635,14 +2634,14 @@ const LeftPanel = {
         const tokenName = row.dataset.token;
         row.style.position = 'relative';
 
-        // Save original value for undo
-        const originalHex = TokenRegistry.theme[section]?.[tokenName]?.value || '#888888';
+        // Track history
+        const th = TokenHistory.getOrCreate(section, tokenName);
+        const originalHex = th.original;
         const originalAlpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
 
-        // Build dropdown with palette shade swatches
+        // Build dropdown — position fixed on body to avoid clipping
         const dd = document.createElement('div');
-        dd.className = 'palette-picker-dropdown open-down';
-        let prevHex = originalHex; // for redo
+        dd.className = 'palette-picker-dropdown';
         let html = `<div class="pp-undo-bar">
           <button class="pp-undo-btn pp-do-undo" title="Undo to ${originalHex}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 10h10a5 5 0 015 5v0a5 5 0 01-5 5H8"/><path d="M7 6L3 10l4 4"/></svg>
@@ -2690,14 +2689,20 @@ const LeftPanel = {
         </div>`;
 
         dd.innerHTML = html;
-        row.appendChild(dd);
+        document.body.appendChild(dd);
 
-        // Smart positioning: open upward if near bottom of viewport
-        const ddRect = dd.getBoundingClientRect();
-        if (ddRect.bottom > window.innerHeight - 20) {
-          dd.classList.remove('open-down');
-          dd.classList.add('open-up');
+        // Position fixed near the swatch
+        const swatchRect = swatch.getBoundingClientRect();
+        let top = swatchRect.bottom + 4;
+        let left = swatchRect.left;
+        // If would overflow bottom, open upward
+        if (top + 400 > window.innerHeight) {
+          top = Math.max(8, swatchRect.top - 400);
         }
+        // Keep within viewport
+        if (left + 230 > window.innerWidth) left = window.innerWidth - 240;
+        dd.style.top = top + 'px';
+        dd.style.left = Math.max(8, left) + 'px';
 
         // Eyedropper handler
         dd.querySelector('.pp-eyedropper')?.addEventListener('click', async (ev) => {
@@ -2765,6 +2770,7 @@ const LeftPanel = {
               TokenRegistry.setColor(section, tokenName, hex, alpha);
               swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
               row.querySelector('.token-hex').value = hex;
+              TokenHistory.push(section, tokenName, hex);
               showUndo();
             });
 
@@ -2772,7 +2778,15 @@ const LeftPanel = {
             let dragging = false;
             miniCanvas.addEventListener('mousedown', (me) => { dragging = true; handleMiniDrag(me); me.preventDefault(); });
             document.addEventListener('mousemove', (me) => { if (dragging) handleMiniDrag(me); });
-            document.addEventListener('mouseup', () => { dragging = false; });
+            document.addEventListener('mouseup', () => {
+              if (dragging) {
+                // Push final position to history on mouseup
+                const hex = row.querySelector('.token-hex').value;
+                TokenHistory.push(section, tokenName, hex);
+                updateUndoRedoState();
+              }
+              dragging = false;
+            });
 
             function handleMiniDrag(me) {
               const { L, C } = GamutPicker.getLCFromPosition(miniCanvas, me.clientX, me.clientY, currentHue);
@@ -2804,52 +2818,47 @@ const LeftPanel = {
           });
         };
 
-        const showUndo = () => {
-          if (undoBtn) undoBtn.classList.add('visible');
-          if (resetBtn) resetBtn.classList.add('visible');
-          flashPreview();
+        const updateUndoRedoState = () => {
+          if (undoBtn) undoBtn.classList.toggle('visible', TokenHistory.canUndo(section, tokenName));
+          if (redoBtn) redoBtn.classList.toggle('visible', TokenHistory.canRedo(section, tokenName));
+          if (resetBtn) resetBtn.classList.toggle('visible', TokenHistory.canUndo(section, tokenName));
         };
 
-        const applyColor = (hex, alpha) => {
+        const showUndo = () => { updateUndoRedoState(); flashPreview(); };
+
+        const applyColor = (hex) => {
+          const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
           TokenRegistry.setColor(section, tokenName, hex, alpha);
           swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
           row.querySelector('.token-hex').value = hex;
           row.querySelector('.hidden-picker').value = hex;
         };
 
+        // Initialize undo/redo state from history
+        updateUndoRedoState();
+
         undoBtn?.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          prevHex = TokenRegistry.theme[section]?.[tokenName]?.value || prevHex;
-          applyColor(originalHex, originalAlpha);
-          undoBtn.classList.remove('visible');
-          if (redoBtn) redoBtn.classList.add('visible');
-          flashPreview();
+          const hex = TokenHistory.undo(section, tokenName);
+          if (hex) { applyColor(hex); updateUndoRedoState(); flashPreview(); }
         });
 
         redoBtn?.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          if (prevHex && prevHex !== originalHex) {
-            applyColor(prevHex, originalAlpha);
-            redoBtn.classList.remove('visible');
-            if (undoBtn) undoBtn.classList.add('visible');
-            flashPreview();
-          }
+          const hex = TokenHistory.redo(section, tokenName);
+          if (hex) { applyColor(hex); updateUndoRedoState(); flashPreview(); }
         });
 
         resetBtn?.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          prevHex = TokenRegistry.theme[section]?.[tokenName]?.value || prevHex;
-          applyColor(originalHex, originalAlpha);
-          undoBtn.classList.remove('visible');
-          resetBtn.classList.remove('visible');
-          if (redoBtn) redoBtn.classList.add('visible');
-          flashPreview();
+          const hex = TokenHistory.reset(section, tokenName);
+          if (hex) { applyColor(hex); updateUndoRedoState(); flashPreview(); }
         });
 
-        // Show undo when any swatch is picked
+        // Track changes from swatch picks
         dd.querySelectorAll('.pp-swatch').forEach(sw => {
           sw.addEventListener('click', () => {
-            prevHex = sw.dataset.hex;
+            TokenHistory.push(section, tokenName, sw.dataset.hex);
             showUndo();
           }, true);
         });
@@ -3444,6 +3453,82 @@ const ImportExport = {
     const a = document.createElement('a');
     a.href = url; a.download = `${slug}.json`; a.click();
     URL.revokeObjectURL(url);
+  }
+};
+
+// ── Token Change History (persistent across dropdown open/close) ──
+const TokenHistory = {
+  // { 'section.tokenName': { original: '#HEX', changes: ['#HEX', ...], index: -1 } }
+  history: {},
+
+  key(section, name) { return `${section}.${name}`; },
+
+  getOrCreate(section, name) {
+    const k = this.key(section, name);
+    if (!this.history[k]) {
+      this.history[k] = {
+        original: TokenRegistry.theme[section]?.[name]?.value || '#000000',
+        changes: [],
+        index: -1
+      };
+    }
+    return this.history[k];
+  },
+
+  push(section, name, hex) {
+    const h = this.getOrCreate(section, name);
+    // Trim any redo history
+    h.changes = h.changes.slice(0, h.index + 1);
+    h.changes.push(hex);
+    h.index = h.changes.length - 1;
+    // Mark the token row as changed
+    document.querySelectorAll(`.token-row[data-token="${name}"][data-section="${section}"]`).forEach(r => r.classList.add('has-change'));
+  },
+
+  canUndo(section, name) {
+    const h = this.history[this.key(section, name)];
+    return h && h.index >= 0;
+  },
+
+  canRedo(section, name) {
+    const h = this.history[this.key(section, name)];
+    return h && h.index < h.changes.length - 1;
+  },
+
+  undo(section, name) {
+    const h = this.history[this.key(section, name)];
+    if (!h || h.index < 0) return h?.original;
+    h.index--;
+    return h.index >= 0 ? h.changes[h.index] : h.original;
+  },
+
+  redo(section, name) {
+    const h = this.history[this.key(section, name)];
+    if (!h || h.index >= h.changes.length - 1) return null;
+    h.index++;
+    return h.changes[h.index];
+  },
+
+  reset(section, name) {
+    const k = this.key(section, name);
+    const h = this.history[k];
+    if (h) {
+      h.index = -1;
+      document.querySelectorAll(`.token-row[data-token="${name}"][data-section="${section}"]`).forEach(r => r.classList.remove('has-change'));
+    }
+    return h?.original;
+  },
+
+  resetAll() {
+    for (const [k, h] of Object.entries(this.history)) {
+      const [section, name] = k.split('.');
+      if (h.original) {
+        const alpha = TokenRegistry.theme[section]?.[name]?.alpha ?? 1;
+        TokenRegistry.setColor(section, name, h.original, alpha, true);
+      }
+    }
+    this.history = {};
+    document.querySelectorAll('.token-row.has-change').forEach(r => r.classList.remove('has-change'));
   }
 };
 
