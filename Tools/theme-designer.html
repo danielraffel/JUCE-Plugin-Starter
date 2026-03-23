@@ -1262,6 +1262,16 @@ button.tb-btn:disabled:hover {
           </select>
         </div>
         <div class="palette-mode-row">
+          <span class="palette-mode-label">Harmony</span>
+          <select class="palette-mode-select" id="cs-harmony">
+            <option value="monochromatic" selected>Monochromatic</option>
+            <option value="analogous">Analogous</option>
+            <option value="complementary">Complementary</option>
+            <option value="splitComplementary">Split Comp.</option>
+            <option value="none">None (manual)</option>
+          </select>
+        </div>
+        <div class="palette-mode-row">
           <span class="palette-mode-label">Mode</span>
           <select class="palette-mode-select" id="cs-mode">
             <option value="dark">Dark</option>
@@ -1628,6 +1638,39 @@ const OklchEngine = {
     return { L, C: lo, H };
   },
 
+  // ── Color Harmony ──────────────────
+  // Derive a harmonious neutral from an accent color
+  harmony: {
+    // Monochromatic: same hue, very low chroma (tinted gray)
+    monochromatic(accentH) {
+      return { H: accentH, C: 0.012 };
+    },
+    // Analogous: nearby hue, low chroma
+    analogous(accentH) {
+      return { H: (accentH + 30) % 360, C: 0.015 };
+    },
+    // Complementary: opposite hue, low chroma
+    complementary(accentH) {
+      return { H: (accentH + 180) % 360, C: 0.015 };
+    },
+    // Split-complementary: offset from opposite
+    splitComplementary(accentH) {
+      return { H: (accentH + 150) % 360, C: 0.015 };
+    },
+    // No harmony: pure neutral (zero chroma)
+    none() {
+      return { H: 0, C: 0 };
+    }
+  },
+
+  // Get harmonious neutral params for a given accent and harmony mode
+  deriveNeutral(accentL, accentC, accentH, harmonyMode) {
+    const fn = this.harmony[harmonyMode || 'monochromatic'];
+    if (!fn) return { L: 0.35, C: 0, H: 0 };
+    const { H, C } = fn(accentH);
+    return { L: 0.35, C, H };
+  },
+
   // WCAG 2.1 relative luminance
   relativeLuminance(hex) {
     const h = hex.replace('#', '');
@@ -1708,10 +1751,11 @@ const ShadeGenerator = {
 const ColorSystemModel = {
   current: null,
 
-  createDefault() {
-    // Default Audio Studio palette — violet accent
+  createDefault(harmonyMode) {
+    // Default Audio Studio palette — violet accent with monochromatic harmony
     const accent = OklchEngine.hexToOklch('#AA88FF');
-    const neutral = OklchEngine.hexToOklch('#33393F');
+    const hMode = harmonyMode || 'monochromatic';
+    const neutral = OklchEngine.deriveNeutral(accent.L, accent.C, accent.H, hMode);
     const success = OklchEngine.hexToOklch('#4CAF50');
     const warning = OklchEngine.hexToOklch('#FFC107');
     const error = OklchEngine.hexToOklch('#F44336');
@@ -1721,7 +1765,8 @@ const ColorSystemModel = {
         name: 'Audio Studio',
         version: '1.0.0',
         description: 'Default color system for audio plugin UIs',
-        template: 'audio-studio'
+        template: 'audio-studio',
+        harmony: hMode
       },
       palettes: {
         accent:  { name: 'accent',  baseColor: accent,  shades: ShadeGenerator.generateRamp(accent.L, accent.C, accent.H) },
@@ -3032,6 +3077,8 @@ const ColorSystemUI = {
         if (param === 'C') palette.baseColor.C = parseFloat(e.target.value);
         const { L, C, H } = palette.baseColor;
         ColorSystemModel.updatePaletteBase(key, L, C, H);
+        // Auto-derive neutral from accent when harmony is enabled
+        this.applyHarmony(key);
         this.render();
       });
     });
@@ -3050,9 +3097,55 @@ const ColorSystemUI = {
         if (param === 'H-input') palette.baseColor.H = val;
         const { L, C, H } = palette.baseColor;
         ColorSystemModel.updatePaletteBase(key, L, C, H);
+        this.applyHarmony(key);
         this.render();
       });
     });
+  },
+
+  // When accent changes, auto-derive neutral using harmony mode
+  applyHarmony(changedPalette) {
+    const cs = ColorSystemModel.current;
+    const harmonyMode = document.getElementById('cs-harmony')?.value || 'monochromatic';
+    if (harmonyMode === 'none') return; // Manual mode — don't auto-derive
+
+    // Only trigger when accent (or first non-neutral/success/warning/error palette) changes
+    const accentKey = this.getAccentKey();
+    if (changedPalette !== accentKey) return;
+
+    const accent = cs.palettes[accentKey];
+    if (!accent) return;
+
+    const neutralKey = this.getNeutralKey();
+    const neutralPalette = cs.palettes[neutralKey];
+    if (!neutralPalette) return;
+
+    // Derive new neutral base from accent hue + harmony mode
+    const derived = OklchEngine.deriveNeutral(
+      accent.baseColor.L, accent.baseColor.C, accent.baseColor.H, harmonyMode
+    );
+    ColorSystemModel.updatePaletteBase(neutralKey, derived.L, derived.C, derived.H);
+    cs.meta.harmony = harmonyMode;
+  },
+
+  // Find the accent palette key (first chromatic palette)
+  getAccentKey() {
+    const cs = ColorSystemModel.current;
+    for (const key of Object.keys(cs.palettes)) {
+      if (!['neutral', 'slate', 'gray', 'zinc', 'stone', 'success', 'warning', 'error'].includes(key)) {
+        return key;
+      }
+    }
+    return Object.keys(cs.palettes)[0];
+  },
+
+  // Find the neutral palette key
+  getNeutralKey() {
+    const cs = ColorSystemModel.current;
+    for (const key of ['neutral', 'slate', 'gray', 'zinc', 'stone']) {
+      if (cs.palettes[key]) return key;
+    }
+    return Object.keys(cs.palettes)[1] || Object.keys(cs.palettes)[0];
   },
 
   init() {
@@ -3064,6 +3157,14 @@ const ColorSystemUI = {
     header.addEventListener('click', () => {
       header.classList.toggle('expanded');
       document.getElementById('color-system').classList.toggle('expanded');
+    });
+
+    // Harmony selector — re-derive neutral from accent
+    document.getElementById('cs-harmony').addEventListener('change', (e) => {
+      const accentKey = this.getAccentKey();
+      this.applyHarmony(accentKey);
+      this.render();
+      Toast.show('Harmony: ' + e.target.value);
     });
 
     // Template selector
