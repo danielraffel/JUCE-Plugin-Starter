@@ -59,3 +59,27 @@
 - [x] 3c.3 Generate Visage C++ code for widget params, post-effects, layout
 - [x] 3c.4 Update visage-theme skill documentation with style system knowledge
 - [x] 3c.5 Commit Phase 3c
+
+## Phase 4: Real Agent Connection
+- [ ] 4.1 Install @anthropic-ai/claude-code in sidecar, verify SDK loads
+- [ ] 4.2 Add model dropdown (Opus 4.6 / Sonnet 4.6) to chat header
+- [ ] 4.3 Rewrite agent.mjs: stdin payload, query() call, NDJSON stdout
+- [ ] 4.4 Rust chat_send: tokio process, stdin/stdout streaming, Tauri events
+- [ ] 4.5 Frontend: listen for streamed events, extract JSON diff, apply to StyleSystem
+- [ ] 4.6 Settings panel: agent status, model selection, auth instructions
+- [ ] 4.7 Error handling: no sidecar, no auth, timeout, retry
+- [ ] 4.8 Commit Phase 4
+
+## Phase 5: Testing
+- [ ] 5.1 Add tauri-plugin-webdriver or automation setup
+- [ ] 5.2 Configure automation mode in tauri.conf.json
+- [ ] 5.3 Write E2E tests (app launch, chat, model select, context, export)
+- [ ] 5.4 Commit Phase 5
+
+## Phase 6: Polish
+- [ ] 6.1 Parse agent response: separate explanation from JSON diff
+- [ ] 6.2 Show change summary in chat
+- [ ] 6.3 Capture real preview thumbnail after style change
+- [ ] 6.4 Thumbnails clickable to restore state
+- [ ] 6.5 A/B compare between thumbnail versions
+- [ ] 6.6 Commit Phase 6
