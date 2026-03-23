@@ -1,0 +1,13 @@
+{
+  "name": "ai-style-designer",
+  "version": "0.1.0",
+  "description": "AI-powered aesthetic style designer for JUCE/Visage audio plugins",
+  "scripts": {
+    "tauri": "cargo tauri",
+    "dev": "cargo tauri dev",
+    "build": "cargo tauri build",
+    "test": "echo 'No tests yet'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
