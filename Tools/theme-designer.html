@@ -1165,6 +1165,29 @@ button.tb-btn:disabled:hover {
 }
 .cs-oklch-input input:focus { border-color: var(--app-accent); }
 
+/* Gamut triangle picker */
+.cs-gamut-wrap {
+  position: relative;
+  margin: 4px 0 6px;
+  cursor: crosshair;
+}
+.cs-gamut-canvas {
+  width: 100%;
+  height: 140px;
+  border-radius: var(--app-radius-sm);
+  display: block;
+}
+.cs-gamut-dot {
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.5);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
 .palette-mode-row {
   display: flex;
   align-items: center;
@@ -3115,6 +3138,143 @@ const SelectAndTweak = {
   }
 };
 
+// ── Gamut Triangle Picker ─────────────────
+const GamutPicker = {
+  // Draw the OKLCH gamut for a given hue onto a canvas
+  draw(canvas, hue, currentL, currentC) {
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.offsetWidth;
+    const h = canvas.offsetHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    // Draw pixel-by-pixel: X = chroma (0 to maxC), Y = lightness (1 at top, 0 at bottom)
+    const maxC = 0.35;
+    const imgData = ctx.createImageData(w * dpr, h * dpr);
+    const data = imgData.data;
+
+    for (let py = 0; py < h; py++) {
+      const L = 1 - (py / h); // top = 1 (white), bottom = 0 (black)
+      for (let px = 0; px < w; px++) {
+        const C = (px / w) * maxC;
+        const { r, g, b } = OklchEngine.oklchToSrgb(L, C, hue);
+        const inGamut = r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255;
+        const idx = ((py * dpr | 0) * w * dpr + (px * dpr | 0)) * 4;
+
+        // Fill each dpr x dpr block
+        for (let dy = 0; dy < dpr; dy++) {
+          for (let dx = 0; dx < dpr; dx++) {
+            const i = ((py * dpr + dy) * w * dpr + (px * dpr + dx)) * 4;
+            if (inGamut) {
+              data[i] = r;
+              data[i + 1] = g;
+              data[i + 2] = b;
+              data[i + 3] = 255;
+            } else {
+              // Out of gamut — dark with subtle pattern
+              data[i] = 18;
+              data[i + 1] = 18;
+              data[i + 2] = 22;
+              data[i + 3] = 255;
+            }
+          }
+        }
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Draw gamut boundary line
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    for (let py = 0; py < h; py++) {
+      const L = 1 - (py / h);
+      // Find max chroma at this lightness via binary search
+      let lo = 0, hi = maxC;
+      for (let i = 0; i < 12; i++) {
+        const mid = (lo + hi) / 2;
+        if (OklchEngine.isInGamut(L, mid, hue)) lo = mid;
+        else hi = mid;
+      }
+      const px = (lo / maxC) * w;
+      if (py === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  },
+
+  // Position the dot on the canvas based on L and C
+  positionDot(dotEl, canvas, L, C) {
+    const w = canvas.offsetWidth;
+    const h = canvas.offsetHeight;
+    const maxC = 0.35;
+    const px = (C / maxC) * w;
+    const py = (1 - L) * h;
+    dotEl.style.left = `${Math.max(0, Math.min(w, px))}px`;
+    dotEl.style.top = `${Math.max(0, Math.min(h, py))}px`;
+    dotEl.style.background = OklchEngine.oklchToHex(L, C, 0); // approximate
+  },
+
+  // Get L and C from mouse position on canvas
+  getLCFromPosition(canvas, clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+    const maxC = 0.35;
+    return {
+      L: 1 - y,
+      C: x * maxC
+    };
+  },
+
+  // Initialize drag handling for a gamut canvas
+  initDrag(canvasWrap, paletteKey, onUpdate) {
+    const canvas = canvasWrap.querySelector('.cs-gamut-canvas');
+    const dot = canvasWrap.querySelector('.cs-gamut-dot');
+    if (!canvas || !dot) return;
+
+    let dragging = false;
+
+    const handleMove = (e) => {
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const { L, C } = this.getLCFromPosition(canvas, clientX, clientY);
+
+      // Gamut map: clamp C to valid range for this L and H
+      const palette = ColorSystemModel.current.palettes[paletteKey];
+      if (!palette) return;
+      const mapped = OklchEngine.gamutMap(L, C, palette.baseColor.H);
+
+      palette.baseColor.L = mapped.L;
+      palette.baseColor.C = mapped.C;
+      ColorSystemModel.updatePaletteBase(paletteKey, mapped.L, mapped.C, palette.baseColor.H);
+
+      this.positionDot(dot, canvas, mapped.L, mapped.C);
+      dot.style.background = OklchEngine.oklchToHex(mapped.L, mapped.C, palette.baseColor.H);
+
+      if (onUpdate) onUpdate(paletteKey);
+    };
+
+    canvas.addEventListener('mousedown', (e) => {
+      dragging = true;
+      handleMove(e);
+      e.preventDefault();
+    });
+    canvas.addEventListener('touchstart', (e) => {
+      dragging = true;
+      handleMove(e);
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('mousemove', (e) => { if (dragging) handleMove(e); });
+    document.addEventListener('touchmove', (e) => { if (dragging) handleMove(e); }, { passive: false });
+    document.addEventListener('mouseup', () => { dragging = false; });
+    document.addEventListener('touchend', () => { dragging = false; });
+  }
+};
+
 // ── Color System UI ──────────────────────
 const ColorSystemUI = {
   expandedPalette: null,
@@ -3141,14 +3301,16 @@ const ColorSystemUI = {
       html += `<div class="cs-palette-editor" ${isExpanded ? 'style="display:block"' : ''}>`;
       if (isExpanded) {
         const base = palette.baseColor;
-        html += `<div class="cs-slider-row">
-          <span class="cs-slider-label">H</span>
-          <input type="range" class="cs-slider cs-slider-hue" min="0" max="360" step="0.1" value="${base.H}" data-palette="${key}" data-param="H">
+        // Gamut triangle: Y=lightness (top=white, bottom=black), X=chroma (left=gray, right=saturated)
+        const canvasId = `gamut-${key}`;
+        const dotId = `gamut-dot-${key}`;
+        html += `<div class="cs-gamut-wrap" data-palette="${key}">
+          <canvas class="cs-gamut-canvas" id="${canvasId}"></canvas>
+          <div class="cs-gamut-dot" id="${dotId}"></div>
         </div>
         <div class="cs-slider-row">
-          <span class="cs-slider-label">C</span>
-          <input type="range" class="cs-slider cs-slider-chroma" min="0" max="0.4" step="0.001" value="${base.C}" data-palette="${key}" data-param="C"
-            style="background:linear-gradient(to right, ${OklchEngine.oklchToHex(base.L, 0, base.H)}, ${OklchEngine.oklchToHex(base.L, 0.3, base.H)})">
+          <span class="cs-slider-label">H</span>
+          <input type="range" class="cs-slider cs-slider-hue" min="0" max="360" step="0.1" value="${base.H}" data-palette="${key}" data-param="H">
         </div>
         <div class="cs-oklch-inputs">
           <div class="cs-oklch-input"><label>L</label><input type="text" value="${(base.L * 100).toFixed(1)}" data-palette="${key}" data-param="L"></div>
@@ -3177,6 +3339,51 @@ const ColorSystemUI = {
   },
 
   bindEvents() {
+    // Initialize gamut triangle pickers for expanded palettes
+    document.querySelectorAll('.cs-gamut-wrap').forEach(wrap => {
+      const key = wrap.dataset.palette;
+      const palette = ColorSystemModel.current.palettes[key];
+      if (!palette) return;
+      const canvas = wrap.querySelector('.cs-gamut-canvas');
+      const dot = wrap.querySelector('.cs-gamut-dot');
+
+      // Draw the gamut for this hue
+      GamutPicker.draw(canvas, palette.baseColor.H, palette.baseColor.L, palette.baseColor.C);
+      GamutPicker.positionDot(dot, canvas, palette.baseColor.L, palette.baseColor.C);
+      dot.style.background = OklchEngine.oklchToHex(palette.baseColor.L, palette.baseColor.C, palette.baseColor.H);
+
+      // Set up drag interaction
+      GamutPicker.initDrag(wrap, key, (changedKey) => {
+        this.applyHarmony(changedKey);
+        // Live apply without full re-render (just CSS vars + canvas redraws)
+        const mode = document.getElementById('cs-mode')?.value || 'dark';
+        ColorSystemModel.applyLive(mode);
+        // Update the L/C/H numeric inputs
+        const p = ColorSystemModel.current.palettes[changedKey];
+        wrap.closest('.cs-palette-editor')?.querySelectorAll('.cs-oklch-input input').forEach(inp => {
+          if (inp.dataset.param === 'L') inp.value = (p.baseColor.L * 100).toFixed(1);
+          if (inp.dataset.param === 'C-input') inp.value = p.baseColor.C.toFixed(3);
+        });
+        // Redraw shade ramp swatches
+        wrap.closest('.cs-palette-editor')?.querySelectorAll('.cs-shade-large').forEach((el, i) => {
+          const step = ShadeGenerator.SHADE_STEPS[i];
+          const shade = p.shades[step];
+          if (shade) el.style.background = shade.hex;
+        });
+        // Redraw mini ramp in palette row
+        const row = wrap.previousElementSibling;
+        if (row) {
+          row.querySelectorAll('.cs-mini-swatch').forEach((sw, i) => {
+            const step = ShadeGenerator.SHADE_STEPS[i];
+            const shade = p.shades[step];
+            if (shade) sw.style.background = shade.hex;
+          });
+          const dotEl = row.querySelector('.cs-palette-dot');
+          if (dotEl && p.shades[500]) dotEl.style.background = p.shades[500].hex;
+        }
+      });
+    });
+
     // Palette row click to expand — and make it the accent if it's chromatic
     document.querySelectorAll('.cs-palette-row').forEach(row => {
       row.addEventListener('click', () => {
@@ -3202,13 +3409,33 @@ const ColorSystemUI = {
         const param = e.target.dataset.param;
         const palette = ColorSystemModel.current.palettes[key];
         if (!palette) return;
-        if (param === 'H') palette.baseColor.H = parseFloat(e.target.value);
+        if (param === 'H') {
+          palette.baseColor.H = parseFloat(e.target.value);
+          // Redraw gamut triangle for new hue
+          const canvas = document.getElementById(`gamut-${key}`);
+          const dot = document.getElementById(`gamut-dot-${key}`);
+          if (canvas && dot) {
+            GamutPicker.draw(canvas, palette.baseColor.H, palette.baseColor.L, palette.baseColor.C);
+            GamutPicker.positionDot(dot, canvas, palette.baseColor.L, palette.baseColor.C);
+            dot.style.background = OklchEngine.oklchToHex(palette.baseColor.L, palette.baseColor.C, palette.baseColor.H);
+          }
+        }
         if (param === 'C') palette.baseColor.C = parseFloat(e.target.value);
         const { L, C, H } = palette.baseColor;
         ColorSystemModel.updatePaletteBase(key, L, C, H);
-        // Auto-derive neutral from accent when harmony is enabled
         this.applyHarmony(key);
-        this.render();
+        // Live update without full re-render
+        const mode = document.getElementById('cs-mode')?.value || 'dark';
+        ColorSystemModel.applyLive(mode);
+        // Update shade ramp swatches inline
+        const editor = e.target.closest('.cs-palette-editor');
+        if (editor) {
+          editor.querySelectorAll('.cs-shade-large').forEach((el, i) => {
+            const step = ShadeGenerator.SHADE_STEPS[i];
+            const shade = palette.shades[step];
+            if (shade) el.style.background = shade.hex;
+          });
+        }
       });
     });
 
