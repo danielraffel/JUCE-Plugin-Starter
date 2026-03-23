@@ -3174,22 +3174,10 @@ const SelectAndTweak = {
 // ── Gamut Triangle Picker ─────────────────
 const GamutPicker = {
   // Precomputed gamut boundary for speed
-  _gamutBoundary(hue, h, maxC) {
-    const boundary = [];
-    for (let py = 0; py < h; py++) {
-      const L = 1 - (py / h);
-      let lo = 0, hi = maxC;
-      for (let i = 0; i < 14; i++) {
-        const mid = (lo + hi) / 2;
-        if (OklchEngine.isInGamut(L, mid, hue)) lo = mid;
-        else hi = mid;
-      }
-      boundary.push(lo);
-    }
-    return boundary;
-  },
-
-  // Draw the OKLCH gamut for a given hue onto a canvas
+  // Draw method reverse-engineered from supacolors' WebGL shader:
+  //   float L = uv.x;         // X axis = Lightness (left=0/black, right=1/white)
+  //   float C = uv.y * 0.4;   // Y axis = Chroma (bottom=0/gray, top=0.4/max)
+  //   alpha = inGamut(rgb)     // Transparent where out of gamut → creates triangle shape
   draw(canvas, hue, currentL, currentC) {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
@@ -3199,74 +3187,63 @@ const GamutPicker = {
     canvas.height = h * dpr;
     ctx.scale(dpr, dpr);
 
-    const maxC = 0.35;
+    const maxC = 0.4; // matches shader: uv.y * 0.4
 
-    // Precompute gamut boundary
-    const boundary = this._gamutBoundary(hue, h, maxC);
-
-    // Supacolors-style gamut triangle:
-    // CONFIRMED from chrome-devtools analysis:
-    // - X axis = chroma (left=0, right=max)
-    // - Y axis = lightness DIRECTLY (top=0/BLACK, bottom=1/WHITE)
-    //   (dot at y=153/200 maps to L=0.766)
-    // - Triangle: black at top-left, white at bottom-left,
-    //   gamut boundary curves to the right
-    // - Top of canvas is DARK, bottom is LIGHT
-
+    // Dark background
     ctx.fillStyle = '#1C1C20';
     ctx.fillRect(0, 0, w, h);
 
-    // Recompute boundary with REVERSED L mapping (top=0, bottom=1)
-    const boundaryRev = [];
-    for (let py = 0; py < h; py++) {
-      const L = py / h; // top=0(black), bottom=1(white)
-      let lo = 0, hi = maxC;
-      for (let i = 0; i < 14; i++) {
-        const mid = (lo + hi) / 2;
-        if (OklchEngine.isInGamut(L, mid, hue)) lo = mid;
-        else hi = mid;
-      }
-      boundaryRev.push(lo);
-    }
-
-    // Render gamut pixels
+    // Render gamut pixels — exact mapping from supacolors shader
     const imgData = ctx.createImageData(w, h);
     const data = imgData.data;
     for (let py = 0; py < h; py++) {
-      const L = py / h; // top=0(black), bottom=1(white)
-      const maxCAtL = boundaryRev[py] || 0;
-      const maxPxAtL = Math.ceil((maxCAtL / maxC) * w);
+      // Y axis: bottom=0 (C=0), top=maxC — but screen Y is inverted
+      const C = (1 - py / h) * maxC; // top of screen = high chroma, bottom = 0
       for (let px = 0; px < w; px++) {
+        // X axis: left=0 (black), right=1 (white)
+        const L = px / w;
         const i = (py * w + px) * 4;
-        if (px <= maxPxAtL && maxCAtL > 0.001) {
-          const C = (px / w) * maxC;
-          const rgb = OklchEngine.oklchToSrgb(L, C, hue);
+        const rgb = OklchEngine.oklchToSrgb(L, C, hue);
+        const inGamut = rgb.r >= 0 && rgb.r <= 255 && rgb.g >= 0 && rgb.g <= 255 && rgb.b >= 0 && rgb.b <= 255;
+        if (inGamut) {
           data[i] = Math.max(0, Math.min(255, rgb.r));
           data[i + 1] = Math.max(0, Math.min(255, rgb.g));
           data[i + 2] = Math.max(0, Math.min(255, rgb.b));
           data[i + 3] = 255;
         } else {
+          // Transparent — shows dark background
           data[i] = 28; data[i + 1] = 28; data[i + 2] = 32; data[i + 3] = 255;
         }
       }
     }
     ctx.putImageData(imgData, 0, 0);
 
-    // Gamut boundary line
+    // Gamut boundary line (trace the in-gamut edge)
     ctx.beginPath();
     ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 1;
-    ctx.moveTo(0, 0); // black (L=0, C=0) = top-left
-    for (let py = 0; py < h; py++) {
-      ctx.lineTo(Math.min(w, (boundaryRev[py] / maxC) * w), py);
+    for (let px = 0; px < w; px++) {
+      const L = px / w;
+      // Find max chroma at this lightness
+      let lo = 0, hi = maxC;
+      for (let i = 0; i < 14; i++) {
+        const mid = (lo + hi) / 2;
+        if (OklchEngine.isInGamut(L, mid, hue)) lo = mid;
+        else hi = mid;
+      }
+      const py = (1 - lo / maxC) * h;
+      if (px === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
     }
-    ctx.lineTo(0, h); // white (L=1, C=0) = bottom-left
+    // Close along the bottom (C=0 line)
+    ctx.lineTo(w, h);
+    ctx.lineTo(0, h);
     ctx.closePath();
     ctx.stroke();
 
-    // Crosshair lines
-    const dotX = (currentC / maxC) * w;
-    const dotY = currentL * h; // L maps directly to Y (top=0, bottom=1)
+    // Crosshair lines through current dot position
+    const dotX = currentL * w;        // X = lightness
+    const dotY = (1 - currentC / maxC) * h;  // Y = chroma (inverted screen Y)
     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
@@ -3275,27 +3252,28 @@ const GamutPicker = {
     ctx.stroke();
   },
 
-  // Position the dot on the canvas based on L and C
-  // Supacolors mapping: X=chroma, Y=lightness directly (top=0/black, bottom=1/white)
+  // Position the dot — matches supacolors shader mapping:
+  // X = lightness (left=0/black, right=1/white)
+  // Y = chroma inverted (top=maxC, bottom=0)
   positionDot(dotEl, canvas, L, C) {
     const w = canvas.offsetWidth;
     const h = canvas.offsetHeight;
-    const maxC = 0.35;
-    const px = (C / maxC) * w;
-    const py = L * h; // L maps directly: top=0(black), bottom=1(white)
+    const maxC = 0.4;
+    const px = L * w;                   // X = lightness
+    const py = (1 - C / maxC) * h;     // Y = chroma (screen-inverted)
     dotEl.style.left = `${Math.max(0, Math.min(w, px))}px`;
     dotEl.style.top = `${Math.max(0, Math.min(h, py))}px`;
   },
 
-  // Get L and C from mouse position on canvas
+  // Get L and C from mouse position — inverse of positionDot
   getLCFromPosition(canvas, clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
     const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
-    const maxC = 0.35;
+    const maxC = 0.4;
     return {
-      L: y, // Y maps directly to L: top=0(black), bottom=1(white)
-      C: x * maxC
+      L: x,                // X = lightness
+      C: (1 - y) * maxC   // Y inverted = chroma
     };
   },
 
