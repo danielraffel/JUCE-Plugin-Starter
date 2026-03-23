@@ -3480,6 +3480,40 @@ const ColorSystemUI = {
       });
     });
 
+    // Shade swatch click to override
+    document.querySelectorAll('.cs-shade-large').forEach(swatch => {
+      swatch.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const key = swatch.closest('.cs-palette-editor')?.previousElementSibling?.dataset?.palette;
+        if (!key) return;
+        const step = parseInt(swatch.title?.match(/^(\d+)/)?.[1]);
+        if (isNaN(step)) return;
+        // Create a hidden color input and trigger it
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.value = swatch.style.background ? OklchEngine.oklchToHex(
+          ColorSystemModel.current.palettes[key]?.shades[step]?.L || 0.5,
+          ColorSystemModel.current.palettes[key]?.shades[step]?.C || 0.1,
+          ColorSystemModel.current.palettes[key]?.shades[step]?.H || 0
+        ) : '#888888';
+        input.style.position = 'absolute'; input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.addEventListener('input', () => {
+          const oklch = OklchEngine.hexToOklch(input.value);
+          const palette = ColorSystemModel.current.palettes[key];
+          if (palette?.shades[step]) {
+            palette.shades[step] = { ...oklch, hex: input.value.toUpperCase(), overridden: true };
+            swatch.style.background = input.value;
+            swatch.style.boxShadow = 'inset 0 0 0 2px rgba(255,200,0,0.6)'; // Gold border for overrides
+            const mode = document.getElementById('cs-mode')?.value || 'dark';
+            ColorSystemModel.applyLive(mode);
+          }
+        });
+        input.addEventListener('change', () => { document.body.removeChild(input); });
+        input.click();
+      });
+    });
+
     // Hue and chroma sliders
     document.querySelectorAll('.cs-slider').forEach(slider => {
       slider.addEventListener('input', (e) => {

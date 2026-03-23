@@ -32,7 +32,7 @@
 
 - [x] 13. **Anchor dot on base shade** — Show a white dot inside the anchor shade (500 by default) like supacolors.
 
-- [ ] 14. **Click shade to override** — Clicking a shade swatch should open a mini color picker to override that specific shade. Show an indicator (different border) for overridden vs auto-generated shades.
+- [x] 14. **Click shade to override** — Clicking a shade swatch should open a mini color picker to override that specific shade. Show an indicator (different border) for overridden vs auto-generated shades.
 
 - [x] 15. **"Shades" label** — Add a "Shades" heading above the swatch grid and the text "Click a shade to override its generated color, or modify the base color to regenerate the entire palette." below.
 
