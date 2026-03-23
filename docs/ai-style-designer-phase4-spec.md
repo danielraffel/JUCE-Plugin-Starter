@@ -14,14 +14,14 @@
 
 ### Phase 4: Connect Real Claude Agent
 
-#### 4.1 Install and Configure Claude Code Agent SDK
-- Install `@anthropic-ai/claude-code` in `tauri/sidecar/`
-- **IMPORTANT**: The SDK requires `ANTHROPIC_API_KEY` environment variable
-- It does NOT use Claude Max/claude.ai login (Anthropic policy for third-party apps)
-- **Alternative**: Shell out to `claude` CLI which DOES use Max account auth
-- Settings panel: API key input (stored securely) OR "Use Claude Code CLI" toggle
-- Key stored in OS keychain via Tauri's secure storage, never in plain text
-- If no key: show setup instructions with link to platform.claude.com
+#### 4.1 Use Claude CLI (Max Account Auth)
+- Shell out directly to `claude` CLI which uses the user's existing Max account
+- NO API key needed — uses existing Claude Code authentication
+- CLI invocation: `claude --output-format stream-json --model <model> --print -p "<prompt>"`
+- The `--print` flag makes it non-interactive (single turn, no tool use)
+- Or use `--output-format json` for a single JSON response
+- Auth check: `claude --version` should return version if authenticated
+- If not installed: show "Install Claude Code" instructions
 
 #### 4.2 Model Selection UI
 - Add model dropdown in chat header (between context badge and Export button)
@@ -33,27 +33,21 @@
   - Opus 4.6 → `claude-opus-4-6`
   - Sonnet 4.6 → `claude-sonnet-4-6`
 
-#### 4.3 Sidecar Agent Implementation
-- `tauri/sidecar/agent.mjs` receives prompt + context via stdin (not CLI args — for large payloads)
-- Uses `query()` from `@anthropic-ai/claude-code`:
-  ```javascript
-  import { query } from '@anthropic-ai/claude-code';
-
-  for await (const message of query({
-    prompt: userPrompt,
-    options: {
-      model: selectedModel,  // 'claude-opus-4-6' or 'claude-sonnet-4-6'
-      maxTurns: 1,
-      customSystemPrompt: STYLE_SYSTEM_PROMPT,
-    }
-  })) {
-    // Stream messages to stdout as NDJSON
-    process.stdout.write(JSON.stringify(message) + '\n');
-  }
+#### 4.3 Direct Claude CLI Invocation (No Node.js Sidecar Needed)
+- Rust backend spawns `claude` CLI directly — no Node.js sidecar required
+- Uses the user's Max subscription via existing Claude Code auth
+- CLI invocation from Rust:
+  ```rust
+  let child = Command::new("claude")
+    .args(["--output-format", "stream-json", "--model", &model, "--print", "-p", &prompt])
+    .stdout(Stdio::piped())
+    .spawn()?;
   ```
-- System prompt teaches Claude about the complete style system JSON format
-- Agent returns a JSON diff of changed properties
-- Support for image references (describe the image in the prompt context)
+- The `--print` flag = non-interactive single turn
+- `--output-format stream-json` = NDJSON streaming on stdout
+- `--model claude-opus-4-6` or `--model claude-sonnet-4-6`
+- System prompt prepended to the user prompt with style system context
+- No API key, no sidecar, no Node.js dependency for the agent
 
 #### 4.4 Rust Backend Streaming
 - Rust spawns Node.js sidecar via `tokio::process::Command`
