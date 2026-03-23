@@ -3284,8 +3284,8 @@ const SelectAndTweak = {
       if (!token) return;
 
       const rgba = ColorConverter.hexAlphaToRgba(token.value, token.alpha ?? 1);
-      html += `<div class="inspector-token">
-        <div class="token-swatch" style="background:${rgba}"></div>
+      html += `<div class="inspector-token" style="position:relative" data-section="${section}" data-itoken="${tokenName}">
+        <div class="token-swatch inspector-swatch" style="background:${rgba};cursor:pointer" title="Click to pick from palette"></div>
         <span class="token-name">${tokenName}</span>
         <input type="text" class="token-hex" value="${token.value}" data-section="${section}" data-token="${tokenName}" style="width:58px">
       </div>`;
@@ -3309,6 +3309,74 @@ const SelectAndTweak = {
         // Re-render left panel swatch
         LeftPanel.render();
         PreviewRenderer.render();
+      });
+    });
+
+    // Inspector swatch click → open palette picker
+    content.querySelectorAll('.inspector-swatch').forEach(swatch => {
+      swatch.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.palette-picker-dropdown').forEach(d => d.remove());
+
+        const tokenRow = swatch.closest('.inspector-token');
+        const section = tokenRow.dataset.section;
+        const tokenName = tokenRow.dataset.itoken;
+
+        const dd = document.createElement('div');
+        dd.className = 'palette-picker-dropdown';
+        dd.style.left = '0'; dd.style.top = '24px'; dd.style.width = '240px';
+        let html = '';
+
+        const cs = ColorSystemModel.current;
+        if (cs?.palettes) {
+          for (const [palName, palette] of Object.entries(cs.palettes)) {
+            html += `<div class="pp-section-label">${palName}</div><div class="pp-shade-row">`;
+            for (const step of ShadeGenerator.SHADE_STEPS) {
+              const shade = palette.shades[step];
+              if (shade) {
+                html += `<div class="pp-swatch" style="background:${shade.hex}" title="${palName}-${step}: ${shade.hex}" data-hex="${shade.hex}"></div>`;
+              }
+            }
+            html += '</div>';
+          }
+        }
+        html += `<div class="pp-custom-row">
+          <input type="color" class="pp-custom-color" value="${tokenRow.querySelector('.token-hex')?.value || '#888888'}">
+          <span class="pp-custom-label">Custom color...</span>
+        </div>`;
+
+        dd.innerHTML = html;
+        tokenRow.appendChild(dd);
+
+        dd.querySelectorAll('.pp-swatch').forEach(sw => {
+          sw.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const hex = sw.dataset.hex;
+            const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
+            TokenRegistry.setColor(section, tokenName, hex, alpha);
+            swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+            tokenRow.querySelector('.token-hex').value = hex;
+            dd.remove();
+            LeftPanel.render();
+            PreviewRenderer.render();
+          });
+        });
+
+        dd.querySelector('.pp-custom-color')?.addEventListener('input', (ev) => {
+          const hex = ev.target.value.toUpperCase();
+          const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
+          TokenRegistry.setColor(section, tokenName, hex, alpha);
+          swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+          tokenRow.querySelector('.token-hex').value = hex;
+        });
+
+        const closeHandler = (ev) => {
+          if (!dd.contains(ev.target) && ev.target !== swatch) {
+            dd.remove();
+            document.removeEventListener('click', closeHandler);
+          }
+        };
+        setTimeout(() => document.addEventListener('click', closeHandler), 10);
       });
     });
   }
