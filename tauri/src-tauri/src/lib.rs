@@ -1,67 +1,103 @@
-use std::process::Command;
+use std::io::{BufRead, BufReader, Write};
+use std::process::{Command, Stdio};
+
+const STYLE_SYSTEM_PROMPT: &str = r#"You are an aesthetic style designer for audio plugin UIs.
+You receive a style system JSON and modify it based on the user's request.
+
+The style system has these sections:
+- geometry: cornerRadius, borderWidth, shadowBlur, plus per-widget settings (knob, button, toggle, slider, textInput)
+- effects: bloom (enabled, size, intensity), shadows (enabled, blur, offsetX, offsetY, alpha), blur
+- gradients: buttonGradient, knobGradient, accentGradient (each has enabled, type, angle, stops)
+- typography: headingSize, bodySize, labelSize, smallSize, fontWeight, letterSpacing, lineHeight
+
+When the user describes an aesthetic (e.g., "80s Macintosh", "neon cyberpunk", "warm analog"),
+translate that into specific property changes across ALL relevant sections.
+
+Return ONLY a valid JSON object with the changed properties as a diff.
+Do NOT return the full style system — only properties that changed.
+Structure: {"geometry":{"button":{"cornerRadius":0}},"effects":{"shadows":{"enabled":false}}}
+
+If a component is selected, only change properties for that component type."#;
 
 #[tauri::command]
 async fn chat_send(
     prompt: String,
     style_json: String,
     selected_component: Option<String>,
-    image_base64: Option<String>,
+    model: Option<String>,
 ) -> Result<String, String> {
-    // Build the request payload for the Node.js sidecar
-    let payload = serde_json::json!({
-        "prompt": prompt,
-        "styleJSON": style_json,
-        "selectedComponent": selected_component,
-        "image": image_base64,
-    });
+    let model_id = model.unwrap_or_else(|| "claude-opus-4-6".to_string());
 
-    // Try to call the Node.js sidecar agent
-    let sidecar_path = std::env::current_dir()
-        .unwrap_or_default()
-        .join("sidecar")
-        .join("agent.mjs");
+    // Build the full prompt with system context
+    let mut full_prompt = format!("{}\n\nCurrent style system:\n{}\n\n", STYLE_SYSTEM_PROMPT, style_json);
+    if let Some(ref component) = selected_component {
+        full_prompt.push_str(&format!("[Selected component: {}]\n", component));
+    }
+    full_prompt.push_str(&format!("User request: {}\n\nReturn ONLY a JSON diff:", prompt));
 
-    if sidecar_path.exists() {
-        // Spawn Node.js process with the payload as stdin
-        let output = Command::new("node")
-            .arg(&sidecar_path)
-            .arg("--payload")
-            .arg(payload.to_string())
-            .output()
-            .map_err(|e| format!("Failed to spawn agent: {}", e))?;
+    // Spawn claude CLI
+    let output = Command::new("claude")
+        .args([
+            "--print",
+            "--output-format", "json",
+            "--model", &model_id,
+            "-p", &full_prompt,
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("Failed to run claude CLI: {}. Is it installed?", e))?;
 
-        if output.status.success() {
-            let response = String::from_utf8_lossy(&output.stdout).to_string();
-            Ok(response)
-        } else {
-            let err = String::from_utf8_lossy(&output.stderr).to_string();
-            Err(format!("Agent error: {}", err))
+    if output.status.success() {
+        let response = String::from_utf8_lossy(&output.stdout).to_string();
+        // Parse the JSON output format: {"type":"result","result":"..."}
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&response) {
+            if let Some(result) = parsed.get("result").and_then(|r| r.as_str()) {
+                // Extract JSON diff from the result text
+                if let Some(json_start) = result.find('{') {
+                    if let Some(json_end) = result.rfind('}') {
+                        let json_str = &result[json_start..=json_end];
+                        if let Ok(diff) = serde_json::from_str::<serde_json::Value>(json_str) {
+                            return Ok(serde_json::json!({
+                                "message": result[..json_start].trim().to_string(),
+                                "diff": diff
+                            }).to_string());
+                        }
+                    }
+                }
+                // No JSON found — return the text as message
+                return Ok(serde_json::json!({
+                    "message": result,
+                    "diff": {}
+                }).to_string());
+            }
         }
-    } else {
-        // Fallback: return a mock response for development
+        // Raw response
         Ok(serde_json::json!({
-            "message": "Agent sidecar not found. Install with: cd tauri/sidecar && pnpm install",
+            "message": response.trim(),
             "diff": {}
         }).to_string())
+    } else {
+        let err = String::from_utf8_lossy(&output.stderr).to_string();
+        Err(format!("Claude CLI error: {}", err.trim()))
     }
 }
 
 #[tauri::command]
 async fn chat_health() -> Result<String, String> {
-    // Check if Node.js and the sidecar are available
-    let node_check = Command::new("node")
+    let output = Command::new("claude")
         .arg("--version")
-        .output();
+        .output()
+        .map_err(|e| format!("Claude CLI not found: {}", e))?;
 
-    match node_check {
-        Ok(output) if output.status.success() => {
-            let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            Ok(serde_json::json!({
-                "status": "ok",
-                "nodeVersion": version,
-            }).to_string())
-        }
-        _ => Err("Node.js not found".to_string()),
+    if output.status.success() {
+        let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        Ok(serde_json::json!({
+            "status": "ok",
+            "version": version,
+        }).to_string())
+    } else {
+        Err("Claude CLI not authenticated or not working".to_string())
     }
 }
 

@@ -60,15 +60,14 @@
 - [x] 3c.4 Update visage-theme skill documentation with style system knowledge
 - [x] 3c.5 Commit Phase 3c
 
-## Phase 4: Real Agent Connection
-- [ ] 4.1 Install @anthropic-ai/claude-code in sidecar, verify SDK loads
-- [ ] 4.2 Add model dropdown (Opus 4.6 / Sonnet 4.6) to chat header
-- [ ] 4.3 Rewrite agent.mjs: stdin payload, query() call, NDJSON stdout
-- [ ] 4.4 Rust chat_send: tokio process, stdin/stdout streaming, Tauri events
-- [ ] 4.5 Frontend: listen for streamed events, extract JSON diff, apply to StyleSystem
-- [ ] 4.6 Settings panel: agent status, model selection, auth instructions
-- [ ] 4.7 Error handling: no sidecar, no auth, timeout, retry
-- [ ] 4.8 Commit Phase 4
+## Phase 4: Real Agent Connection (claude CLI, Max subscription)
+- [ ] 4.1 Verify claude CLI from Rust: spawn "claude --version"
+- [ ] 4.2 Add model dropdown to chat header: Opus 4.6 (default) / Sonnet 4.6
+- [ ] 4.3 Rust chat_send: spawn claude CLI directly, stream NDJSON, emit Tauri events
+- [ ] 4.4 Frontend: listen for Tauri events, accumulate response, extract JSON diff, apply
+- [ ] 4.5 Settings: CLI status check, model selection
+- [ ] 4.6 Error handling: CLI not found, timeout, parse failure
+- [ ] 4.7 Commit Phase 4
 
 ## Phase 5: Testing
 - [ ] 5.1 Add tauri-plugin-webdriver or automation setup

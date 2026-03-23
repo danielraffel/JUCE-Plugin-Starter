@@ -1749,6 +1749,10 @@ button.tb-btn:disabled:hover {
         <div class="chat-context-bar">
           <span class="chat-context-badge" id="chat-context">Editing: All Components</span>
           <button class="tb-btn" style="font-size:8px;padding:1px 4px;display:none" id="chat-clear-context" title="Clear selection">✕</button>
+          <select class="palette-mode-select" id="chat-model" style="font-size:9px;padding:2px 4px;width:auto;min-width:70px" title="Claude model">
+            <option value="claude-opus-4-6">Opus 4.6</option>
+            <option value="claude-sonnet-4-6" selected>Sonnet 4.6</option>
+          </select>
           <button class="tb-btn" style="font-size:9px;padding:2px 6px" id="chat-export-btn">Export</button>
         </div>
         <div id="chat-messages"></div>
@@ -4908,6 +4912,14 @@ const ChatUI = {
       this.updateContext(null);
     });
 
+    // Model selection — persist in localStorage
+    const modelSelect = document.getElementById('chat-model');
+    const savedModel = localStorage.getItem('ai-style-model');
+    if (savedModel && modelSelect) modelSelect.value = savedModel;
+    modelSelect?.addEventListener('change', (e) => {
+      localStorage.setItem('ai-style-model', e.target.value);
+    });
+
     // Send button
     document.getElementById('chat-send-btn').addEventListener('click', () => this.send());
 
@@ -5033,18 +5045,20 @@ const ChatUI = {
   },
 
   async callAgent(prompt, imageBase64) {
+    const model = document.getElementById('chat-model')?.value || 'claude-sonnet-4-6';
+
     // Try Tauri IPC first
     if (window.__TAURI__) {
       try {
         const result = await window.__TAURI__.core.invoke('chat_send', {
           prompt,
-          styleJson: StyleSystem.toJSON(),
-          selectedComponent: this.selectedComponent,
-          imageBase64: imageBase64 || null,
+          styleJson: StyleSystem.current ? StyleSystem.toJSON() : '{}',
+          selectedComponent: this.selectedComponent || null,
+          model,
         });
         return JSON.parse(result);
       } catch (e) {
-        return { message: 'Tauri agent error: ' + e, diff: {} };
+        return { message: 'Claude error: ' + e, diff: {} };
       }
     }
 
