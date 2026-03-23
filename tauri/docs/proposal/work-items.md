@@ -76,9 +76,9 @@
 - [x] 5.4 Commit Phase 5
 
 ## Phase 6: Polish
-- [ ] 6.1 Parse agent response: separate explanation from JSON diff
-- [ ] 6.2 Show change summary in chat
-- [ ] 6.3 Capture real preview thumbnail after style change
-- [ ] 6.4 Thumbnails clickable to restore state
-- [ ] 6.5 A/B compare between thumbnail versions
-- [ ] 6.6 Commit Phase 6
+- [x] 6.1 Parse agent response: separate explanation from JSON diff
+- [x] 6.2 Show change summary in chat
+- [x] 6.3 Capture real preview thumbnail after style change
+- [x] 6.4 Thumbnails clickable to restore state
+- [x] 6.5 A/B compare between thumbnail versions
+- [x] 6.6 Commit Phase 6
