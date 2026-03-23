@@ -368,8 +368,8 @@ button.tb-btn-accent:hover {
   border-radius: 8px;
   padding: 8px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  width: 220px;
-  max-height: 280px;
+  width: 230px;
+  max-height: 420px;
   overflow-y: auto;
 }
 .palette-picker-dropdown::-webkit-scrollbar { width: 4px; }
@@ -414,6 +414,17 @@ button.tb-btn-accent:hover {
   gap: 4px;
 }
 .pp-custom-label:hover { color: var(--app-text-muted); }
+.pp-undo {
+  font-size: 9px;
+  color: var(--app-accent);
+  cursor: pointer;
+  float: right;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 2px 4px;
+}
+.pp-undo.visible { opacity: 1; }
+.pp-undo:hover { text-decoration: underline; }
 .pp-mini-picker {
   display: none;
   margin-top: 6px;
@@ -428,16 +439,18 @@ button.tb-btn-accent:hover {
 }
 .pp-mini-gamut-wrap {
   position: relative;
+  overflow: visible;
 }
 .pp-mini-dot {
   position: absolute;
-  width: 12px; height: 12px;
+  width: 14px; height: 14px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.9);
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.4);
   pointer-events: none;
   transform: translate(-50%, -50%);
   background: transparent;
+  z-index: 5;
 }
 .pp-mini-hue {
   width: 100%;
@@ -2577,10 +2590,14 @@ const LeftPanel = {
         const tokenName = row.dataset.token;
         row.style.position = 'relative';
 
+        // Save original value for undo
+        const originalHex = TokenRegistry.theme[section]?.[tokenName]?.value || '#888888';
+        const originalAlpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
+
         // Build dropdown with palette shade swatches
         const dd = document.createElement('div');
         dd.className = 'palette-picker-dropdown';
-        let html = '';
+        let html = `<span class="pp-undo" title="Revert to ${originalHex}">undo</span>`;
 
         const cs = ColorSystemModel.current;
         if (cs?.palettes) {
@@ -2677,6 +2694,24 @@ const LeftPanel = {
               row.querySelector('.token-hex').value = hex;
             }
           }
+        });
+
+        // Undo button — revert to original color
+        const undoBtn = dd.querySelector('.pp-undo');
+        const showUndo = () => { if (undoBtn) undoBtn.classList.add('visible'); };
+        undoBtn?.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          TokenRegistry.setColor(section, tokenName, originalHex, originalAlpha);
+          swatch.style.background = ColorConverter.hexAlphaToRgba(originalHex, originalAlpha);
+          row.querySelector('.token-hex').value = originalHex;
+          row.querySelector('.hidden-picker').value = originalHex;
+          undoBtn.classList.remove('visible');
+        });
+
+        // Show undo when any swatch is picked
+        dd.querySelectorAll('.pp-swatch').forEach(sw => {
+          const origClick = sw.onclick;
+          sw.addEventListener('click', showUndo, true);
         });
 
         // Close on click outside
