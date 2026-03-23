@@ -1385,7 +1385,7 @@ button.tb-btn:disabled:hover {
         </div>
         <div id="cs-palettes"></div>
         <div style="display:flex;gap:4px;margin-top:6px">
-          <button class="palette-apply-btn" id="cs-generate-inverse" style="flex:1">Generate Light/Dark</button>
+          <button class="palette-apply-btn" id="cs-generate-inverse" style="flex:1" title="Generate the opposite mode from your current design. Both modes are saved in the color system.">Generate Opposite Mode</button>
         </div>
         <div style="display:flex;gap:4px;margin-top:4px">
           <button class="palette-apply-btn" id="cs-save" style="flex:1;background:var(--app-panel);border:1px solid var(--app-border);color:var(--app-text-muted)">Save</button>
@@ -2079,6 +2079,7 @@ const ColorSystemModel = {
   },
 
   // Fix text/background contrast issues automatically
+  // Inspired by Solar app: preserves hue while adjusting lightness for readability
   _fixContrast() {
     const pairs = [
       ['TextPrimary', 'PluginBackground', 'custom', 'custom'],
@@ -2090,17 +2091,20 @@ const ColorSystemModel = {
       ['TextEditorText', 'TextEditorBackground', 'colors', 'colors'],
     ];
     for (const [textToken, bgToken, textSection, bgSection] of pairs) {
-      const text = this.current?.palettes ? null : TokenRegistry.theme[textSection]?.[textToken];
-      const bg = this.current?.palettes ? null : TokenRegistry.theme[bgSection]?.[bgToken];
-      // Use token registry directly
       const textTok = TokenRegistry.theme[textSection]?.[textToken];
       const bgTok = TokenRegistry.theme[bgSection]?.[bgToken];
       if (!textTok || !bgTok) continue;
       const ratio = OklchEngine.contrastRatio(textTok.value, bgTok.value);
       if (ratio < 4.5) {
-        // Auto-fix: make text white or black depending on background luminance
+        // Preserve hue: adjust lightness in OKLCH until contrast passes
         const bgLum = OklchEngine.relativeLuminance(bgTok.value);
-        const fixHex = bgLum > 0.18 ? '#1A1A1E' : '#F0F0F4';
+        const textOklch = OklchEngine.hexToOklch(textTok.value);
+        const isDarkBg = bgLum < 0.18;
+        // Shift text toward white (on dark bg) or black (on light bg) while keeping hue
+        let targetL = isDarkBg ? 0.92 : 0.15;
+        // Reduce chroma slightly for better readability
+        let targetC = textOklch.C * 0.3;
+        const fixHex = OklchEngine.oklchToHex(targetL, targetC, textOklch.H);
         TokenRegistry.theme[textSection][textToken].value = fixHex;
       }
     }
