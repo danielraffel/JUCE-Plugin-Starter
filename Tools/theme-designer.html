@@ -3643,6 +3643,10 @@ const ColorSystemUI = {
       const canvas = wrap.querySelector('.cs-gamut-canvas');
       const dot = wrap.querySelector('.cs-gamut-dot');
 
+      // Clamp base color to gamut before drawing (prevents dot outside triangle)
+      const maxCInit = GamutPicker.maxChromaAtL(palette.baseColor.L, palette.baseColor.H);
+      if (palette.baseColor.C > maxCInit) palette.baseColor.C = maxCInit;
+
       // Draw the gamut for this hue
       GamutPicker.draw(canvas, palette.baseColor.H, palette.baseColor.L, palette.baseColor.C);
       GamutPicker.positionDot(dot, canvas, palette.baseColor.L, palette.baseColor.C);
@@ -3763,6 +3767,9 @@ const ColorSystemUI = {
         }
         if (param === 'C') {
           palette.baseColor.C = parseFloat(e.target.value);
+          // Clamp C to gamut
+          const maxCSlider = GamutPicker.maxChromaAtL(palette.baseColor.L, palette.baseColor.H);
+          if (palette.baseColor.C > maxCSlider) palette.baseColor.C = maxCSlider;
           // Update gamut dot position
           const canvas = document.getElementById(`gamut-${key}`);
           const dot = document.getElementById(`gamut-dot-${key}`);
