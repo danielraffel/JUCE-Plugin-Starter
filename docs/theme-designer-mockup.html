@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sonic Observatory | Theme Designer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-fixed-dim": "#63e1e7",
+              "on-primary": "#005f64",
+              "on-primary-fixed": "#004145",
+              "primary": "#99f7ff",
+              "on-primary-container": "#00555a",
+              "secondary": "#d575ff",
+              "on-surface": "#f3effc",
+              "surface-container-lowest": "#000000",
+              "surface-container-highest": "#262431",
+              "primary-container": "#00f1fe",
+              "on-secondary-fixed-variant": "#8300b4",
+              "surface": "#0e0d16",
+              "primary-fixed": "#00f1fe",
+              "surface-container-low": "#13121c",
+              "outline-variant": "#484751",
+              "outline": "#777480",
+              "on-error": "#490006",
+              "on-tertiary-container": "#00585b",
+              "on-secondary-container": "#fff5fc",
+              "on-error-container": "#ffa8a3",
+              "surface-tint": "#99f7ff",
+              "secondary-fixed-dim": "#eaaeff",
+              "inverse-surface": "#fcf8ff",
+              "error-container": "#9f0519",
+              "on-surface-variant": "#ada9b6",
+              "tertiary": "#9dfaff",
+              "primary-dim": "#00e2ee",
+              "background": "#0e0d16",
+              "on-tertiary": "#006164",
+              "tertiary-container": "#72eff5",
+              "surface-container": "#1a1823",
+              "on-secondary-fixed": "#58007a",
+              "surface-bright": "#2c2a39",
+              "tertiary-fixed": "#72eff5",
+              "secondary-fixed": "#f0c1ff",
+              "tertiary-dim": "#63e1e7",
+              "error-dim": "#d7383b",
+              "on-primary-fixed-variant": "#006065",
+              "surface-dim": "#0e0d16",
+              "surface-container-high": "#201e2a",
+              "on-secondary": "#390050",
+              "error": "#ff716c",
+              "secondary-dim": "#b90afc"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .knob-shadow {
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 1px 1px rgba(255,255,255,0.05);
+      }
+      .glass-panel {
+        background: rgba(32, 30, 42, 0.6);
+        backdrop-filter: blur(24px);
+      }
+      .waveform-bar {
+        background: linear-gradient(0deg, rgba(153, 247, 255, 0.1) 0%, #99f7ff 100%);
+      }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary min-h-screen flex flex-col overflow-hidden">
+<!-- TopNavBar -->
+<header class="bg-[#13121c] dark:bg-[#13121c] flex justify-between items-center w-full px-6 h-16 shrink-0 z-50">
+<div class="flex items-center gap-8">
+<div class="text-xl font-bold tracking-tighter text-cyan-400 dark:text-cyan-400 font-headline uppercase">Sonic Observatory</div>
+<nav class="hidden md:flex items-center gap-6 h-full">
+<a class="font-['Space_Grotesk'] uppercase tracking-widest text-xs text-cyan-400 border-b-2 border-cyan-400 pb-1 hover:text-cyan-200 transition-colors" href="#">Editor</a>
+<a class="font-['Space_Grotesk'] uppercase tracking-widest text-xs text-slate-400 hover:text-cyan-200 transition-colors" href="#">Library</a>
+<a class="font-['Space_Grotesk'] uppercase tracking-widest text-xs text-slate-400 hover:text-cyan-200 transition-colors" href="#">Samples</a>
+<a class="font-['Space_Grotesk'] uppercase tracking-widest text-xs text-slate-400 hover:text-cyan-200 transition-colors" href="#">Settings</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-400 hover:text-cyan-200 transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-slate-400 hover:text-cyan-200 transition-colors">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden">
+<!-- SideNavBar (Left Sidebar) -->
+<aside class="bg-[#0e0d16] dark:bg-[#0e0d16] flex flex-col h-full py-4 docked left-0 h-screen w-64 shrink-0 bg-[#13121c]">
+<div class="px-6 py-2 mb-6">
+<div class="text-cyan-400 font-bold font-headline uppercase tracking-wider text-sm">Studio Rack</div>
+<div class="text-slate-500 text-[10px] font-medium tracking-widest">v2.4.0 PROFESSIONAL</div>
+</div>
+<div class="flex-1 space-y-1">
+<div class="px-6 mb-2 text-[10px] font-bold text-outline uppercase tracking-widest">Token Browser</div>
+<div class="flex items-center gap-3 bg-[#201e2a] text-cyan-400 rounded-lg p-3 mx-2 border-l-4 border-cyan-400 font-['Inter'] text-sm font-medium cursor-pointer transition-transform active:scale-95">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+<span>Backgrounds</span>
+</div>
+<div class="flex items-center gap-3 text-slate-500 p-3 mx-2 font-['Inter'] text-sm font-medium hover:bg-[#1a1823] hover:text-slate-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="Category">category</span>
+<span>Accents</span>
+</div>
+<div class="flex items-center gap-3 text-slate-500 p-3 mx-2 font-['Inter'] text-sm font-medium hover:bg-[#1a1823] hover:text-slate-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="settings_input_component">settings_input_component</span>
+<span>UI Elements</span>
+</div>
+<div class="flex items-center gap-3 text-slate-500 p-3 mx-2 font-['Inter'] text-sm font-medium hover:bg-[#1a1823] hover:text-slate-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span>History</span>
+</div>
+<div class="flex items-center gap-3 text-slate-500 p-3 mx-2 font-['Inter'] text-sm font-medium hover:bg-[#1a1823] hover:text-slate-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="cloud_queue">cloud_queue</span>
+<span>Cloud</span>
+</div>
+</div>
+<div class="px-4 mt-auto">
+<button class="w-full bg-secondary-container text-on-secondary-container py-3 rounded-lg font-headline font-bold text-xs uppercase tracking-widest hover:opacity-90 transition-opacity">
+                    New Project
+                </button>
+</div>
+</aside>
+<!-- Center Canvas -->
+<section class="flex-1 relative bg-surface p-12 overflow-y-auto flex items-center justify-center">
+<!-- Plugin Chassis -->
+<div class="w-full max-w-4xl bg-surface-container-high rounded-none shadow-2xl border-t border-white/5 relative flex flex-col overflow-hidden">
+<!-- Plugin Header -->
+<div class="h-12 bg-surface-container-low flex items-center justify-between px-6 border-b border-black/20">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_#d575ff]"></div>
+<span class="font-headline font-bold text-sm tracking-[0.2em] text-on-surface">ASTRA_DYNAMIC_COMP</span>
+</div>
+<div class="flex gap-4">
+<span class="text-[10px] font-mono text-outline uppercase tracking-tighter">Engine v4.2</span>
+<span class="material-symbols-outlined text-outline text-lg">settings</span>
+</div>
+</div>
+<!-- Main UI Grid -->
+<div class="p-10 flex gap-12">
+<!-- VU Meter Section -->
+<div class="w-24 flex flex-col items-center">
+<div class="flex-1 w-12 bg-surface-container-lowest relative rounded-sm flex flex-col-reverse p-1 overflow-hidden">
+<!-- Segments -->
+<div class="w-full h-[60%] bg-primary shadow-[0_0_15px_rgba(153,247,255,0.4)] mb-0.5"></div>
+<div class="w-full h-1 bg-surface-container-highest mb-0.5"></div>
+<div class="w-full h-[20%] bg-secondary shadow-[0_0_15px_rgba(213,117,255,0.4)] mb-0.5 opacity-40"></div>
+<!-- Scale markings -->
+<div class="absolute inset-0 flex flex-col justify-between py-2 pointer-events-none opacity-50">
+<div class="w-full border-t border-white/10 flex justify-end pr-1"><span class="text-[8px] font-headline text-on-surface">+6</span></div>
+<div class="w-full border-t border-white/10 flex justify-end pr-1"><span class="text-[8px] font-headline text-on-surface">0</span></div>
+<div class="w-full border-t border-white/10 flex justify-end pr-1"><span class="text-[8px] font-headline text-on-surface">-12</span></div>
+<div class="w-full border-t border-white/10 flex justify-end pr-1"><span class="text-[8px] font-headline text-on-surface">-24</span></div>
+<div class="w-full border-t border-white/10 flex justify-end pr-1"><span class="text-[8px] font-headline text-on-surface">-48</span></div>
+</div>
+</div>
+<span class="mt-4 font-headline text-[10px] text-secondary tracking-widest uppercase">Input VU</span>
+</div>
+<!-- Knobs Grid -->
+<div class="flex-1 grid grid-cols-3 gap-x-8 gap-y-12">
+<!-- Knob 1 -->
+<div class="flex flex-col items-center gap-3">
+<span class="font-headline text-[10px] text-on-surface-variant tracking-widest uppercase">Threshold</span>
+<div class="relative w-20 h-20 rounded-full bg-surface-container-highest knob-shadow border border-white/5 flex items-center justify-center cursor-pointer">
+<div class="absolute top-2 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#99f7ff]"></div>
+<div class="w-14 h-14 rounded-full border border-white/5 bg-gradient-to-br from-white/5 to-transparent"></div>
+</div>
+<span class="font-headline text-primary text-xs tracking-tighter">-14.2 dB</span>
+</div>
+<!-- Knob 2 -->
+<div class="flex flex-col items-center gap-3">
+<span class="font-headline text-[10px] text-on-surface-variant tracking-widest uppercase">Ratio</span>
+<div class="relative w-20 h-20 rounded-full bg-surface-container-highest knob-shadow border border-white/5 flex items-center justify-center cursor-pointer">
+<div class="absolute top-2 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#99f7ff] rotate-[45deg] origin-center translate-x-6 translate-y-3"></div>
+<div class="w-14 h-14 rounded-full border border-white/5 bg-gradient-to-br from-white/5 to-transparent"></div>
+</div>
+<span class="font-headline text-primary text-xs tracking-tighter">4.0 : 1</span>
+</div>
+<!-- Knob 3 -->
+<div class="flex flex-col items-center gap-3">
+<span class="font-headline text-[10px] text-on-surface-variant tracking-widest uppercase">Attack</span>
+<div class="relative w-20 h-20 rounded-full bg-surface-container-highest knob-shadow border border-white/5 flex items-center justify-center cursor-pointer">
+<div class="absolute top-2 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#99f7ff] rotate-[-60deg] origin-center -translate-x-6 translate-y-3"></div>
+<div class="w-14 h-14 rounded-full border border-white/5 bg-gradient-to-br from-white/5 to-transparent"></div>
+</div>
+<span class="font-headline text-primary text-xs tracking-tighter">12 ms</span>
+</div>
+<!-- Knob 4 -->
+<div class="flex flex-col items-center gap-3">
+<span class="font-headline text-[10px] text-on-surface-variant tracking-widest uppercase">Release</span>
+<div class="relative w-20 h-20 rounded-full bg-surface-container-highest knob-shadow border border-white/5 flex items-center justify-center cursor-pointer">
+<div class="absolute top-2 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#99f7ff]"></div>
+<div class="w-14 h-14 rounded-full border border-white/5 bg-gradient-to-br from-white/5 to-transparent"></div>
+</div>
+<span class="font-headline text-primary text-xs tracking-tighter">240 ms</span>
+</div>
+<!-- Knob 5 -->
+<div class="flex flex-col items-center gap-3">
+<span class="font-headline text-[10px] text-on-surface-variant tracking-widest uppercase">Make-up</span>
+<div class="relative w-20 h-20 rounded-full bg-surface-container-highest knob-shadow border border-white/5 flex items-center justify-center cursor-pointer">
+<div class="absolute top-2 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#99f7ff] rotate-[110deg] origin-center translate-x-3 translate-y-8"></div>
+<div class="w-14 h-14 rounded-full border border-white/5 bg-gradient-to-br from-white/5 to-transparent"></div>
+</div>
+<span class="font-headline text-primary text-xs tracking-tighter">+4.0 dB</span>
+</div>
+<!-- Knob 6 -->
+<div class="flex flex-col items-center gap-3">
+<span class="font-headline text-[10px] text-on-surface-variant tracking-widest uppercase">Mix</span>
+<div class="relative w-20 h-20 rounded-full bg-surface-container-highest knob-shadow border border-white/5 flex items-center justify-center cursor-pointer">
+<div class="absolute top-2 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#99f7ff] rotate-[180deg] origin-center translate-y-10"></div>
+<div class="w-14 h-14 rounded-full border border-white/5 bg-gradient-to-br from-white/5 to-transparent"></div>
+</div>
+<span class="font-headline text-primary text-xs tracking-tighter">100%</span>
+</div>
+</div>
+</div>
+<!-- Waveform Visualization -->
+<div class="h-32 bg-surface-container-lowest mt-4 relative flex items-center px-4 gap-0.5">
+<!-- Faux waveform bars -->
+<div class="waveform-bar w-1.5 h-[30%] opacity-20"></div>
+<div class="waveform-bar w-1.5 h-[45%] opacity-30"></div>
+<div class="waveform-bar w-1.5 h-[60%] opacity-40"></div>
+<div class="waveform-bar w-1.5 h-[75%] opacity-60"></div>
+<div class="waveform-bar w-1.5 h-[90%] opacity-80"></div>
+<div class="waveform-bar w-1.5 h-[65%] shadow-[0_0_20px_#99f7ff]"></div>
+<div class="waveform-bar w-1.5 h-[40%] opacity-80"></div>
+<div class="waveform-bar w-1.5 h-[55%] opacity-60"></div>
+<div class="waveform-bar w-1.5 h-[80%] opacity-40"></div>
+<div class="waveform-bar w-1.5 h-[95%] shadow-[0_0_20px_#99f7ff]"></div>
+<div class="waveform-bar w-1.5 h-[60%] opacity-80"></div>
+<div class="waveform-bar w-1.5 h-[45%] opacity-60"></div>
+<div class="waveform-bar w-1.5 h-[30%] opacity-40"></div>
+<div class="waveform-bar w-1.5 h-[50%] opacity-30"></div>
+<div class="waveform-bar w-1.5 h-[70%] opacity-50"></div>
+<div class="waveform-bar w-1.5 h-[85%] shadow-[0_0_20px_#99f7ff]"></div>
+<div class="waveform-bar w-1.5 h-[40%] opacity-80"></div>
+<div class="waveform-bar w-1.5 h-[20%] opacity-60"></div>
+<div class="waveform-bar w-1.5 h-[55%] opacity-40"></div>
+<div class="waveform-bar w-1.5 h-[75%] opacity-30"></div>
+<div class="waveform-bar w-1.5 h-[90%] shadow-[0_0_20px_#99f7ff]"></div>
+<div class="waveform-bar w-1.5 h-[60%] opacity-80"></div>
+<div class="waveform-bar w-1.5 h-[40%] opacity-60"></div>
+<div class="waveform-bar w-1.5 h-[25%] opacity-40"></div>
+<div class="waveform-bar w-1.5 h-[45%] opacity-30"></div>
+<div class="waveform-bar w-1.5 h-[80%] opacity-60"></div>
+<div class="waveform-bar w-1.5 h-[95%] shadow-[0_0_20px_#99f7ff]"></div>
+<div class="waveform-bar w-1.5 h-[60%] opacity-80"></div>
+<div class="waveform-bar w-1.5 h-[40%] opacity-60"></div>
+<div class="waveform-bar w-1.5 h-[25%] opacity-40"></div>
+<div class="waveform-bar w-1.5 h-[50%] opacity-30"></div>
+<div class="waveform-bar w-1.5 h-[75%] opacity-60"></div>
+<div class="waveform-bar w-1.5 h-[90%] shadow-[0_0_20px_#99f7ff]"></div>
+<div class="waveform-bar w-1.5 h-[55%] opacity-80"></div>
+<div class="waveform-bar w-1.5 h-[35%] opacity-60"></div>
+<div class="waveform-bar w-1.5 h-[20%] opacity-40"></div>
+<div class="waveform-bar w-1.5 h-[50%] opacity-30"></div>
+<div class="waveform-bar w-1.5 h-[75%] shadow-[0_0_20px_#99f7ff]"></div>
+<div class="waveform-bar w-1.5 h-[40%] opacity-80"></div>
+<!-- Scanline -->
+<div class="absolute left-1/3 top-0 bottom-0 w-px bg-primary shadow-[0_0_10px_#99f7ff]"></div>
+</div>
+</div>
+</section>
+<!-- Token Inspector (Right Sidebar) -->
+<aside class="w-80 bg-surface-container border-l border-outline-variant/20 p-6 flex flex-col gap-8 overflow-y-auto">
+<div>
+<h3 class="font-headline text-xs font-bold uppercase tracking-widest text-primary mb-6">Token Inspector</h3>
+<div class="space-y-6">
+<!-- Opacity Slider -->
+<div class="space-y-3">
+<div class="flex justify-between items-end">
+<label class="font-headline text-[10px] text-on-surface-variant uppercase tracking-wider">Global Opacity</label>
+<span class="text-xs font-headline text-primary">85%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-lowest rounded-full overflow-hidden relative">
+<div class="absolute left-0 top-0 h-full w-[85%] bg-primary"></div>
+</div>
+</div>
+<!-- Glow Intensity Slider -->
+<div class="space-y-3">
+<div class="flex justify-between items-end">
+<label class="font-headline text-[10px] text-on-surface-variant uppercase tracking-wider">Glow Intensity</label>
+<span class="text-xs font-headline text-primary">1.2 rad</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-lowest rounded-full overflow-hidden relative">
+<div class="absolute left-0 top-0 h-full w-[60%] bg-primary shadow-[0_0_8px_#99f7ff]"></div>
+</div>
+</div>
+<!-- Corner Geometry -->
+<div class="space-y-3">
+<label class="font-headline text-[10px] text-on-surface-variant uppercase tracking-wider">Corner Geometry</label>
+<div class="grid grid-cols-4 gap-2">
+<button class="aspect-square rounded-none border border-primary bg-primary/10 flex items-center justify-center">
+<span class="w-3 h-3 border-t-2 border-l-2 border-primary"></span>
+</button>
+<button class="aspect-square rounded-sm border border-outline-variant hover:border-primary transition-colors"></button>
+<button class="aspect-square rounded-md border border-outline-variant hover:border-primary transition-colors"></button>
+<button class="aspect-square rounded-full border border-outline-variant hover:border-primary transition-colors"></button>
+</div>
+</div>
+</div>
+</div>
+<!-- CSS Variables Export -->
+<div class="flex-1 flex flex-col min-h-0">
+<div class="flex items-center justify-between mb-3">
+<label class="font-headline text-[10px] text-on-surface-variant uppercase tracking-wider">Export Syntax</label>
+<span class="material-symbols-outlined text-sm text-outline cursor-pointer hover:text-primary">content_copy</span>
+</div>
+<div class="flex-1 bg-black/40 rounded p-4 font-mono text-[11px] text-primary/70 overflow-y-auto border border-white/5 leading-relaxed">
+<span class="text-secondary">:root</span> {<br/>
+                      <span class="text-on-surface-variant">--astra-primary:</span> <span class="text-primary">#99F7FF</span>;<br/>
+                      <span class="text-on-surface-variant">--astra-glow:</span> <span class="text-primary">1.2rem</span>;<br/>
+                      <span class="text-on-surface-variant">--astra-radius:</span> <span class="text-primary">0px</span>;<br/>
+                      <span class="text-on-surface-variant">--astra-bg:</span> <span class="text-primary">#13121C</span>;<br/>
+                      <span class="text-on-surface-variant">--astra-knob-dim:</span> <span class="text-primary">80px</span>;<br/>
+                    }
+                </div>
+</div>
+<button class="bg-primary text-on-primary py-4 font-headline font-bold text-xs uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(153,247,255,0.2)] hover:shadow-[0_0_30px_rgba(153,247,255,0.4)] transition-all">
+                Sync to Hardware
+            </button>
+</aside>
+</main>
+<!-- Contextual Footer (Status Bar) -->
+<footer class="h-8 bg-surface-container-lowest flex items-center px-4 justify-between text-[10px] font-headline tracking-widest text-outline border-t border-white/5 uppercase">
+<div class="flex gap-6">
+<span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Connected: ASTRA_RACK_01</span>
+<span>Latency: 1.2ms</span>
+</div>
+<div class="flex gap-4">
+<span>Project: NEON_OBSERVATORY_THEME</span>
+<span class="text-secondary">Saving...</span>
+</div>
+</footer>
+</body></html>
