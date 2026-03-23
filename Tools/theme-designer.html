@@ -3902,7 +3902,22 @@ const App = {
     });
     document.getElementById('export-copy').addEventListener('click', () => {
       const code = document.getElementById('export-code').textContent;
-      navigator.clipboard?.writeText(code).then(() => Toast.show('Copied to clipboard'));
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(code).then(() => Toast.show('Copied to clipboard')).catch(() => {
+          // Fallback for file:// protocol
+          const ta = document.createElement('textarea');
+          ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+          document.body.removeChild(ta);
+          Toast.show('Copied to clipboard');
+        });
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        Toast.show('Copied to clipboard');
+      }
     });
     document.getElementById('export-download').addEventListener('click', () => {
       const code = document.getElementById('export-code').textContent;
