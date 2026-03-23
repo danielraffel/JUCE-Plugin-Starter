@@ -3177,11 +3177,20 @@ const ColorSystemUI = {
   },
 
   bindEvents() {
-    // Palette row click to expand
+    // Palette row click to expand — and make it the accent if it's chromatic
     document.querySelectorAll('.cs-palette-row').forEach(row => {
       row.addEventListener('click', () => {
         const key = row.dataset.palette;
         this.expandedPalette = this.expandedPalette === key ? null : key;
+
+        // If expanding a chromatic palette (not neutral/success/warning/error),
+        // reassign semantic accent roles to this palette
+        const neutralKeys = ['neutral', 'slate', 'gray', 'zinc', 'stone'];
+        const semanticKeys = ['success', 'warning', 'error'];
+        if (this.expandedPalette && !neutralKeys.includes(key) && !semanticKeys.includes(key)) {
+          this.setAccentPalette(key);
+        }
+
         this.render();
       });
     });
@@ -3223,6 +3232,25 @@ const ColorSystemUI = {
     });
   },
 
+  // Reassign all accent-pointing semantic roles to a new palette
+  setAccentPalette(newAccentKey) {
+    const cs = ColorSystemModel.current;
+    const oldAccentKey = this.getAccentKey();
+    if (newAccentKey === oldAccentKey) return;
+
+    for (const mode of ['dark', 'light']) {
+      const roles = cs.semanticRoles[mode];
+      if (!roles) continue;
+      for (const [role, mapping] of Object.entries(roles)) {
+        if (mapping.palette === oldAccentKey) {
+          mapping.palette = newAccentKey;
+        }
+      }
+    }
+    // Also run harmony to update neutral
+    this.applyHarmony(newAccentKey);
+  },
+
   // When accent changes, auto-derive neutral using harmony mode
   applyHarmony(changedPalette) {
     const cs = ColorSystemModel.current;
@@ -3259,9 +3287,15 @@ const ColorSystemUI = {
     cs.meta.harmony = harmonyMode;
   },
 
-  // Find the accent palette key (first chromatic palette)
+  // Find the accent palette key by checking what AccentPrimary points to
   getAccentKey() {
     const cs = ColorSystemModel.current;
+    // Check what the AccentPrimary semantic role points to
+    const accentRole = cs.semanticRoles?.dark?.AccentPrimary;
+    if (accentRole?.palette && cs.palettes[accentRole.palette]) {
+      return accentRole.palette;
+    }
+    // Fallback: first chromatic palette
     for (const key of Object.keys(cs.palettes)) {
       if (!['neutral', 'slate', 'gray', 'zinc', 'stone', 'success', 'warning', 'error'].includes(key)) {
         return key;
@@ -3296,6 +3330,11 @@ const ColorSystemUI = {
       this.applyHarmony(accentKey);
       this.render();
       Toast.show('Harmony: ' + e.target.value);
+    });
+
+    // Mode change — auto-apply immediately
+    document.getElementById('cs-mode').addEventListener('change', () => {
+      this.render(); // render() auto-applies via applyLive()
     });
 
     // Template selector
