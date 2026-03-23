@@ -16,7 +16,7 @@
 
 - [x] 6. **Higher resolution gamut rendering** — Current step=2 pixels looks blocky. Use step=1 or render at canvas resolution with ImageData for smooth gradients.
 
-- [ ] 7. **HEX/RGB/HSL/OKLCH format dropdown** — Add a dropdown next to the L/C/H inputs that switches between display formats: HEX (#AA88FF), RGB (R:170 G:136 B:255), HSL (H:260 S:100% L:77%), OKLCH (L:60.6 C:0.25 H:292.7). Default to OKLCH.
+- [x] 7. **HEX/RGB/HSL/OKLCH format dropdown** — Add a dropdown next to the L/C/H inputs that switches between display formats: HEX (#AA88FF), RGB (R:170 G:136 B:255), HSL (H:260 S:100% L:77%), OKLCH (L:60.6 C:0.25 H:292.7). Default to OKLCH.
 
 - [x] 8. **Chroma slider gradient updates dynamically** — When hue or lightness changes, the chroma slider background gradient should update to show the current color going from gray to max saturation.
 
@@ -48,7 +48,7 @@
 
 ## Accessibility
 
-- [ ] 20. **"Aa" accessibility button** — Add an Aa button next to the chroma slider that shows a preview of the current color as text on white and black backgrounds with contrast ratios.
+- [x] 20. **"Aa" accessibility button** — Add an Aa button next to the chroma slider that shows a preview of the current color as text on white and black backgrounds with contrast ratios.
 
 - [ ] 21. **Contrast warnings in preview** — When text/background combinations in the plugin preview fail WCAG AA, show a small warning icon on the affected component.
 

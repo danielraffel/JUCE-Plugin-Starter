@@ -3374,8 +3374,20 @@ const ColorSystemUI = {
           <span class="cs-slider-label">C</span>
           <input type="range" class="cs-slider cs-slider-chroma" min="0" max="0.35" step="0.001" value="${base.C}" data-palette="${key}" data-param="C"
             style="background:linear-gradient(to right, ${OklchEngine.oklchToHex(base.L, 0, base.H)}, ${OklchEngine.oklchToHex(base.L, Math.min(0.3, base.C * 1.5 || 0.2), base.H)})">
+          <button class="info-btn" style="width:24px;height:24px;font-size:11px;font-weight:700;border-radius:6px;flex-shrink:0" title="Contrast preview" onclick="event.stopPropagation();InfoModal.show('contrast-preview-${key}')">Aa</button>
         </div>
-        <div class="cs-oklch-inputs">
+        `;
+        // Format dropdown + values
+        const hex = OklchEngine.oklchToHex(base.L, base.C, base.H);
+        const rgb = OklchEngine.oklchToSrgb(base.L, base.C, base.H);
+        html += `<div class="cs-oklch-inputs" style="align-items:flex-end">
+          <div class="cs-oklch-input" style="flex:0 0 auto">
+            <select class="palette-mode-select cs-format-select" data-palette="${key}" style="font-size:9px;padding:3px 4px;width:56px">
+              <option value="oklch" selected>OKLCH</option>
+              <option value="hex">HEX</option>
+              <option value="rgb">RGB</option>
+            </select>
+          </div>
           <div class="cs-oklch-input"><label>L</label><input type="text" value="${(base.L * 100).toFixed(1)}" data-palette="${key}" data-param="L"></div>
           <div class="cs-oklch-input"><label>C</label><input type="text" value="${base.C.toFixed(3)}" data-palette="${key}" data-param="C-input"></div>
           <div class="cs-oklch-input"><label>H</label><input type="text" value="${base.H.toFixed(1)}" data-palette="${key}" data-param="H-input"></div>
@@ -3761,6 +3773,39 @@ const InfoModal = {
     const title = document.getElementById('info-title');
     const body = document.getElementById('info-body');
     overlay.style.display = 'flex';
+
+    // Dynamic contrast preview for Aa button
+    if (topic.startsWith('contrast-preview-')) {
+      const palKey = topic.replace('contrast-preview-', '');
+      const pal = ColorSystemModel.current?.palettes[palKey];
+      if (pal) {
+        const hex = OklchEngine.oklchToHex(pal.baseColor.L, pal.baseColor.C, pal.baseColor.H);
+        const onWhite = OklchEngine.contrastRatio(hex, '#FFFFFF').toFixed(1);
+        const onBlack = OklchEngine.contrastRatio(hex, '#000000').toFixed(1);
+        const levelWhite = OklchEngine.contrastLevel(parseFloat(onWhite));
+        const levelBlack = OklchEngine.contrastLevel(parseFloat(onBlack));
+        title.textContent = 'Accessibility Preview';
+        body.innerHTML = `
+          <h4>Contrast Ratios for ${palKey} (${hex})</h4>
+          <div style="display:flex;gap:12px;margin:12px 0">
+            <div style="flex:1;background:#FFFFFF;padding:16px;border-radius:8px;text-align:center">
+              <div style="color:${hex};font-size:20px;font-weight:700">Aa</div>
+              <div style="color:#333;font-size:10px;margin-top:4px">${onWhite}:1 <strong>${levelWhite}</strong></div>
+              <div style="color:#666;font-size:9px">on white</div>
+            </div>
+            <div style="flex:1;background:#000000;padding:16px;border-radius:8px;text-align:center">
+              <div style="color:${hex};font-size:20px;font-weight:700">Aa</div>
+              <div style="color:#ccc;font-size:10px;margin-top:4px">${onBlack}:1 <strong>${levelBlack}</strong></div>
+              <div style="color:#888;font-size:9px">on black</div>
+            </div>
+          </div>
+          <p>WCAG AA requires 4.5:1 for normal text, 3:1 for large text.<br>AAA requires 7:1 for normal text, 4.5:1 for large text.</p>
+        `;
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; }, { once: true });
+        return;
+      }
+    }
+
     title.textContent = this.topics[topic]?.title || 'Info';
     body.innerHTML = this.topics[topic]?.html || '';
 
