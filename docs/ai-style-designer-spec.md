@@ -153,14 +153,29 @@ Extends the v0.1 color system with geometry, effects, gradients, typography:
 - Send button + Enter to submit
 
 ### Phase 3: Claude Agent Connection
-- Investigate Assembly app patterns for Max account auth
-- Options:
-  a) Claude Code Agent SDK (spawns local process)
-  b) Anthropic API with OAuth (needs API key — user doesn't want this)
-  c) MCP bridge to running Claude Code session
-  d) Tauri app wrapping Claude Code subprocess
-- The agent receives: current style JSON + selected component + prompt + optional image
-- Returns: modified style JSON (or diff)
+**DECISION (from research):** Use `@anthropic-ai/claude-code` Agent SDK via a tiny local Node.js server.
+
+Architecture:
+```
+theme-designer.html (browser)
+    ↓ fetch('http://localhost:3847/chat', { prompt, styleJSON, context, image })
+    ↓
+tools/style-agent-server.mjs (~100 lines Node.js)
+    ↓ import { query } from '@anthropic-ai/claude-code'
+    ↓ Uses existing Claude Code auth (Max account, no API key)
+    ↓
+Claude Code Agent (spawned subprocess)
+    ↓ Receives: system prompt + style JSON + component context + image
+    ↓ Returns: modified style JSON diff
+    ↓
+Server streams response back to browser via SSE
+```
+
+- Server file: `tools/style-agent-server.mjs` — start with `node tools/style-agent-server.mjs`
+- No API key needed — uses Claude Code's existing auth
+- Agent receives: current style JSON + selected component + prompt + optional base64 image
+- Returns: JSON diff of changed style properties
+- Server auto-starts when theme designer opens (or user runs it manually)
 
 ### Phase 4: Style Application Engine
 - Parse returned style JSON
