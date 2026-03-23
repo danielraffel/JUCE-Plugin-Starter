@@ -1,230 +1,153 @@
 # Ralph Loop: AI-Powered Aesthetic Style Designer
 
-## Branch Setup
+## Branch
 
-Create branch `feature/ai-style-designer` from tag v0.1 on `feature/theme-designer`.
+`feature/ai-style-designer` (already created from `feature/theme-designer` at v0.1)
 
 ## Task
 
-Build an AI-powered aesthetic style designer that extends the v0.1 color theme designer. Users describe visual styles in natural language via a chat box, and the component showcase updates live. Uses Claude Code Agent SDK with existing Max account auth.
+Build an AI-powered aesthetic style designer that extends the v0.1 color theme designer. Users describe visual styles in natural language via a chat box, and the component showcase updates live. Uses Claude Code Agent SDK with existing Max account auth in a Tauri 2 app.
 
 Follow phases in order. After each phase, open the HTML to test. Commit after each phase.
 
+## Key Files
+
+- `Tools/theme-designer.html` — existing theme designer (4100+ lines, vanilla JS/CSS)
+- `Tools/themes/default.json` — existing color system tokens
+- `scripts/generate_theme.py` — existing C++ codegen
+- `docs/ai-style-designer-spec.md` — full feature spec
+- `/Users/danielraffel/Code/Assembly/docs/proposal/` — Tauri 2 architecture reference
+- `/Users/danielraffel/Code/visage/` — Visage framework (style properties reference)
+
+## Phase 0: Scaffold
+
+- [ ] Create `tauri/` directory for the Tauri app
+- [ ] Create `tauri/CLAUDE.md` with project conventions
+- [ ] Create `tauri/docs/proposal/work-items.md` with all work items from Phases 0-3
+- [ ] Create `tauri/docs/LEARNINGS.md` (empty initially)
+- [ ] Init Tauri 2 project: `pnpm create tauri-app` with vanilla frontend
+- [ ] Copy `Tools/theme-designer.html` as the Tauri frontend source
+- [ ] Verify `pnpm install && pnpm tauri dev` opens the theme designer in a Tauri window
+- [ ] Commit scaffold
+
 ## Phase 1: Style System JSON Format
 
-Extend the existing color system with geometry, effects, gradients, and typography sections.
-
-**File: Tools/themes/default.stylesystem.json**
-
-Add these sections alongside the existing colorSystem:
-
-```json
-{
-  "geometry": {
-    "global": { "cornerRadius": 6, "borderWidth": 1, "shadowBlur": 8, "shadowOffsetY": 4 },
-    "knob": { "arcWidth": 4, "arcStyle": "rounded", "thumbSize": 4 },
-    "button": { "cornerRadius": 6, "borderWidth": 0, "paddingX": 14, "paddingY": 6 },
-    "toggle": { "trackWidth": 32, "trackHeight": 18, "trackRounding": 9, "thumbSize": 14 },
-    "slider": { "trackHeight": 6, "trackRounding": 3, "thumbSize": 14 },
-    "textInput": { "cornerRadius": 6, "borderWidth": 1, "paddingX": 8, "paddingY": 6 }
-  },
-  "effects": {
-    "bloom": { "enabled": false, "size": 0, "intensity": 0 },
-    "shadows": { "enabled": true, "blur": 8, "offsetX": 0, "offsetY": 4, "alpha": 0.4 }
-  },
-  "gradients": {
-    "buttonGradient": { "enabled": false, "type": "linear", "angle": 180, "stops": [] },
-    "knobGradient": { "enabled": false, "type": "radial", "stops": [] }
-  },
-  "typography": {
-    "headingSize": 16, "bodySize": 13, "labelSize": 10, "fontWeight": "normal"
-  }
-}
-```
-
-Update `Tools/theme-designer.html`:
-- Add CSS custom properties for geometry: `--st-knob-arc-width`, `--st-button-rounding`, etc.
-- Preview components read geometry vars alongside color vars
-- Canvas knobs use `--st-knob-arc-width` for arc thickness
-- Buttons use `--st-button-rounding` for border-radius
-- Toggles use `--st-toggle-track-rounding`
-- Export panel adds "Style System" tab
+- [ ] Create `Tools/themes/default.stylesystem.json` extending color system with:
+  - `geometry` section (cornerRadius, borderWidth, shadowBlur, knob/button/toggle/slider/textInput specific)
+  - `effects` section (bloom, shadows)
+  - `gradients` section (buttonGradient, knobGradient)
+  - `typography` section (headingSize, bodySize, labelSize, fontWeight)
+- [ ] Add CSS custom properties to theme-designer.html: `--st-knob-arc-width`, `--st-button-rounding`, `--st-toggle-rounding`, etc.
+- [ ] Preview components read geometry vars: canvas knobs use `--st-knob-arc-width`, buttons use `--st-button-rounding`, etc.
+- [ ] Style system embedded in HTML as `<script id="style-system-data">` (like theme-data)
+- [ ] Export panel adds "Style System" tab outputting full .stylesystem.json
+- [ ] Commit
 
 ## Phase 2: Chat UI
 
-Add a chat panel to the right side of the theme designer.
+- [ ] Add chat panel to right side of theme designer (tab: Inspector | Chat)
+- [ ] Chat has: message list, text input with placeholder, send button, image upload button
+- [ ] Messages: user prompts right-aligned, agent responses left-aligned, in rounded bubbles
+- [ ] Show "Editing: [component]" or "Editing: All" based on inspector selection
+- [ ] Image upload converts to base64, shows thumbnail in chat
+- [ ] Loading/typing indicator animation while agent processes
+- [ ] Chat history stored in memory (persists during session)
+- [ ] "Export current" button visible in chat header
+- [ ] Commit
 
-**In the HTML:**
-- Replace or add alongside the inspector panel
-- Toggle between Inspector and Chat views with tabs
-- Chat has: message list, text input, send button, image upload button
-- Messages show: user prompts (right-aligned), agent responses (left-aligned)
-- Show "Editing: [component name]" or "Editing: All" based on inspector selection
-- Image upload converts to base64 for sending to agent
-- Loading indicator while agent processes
+## Phase 3: Tauri Backend + Claude Agent
 
-**CSS:**
-- Chat messages styled like a modern chat (rounded bubbles, subtle backgrounds)
-- Image previews shown inline
-- Typing indicator animation
+- [ ] Add Rust backend with Tauri IPC commands:
+  - `chat_send(prompt, style_json, selected_component, image_base64)` → streams response
+  - `chat_health()` → checks if agent is available
+- [ ] Node.js sidecar using `@anthropic-ai/claude-code` Agent SDK:
+  - Receives prompt + current style JSON + component context + optional image
+  - System prompt teaches Claude about the style system format
+  - Returns JSON diff of changed properties
+  - Streams response via Tauri events
+- [ ] Frontend receives streamed agent response, parses JSON diff
+- [ ] Apply diff to current style system: merge changes, update CSS vars, redraw canvases
+- [ ] Flash changed components in preview
+- [ ] Auto-capture preview thumbnail after each style change (canvas.toDataURL)
+- [ ] Display thumbnail in chat inline below agent response, clickable to restore
+- [ ] Chat history with thumbnails = version history (click any to restore that state)
+- [ ] Commit
 
-## Phase 3: Tauri App with Agent Backend
+## Phase 3b: Inspector-Scoped Prompts
 
-Create a Tauri 2 app that bundles the theme designer as frontend and runs the Claude Code Agent SDK in a sidecar Node.js process (or directly in Rust via the Anthropic API).
+- [ ] When component is Cmd+clicked, chat context includes component name and current style props
+- [ ] Agent system prompt updated: "User selected [Component]. Only modify that component's properties."
+- [ ] UI shows "Editing: Rotary Knob" badge in chat header
+- [ ] No selection = "Editing: All Components"
+- [ ] Commit
 
-**Architecture:**
-```
-┌─────────────────────────────────┐
-│ Tauri App (single binary)       │
-│                                 │
-│ Frontend: theme-designer.html   │
-│   ↕ Tauri IPC (invoke/events)   │
-│ Backend: Rust + Node.js sidecar │
-│   ↕ Claude Code Agent SDK      │
-│   ↕ Uses Max account auth      │
-└─────────────────────────────────┘
-```
+## Phase 3c: Extended Export
 
-**Scaffold:** Use the Assembly proposal at `/Users/danielraffel/Code/Assembly/docs/proposal/` as reference for Tauri 2 + React setup. But our frontend is the existing vanilla HTML theme designer (not React).
+- [ ] `.stylesystem.json` export includes all sections (colors + geometry + effects + gradients + typography)
+- [ ] Update `scripts/generate_theme.py` to read geometry/effects sections
+- [ ] Generate Visage C++ code for widget construction params, post-effect setup, layout config
+- [ ] Update juce-dev skill (`skills/visage-theme/SKILL.md`) with style system knowledge
+- [ ] Commit
 
-Create `apps/desktop/` with:
+## CODEX DELEGATION (OPTIONAL)
 
-```javascript
-import { query } from '@anthropic-ai/claude-code';
-import { createServer } from 'http';
+- Use `/codex <task>` or `codex exec --full-auto <task>` for parallel work when it would speed things up.
+- Good candidates for Codex delegation:
+  - Writing tests for code you just wrote
+  - Implementing a component while you work on another
+  - Code review of completed work items
+  - Extracting utilities into shared modules
+- Do NOT delegate to Codex when:
+  - The task depends on something you are currently building
+  - Multiple agents would edit the same file
+  - The task requires your current conversation context
+- When delegating, run Codex in background and continue your own work.
+- Check Codex output before marking the work item complete.
 
-const PORT = 3847;
+## EACH ITERATION MUST
 
-const SYSTEM_PROMPT = `You are an aesthetic style designer for audio plugin UIs.
-You receive the current style system JSON and modify it based on the user's request.
-Return ONLY a JSON object with the changed properties (a diff, not the full style).
-The style system has sections: colorSystem, geometry, effects, gradients, typography.
-When the user describes an aesthetic ("80s Macintosh", "neon cyberpunk", "warm analog"),
-translate that into specific property changes across all sections.
-If a component is selected, only change properties relevant to that component.`;
+1. Re-read `tauri/CLAUDE.md` (create if missing)
+2. Re-read `tauri/docs/proposal/work-items.md`
+3. Check `tauri/docs/LEARNINGS.md` for relevant prior learnings
+4. Identify the NEXT incomplete item in sequential order
+5. Implement it (and only it, unless it's trivial and the next item is closely related)
+6. Write E2E tests for newly implemented features (if applicable)
+7. Verify code compiles (`pnpm install && pnpm build` in `tauri/`)
+8. Run tests if applicable (`pnpm test && pnpm test:e2e`)
+9. If anything interesting was learned, add to `LEARNINGS.md`
+10. Commit changes (if any)
+11. Update `work-items.md` status
+12. Re-check which items remain
 
-createServer(async (req, res) => {
-  if (req.method === 'POST' && req.url === '/chat') {
-    // Parse body, call Claude Code Agent SDK, stream response
-    // ...
-  }
-  if (req.method === 'GET' && req.url === '/health') {
-    res.end('ok');
-  }
-}).listen(PORT);
-```
+## COMPLETION CONDITION
 
-**In the HTML:**
-- Chat send button POSTs to `http://localhost:3847/chat`
-- Body: `{ prompt, styleJSON, selectedComponent, image }`
-- Response: SSE stream of agent messages
-- Parse final JSON diff from agent response
-- Apply diff to current style system
-- Update preview live
+- `tauri/docs/proposal/work-items.md` contains ZERO unimplemented Phase 0 through Phase 3 items
+- All Phase 0, Phase 1, Phase 2, and Phase 3 features are fully implemented and verified
+- Code builds successfully (`pnpm tauri build`)
+- Unit tests pass (`pnpm test`)
+- E2E tests pass (`pnpm test:e2e`)
+- Code and commit history comply with `tauri/CLAUDE.md`
+- `tauri/docs/LEARNINGS.md` has been maintained throughout
 
-**Startup:** User runs `node tools/style-agent-server.mjs` before using chat.
-Or: add a "Start Agent" button in the UI that checks if server is running.
+## IF STUCK
 
-## Phase 4: Style Application Engine
-
-When the agent returns a style diff JSON:
-1. Merge diff into current style system
-2. Apply color changes via existing CSSBridge
-3. Apply geometry changes to CSS custom properties
-4. Canvas components re-read geometry vars on redraw
-5. Apply effect changes (shadow CSS, bloom approximation)
-6. Apply typography changes
-7. Flash changed components
-8. Save to undo history
-
-## Phase 5: Chat-Based Version History
-
-The chat IS the version history. No separate version management UI needed.
-
-**Each agent response that changes the style automatically:**
-1. Captures a small preview thumbnail (canvas snapshot of the preview area)
-2. Saves the complete style JSON at that point
-3. Displays the thumbnail inline in the chat
-
-**UX:**
-```
-You: "Make it look like warm analog synth"
-Agent: Applied warm analog style (12 changes)
-[Preview thumbnail — clickable]
-
-You: "Make the knobs more metallic"
-Agent: Updated knob gradients (3 changes)
-[Preview thumbnail — clickable]
-
-You: "Try neon cyberpunk instead"
-Agent: Applied neon cyberpunk style (18 changes)
-[Preview thumbnail — clickable]
-```
-
-- Click any thumbnail → restores that exact style state in the preview
-- Current state highlighted with a border
-- Chat scrolls naturally — version history grows with the conversation
-- "Export current" button exports whatever version is currently active
-- Thumbnails stored as small data URLs in the chat history
-- Chat history persisted to localStorage (survives page reload)
-
-## Phase 6: Inspector-Scoped Prompts
-
-When a component is Cmd+clicked:
-- Chat context includes: component name, type, framework, current style properties
-- Agent system prompt updated: "The user has selected [Component]. Only modify properties for this component type."
-- Response diff is scoped to that component's properties
-- UI shows "Editing: Rotary Knob" badge in chat header
-
-When no component is selected:
-- Agent applies changes globally
-- UI shows "Editing: All Components"
-
-## Phase 7: Stitch Integration (Optional)
-
-- "Preview with Stitch" button in chat
-- Sends current style description to Stitch SDK
-- Stitch generates a mockup image
-- Image displayed in chat as a reference
-- User can say "apply this" to derive style from the Stitch output
-
-## Phase 8: Extended Export
-
-- `.stylesystem.json` includes all sections (colors + geometry + effects + gradients + typography)
-- Update `scripts/generate_theme.py` to read geometry/effects and generate C++ code for:
-  - Visage widget construction parameters
-  - Post-effect setup code
-  - Layout configuration
-- Update juce-dev skill with style system knowledge
-- Claude Code's `/juce-dev:theme --apply` can read .stylesystem.json
-
-## Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| `tools/style-agent-server.mjs` | Create — local Claude agent server |
-| `tools/theme-designer.html` | Modify — add chat UI, geometry CSS vars, style application |
-| `tools/themes/default.stylesystem.json` | Create — full style system with geometry/effects |
-| `scripts/generate_theme.py` | Modify — handle geometry/effects in codegen |
-| `docs/ai-style-designer-spec.md` | Reference — full spec |
-
-## Implementation Order for Ralph Loop
-
-1. Phase 1: Style system JSON + geometry CSS vars in preview
-2. Phase 2: Chat UI panel with message list and input
-3. Phase 3: Local agent server with Claude Code SDK
-4. Phase 4: Style application (parse agent response, apply to preview)
-5. Phase 5: Version history with comparison
-6. Phase 6: Inspector-scoped context in prompts
-7. Phase 7: Stitch preview (if SDK available)
-8. Phase 8: Extended export and codegen
+After 20 iterations, document in `LEARNINGS.md`:
+- What is blocked
+- Why
+- What was attempted
+- What assumption may be wrong
 
 ## Success Criteria
 
 1. Type "warm analog synth" → preview updates with rounded knobs, subtle shadows, warm palette
 2. Cmd+click knob → type "more skeuomorphic" → only knobs change
 3. Upload screenshot → type "like this" → preview approximates style
-4. Switch between "80s Mac" and "Neon" variations
-5. Export .stylesystem.json → includes geometry + effects
+4. Click any chat thumbnail → restores that version
+5. Export .stylesystem.json → includes geometry + effects + colors
 6. No API key needed — uses Claude Code auth
-7. Server is <100 lines of Node.js
+7. Tauri app builds cross-platform
+
+ONLY WHEN ALL CONDITIONS ARE MET:
+Output exactly: DONE
+
+--completion-promise "DONE" --max-iterations 120
