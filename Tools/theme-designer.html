@@ -357,6 +357,72 @@ button.tb-btn-accent:hover {
 /* Hidden native color picker */
 .hidden-picker { position: absolute; visibility: hidden; width: 0; height: 0; }
 
+/* Inline palette color picker dropdown */
+.palette-picker-dropdown {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 50;
+  background: var(--app-panel-raised);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.palette-picker-dropdown::-webkit-scrollbar { width: 4px; }
+.palette-picker-dropdown::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 2px; }
+.pp-section-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-text-dim);
+  margin: 6px 0 3px;
+}
+.pp-section-label:first-child { margin-top: 0; }
+.pp-shade-row {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+.pp-swatch {
+  width: 16px; height: 16px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.pp-swatch:hover {
+  transform: scale(1.3);
+  border-color: rgba(255,255,255,0.5);
+  z-index: 1;
+}
+.pp-custom-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--app-border-subtle);
+  align-items: center;
+}
+.pp-custom-row input[type="color"] {
+  width: 24px; height: 24px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+.pp-custom-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
+.pp-custom-row input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+.pp-custom-label {
+  font-size: 9px;
+  color: var(--app-text-dim);
+}
+
 /* ── CENTER (Preview) ───────────────────── */
 #center-panel {
   grid-area: center;
@@ -2461,12 +2527,77 @@ const LeftPanel = {
       });
     });
 
-    // Color swatch click → open native picker
+    // Color swatch click → open inline palette picker
     document.querySelectorAll('.token-swatch').forEach(swatch => {
-      swatch.addEventListener('click', () => {
+      swatch.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Close any existing dropdown
+        document.querySelectorAll('.palette-picker-dropdown').forEach(d => d.remove());
+
         const row = swatch.closest('.token-row');
-        const picker = row.querySelector('.hidden-picker');
-        if (picker) picker.click();
+        const section = row.dataset.section;
+        const tokenName = row.dataset.token;
+        row.style.position = 'relative';
+
+        // Build dropdown with palette shade swatches
+        const dd = document.createElement('div');
+        dd.className = 'palette-picker-dropdown';
+        let html = '';
+
+        const cs = ColorSystemModel.current;
+        if (cs?.palettes) {
+          for (const [palName, palette] of Object.entries(cs.palettes)) {
+            html += `<div class="pp-section-label">${palName}</div><div class="pp-shade-row">`;
+            for (const step of ShadeGenerator.SHADE_STEPS) {
+              const shade = palette.shades[step];
+              if (shade) {
+                html += `<div class="pp-swatch" style="background:${shade.hex}" title="${palName}-${step}: ${shade.hex}" data-hex="${shade.hex}"></div>`;
+              }
+            }
+            html += '</div>';
+          }
+        }
+
+        // Custom color option (fallback to OS picker)
+        html += `<div class="pp-custom-row">
+          <input type="color" class="pp-custom-color" value="${row.querySelector('.token-hex')?.value || '#888888'}">
+          <span class="pp-custom-label">Custom color...</span>
+        </div>`;
+
+        dd.innerHTML = html;
+        row.appendChild(dd);
+
+        // Swatch click → apply color
+        dd.querySelectorAll('.pp-swatch').forEach(sw => {
+          sw.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const hex = sw.dataset.hex;
+            const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
+            TokenRegistry.setColor(section, tokenName, hex, alpha);
+            swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+            row.querySelector('.token-hex').value = hex;
+            row.querySelector('.hidden-picker').value = hex;
+            dd.remove();
+          });
+        });
+
+        // Custom color picker
+        dd.querySelector('.pp-custom-color')?.addEventListener('input', (ev) => {
+          const hex = ev.target.value.toUpperCase();
+          const alpha = TokenRegistry.theme[section]?.[tokenName]?.alpha ?? 1;
+          TokenRegistry.setColor(section, tokenName, hex, alpha);
+          swatch.style.background = ColorConverter.hexAlphaToRgba(hex, alpha);
+          row.querySelector('.token-hex').value = hex;
+        });
+
+        // Close on click outside
+        const closeHandler = (ev) => {
+          if (!dd.contains(ev.target) && ev.target !== swatch) {
+            dd.remove();
+            document.removeEventListener('click', closeHandler);
+          }
+        };
+        setTimeout(() => document.addEventListener('click', closeHandler), 10);
       });
     });
 
