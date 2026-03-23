@@ -70,10 +70,10 @@
 - [x] 4.7 Commit Phase 4
 
 ## Phase 5: Testing
-- [ ] 5.1 Add tauri-plugin-webdriver or automation setup
-- [ ] 5.2 Configure automation mode in tauri.conf.json
-- [ ] 5.3 Write E2E tests (app launch, chat, model select, context, export)
-- [ ] 5.4 Commit Phase 5
+- [x] 5.1 Add tauri-plugin-webdriver or automation setup
+- [x] 5.2 Configure automation mode in tauri.conf.json
+- [x] 5.3 Write E2E tests (app launch, chat, model select, context, export)
+- [x] 5.4 Commit Phase 5
 
 ## Phase 6: Polish
 - [ ] 6.1 Parse agent response: separate explanation from JSON diff

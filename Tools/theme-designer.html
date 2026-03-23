@@ -4970,11 +4970,14 @@ const ChatUI = {
       if (response.diff && Object.keys(response.diff).length > 0) {
         // Apply the style diff
         this.applyStyleDiff(response.diff);
-        // Capture thumbnail
-        const thumbnail = this.capturePreviewThumbnail();
-        const msg = this.messages[this.messages.length] || {};
-        // Add agent message with thumbnail
-        this.addMessage('agent', response.message || 'Style updated', null, response.diff, thumbnail);
+        // Build change summary
+        const changes = this.summarizeChanges(response.diff);
+        const msg = response.message ? response.message + '\n\n' + changes : changes;
+        // Capture thumbnail after applying changes
+        setTimeout(() => {
+          const thumbnail = this.capturePreviewThumbnail();
+          this.addMessage('agent', msg, null, response.diff, thumbnail);
+        }, 100); // small delay for canvas redraws
       } else {
         this.addMessage('agent', response.message || 'No changes applied');
       }
@@ -5102,6 +5105,23 @@ const ChatUI = {
       diff.typography = { headingSize: 13, bodySize: 11, labelSize: 9 };
     }
     return diff;
+  },
+
+  summarizeChanges(diff) {
+    const changes = [];
+    const flatten = (obj, prefix = '') => {
+      for (const [k, v] of Object.entries(obj)) {
+        const path = prefix ? `${prefix}.${k}` : k;
+        if (v && typeof v === 'object' && !Array.isArray(v)) flatten(v, path);
+        else changes.push(`${path}: ${v}`);
+      }
+    };
+    flatten(diff);
+    const count = changes.length;
+    if (count === 0) return 'No properties changed';
+    const preview = changes.slice(0, 4).join(', ');
+    const more = count > 4 ? ` +${count - 4} more` : '';
+    return `Updated ${count} properties: ${preview}${more}`;
   },
 
   applyStyleDiff(diff) {
