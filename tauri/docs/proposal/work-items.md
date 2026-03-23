@@ -61,13 +61,13 @@
 - [x] 3c.5 Commit Phase 3c
 
 ## Phase 4: Real Agent Connection (claude CLI, Max subscription)
-- [ ] 4.1 Verify claude CLI from Rust: spawn "claude --version"
-- [ ] 4.2 Add model dropdown to chat header: Opus 4.6 (default) / Sonnet 4.6
-- [ ] 4.3 Rust chat_send: spawn claude CLI directly, stream NDJSON, emit Tauri events
-- [ ] 4.4 Frontend: listen for Tauri events, accumulate response, extract JSON diff, apply
-- [ ] 4.5 Settings: CLI status check, model selection
-- [ ] 4.6 Error handling: CLI not found, timeout, parse failure
-- [ ] 4.7 Commit Phase 4
+- [x] 4.1 Verify claude CLI from Rust: spawn "claude --version"
+- [x] 4.2 Add model dropdown to chat header: Opus 4.6 (default) / Sonnet 4.6
+- [x] 4.3 Rust chat_send: spawn claude CLI directly, stream NDJSON, emit Tauri events
+- [x] 4.4 Frontend: listen for Tauri events, accumulate response, extract JSON diff, apply
+- [x] 4.5 Settings: CLI status check, model selection
+- [x] 4.6 Error handling: CLI not found, timeout, parse failure
+- [x] 4.7 Commit Phase 4
 
 ## Phase 5: Testing
 - [ ] 5.1 Add tauri-plugin-webdriver or automation setup

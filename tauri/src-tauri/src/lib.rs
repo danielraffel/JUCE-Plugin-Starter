@@ -103,7 +103,7 @@ async fn chat_health() -> Result<String, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -113,7 +113,13 @@ pub fn run() {
                 )?;
             }
             Ok(())
-        })
+        });
+
+    // Enable WebDriver in debug builds
+    #[cfg(debug_assertions)]
+    let builder = builder.plugin(tauri_plugin_webdriver::init());
+
+    builder
         .invoke_handler(tauri::generate_handler![chat_send, chat_health])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
