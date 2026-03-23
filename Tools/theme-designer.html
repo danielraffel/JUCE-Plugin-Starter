@@ -1101,29 +1101,23 @@ button.tb-btn:disabled:hover {
   background: linear-gradient(to right, var(--app-text-dim), var(--app-accent));
 }
 .cs-shade-ramp-large {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
-  margin: 8px 0 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 4px;
 }
 .cs-shade-large {
-  aspect-ratio: 1;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   position: relative;
   cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
-  min-height: 32px;
+  transition: transform 0.12s, box-shadow 0.12s;
 }
-.cs-shade-large:hover { transform: scale(1.08); z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
-.cs-shade-large.anchor { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.6); }
+.cs-shade-large:hover { transform: scale(1.1); z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+.cs-shade-large.anchor { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.4); }
 .cs-shade-large .shade-label {
-  position: absolute;
-  bottom: -13px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 7px;
-  color: var(--app-text-dim);
-  white-space: nowrap;
+  display: none; /* shown on hover via tooltip */
 }
 .cs-shade-large .contrast-badge {
   position: absolute;
@@ -3211,35 +3205,47 @@ const GamutPicker = {
     const boundary = this._gamutBoundary(hue, h, maxC);
 
     // Dark background
-    ctx.fillStyle = '#141417';
+    ctx.fillStyle = '#18181B';
     ctx.fillRect(0, 0, w, h);
 
-    // Draw in-gamut pixels
-    // Use step=2 for speed during drag, full resolution on idle
-    const step = 2;
-    for (let py = 0; py < h; py += step) {
+    // Build gamut clip path (triangle shape)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, 0); // white point (L=1, C=0)
+    for (let py = 0; py < h; py += 2) {
+      const px = (boundary[py] / maxC) * w;
+      ctx.lineTo(Math.min(w, px + 1), py);
+    }
+    ctx.lineTo(0, h); // black point (L=0, C=0)
+    ctx.closePath();
+    ctx.clip();
+
+    // Render gamut pixels using ImageData for smooth gradients
+    const imgData = ctx.createImageData(w, h);
+    const data = imgData.data;
+    for (let py = 0; py < h; py++) {
       const L = 1 - (py / h);
-      const maxCAtL = boundary[py] || 0;
-      const maxPx = (maxCAtL / maxC) * w;
-      for (let px = 0; px < maxPx; px += step) {
+      for (let px = 0; px < w; px++) {
         const C = (px / w) * maxC;
         const { r, g, b } = OklchEngine.oklchToSrgb(L, C, hue);
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.fillRect(px, py, step, step);
+        const i = (py * w + px) * 4;
+        data[i] = Math.max(0, Math.min(255, r));
+        data[i + 1] = Math.max(0, Math.min(255, g));
+        data[i + 2] = Math.max(0, Math.min(255, b));
+        data[i + 3] = 255;
       }
     }
+    ctx.putImageData(imgData, 0, 0);
+    ctx.restore();
 
-    // Draw gamut boundary line (triangular shape)
+    // Draw gamut boundary line
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.lineWidth = 1;
-    // Top: white point (L=1, C=0) = top-left
     ctx.moveTo(0, 0);
-    for (let py = 0; py < h; py++) {
-      const px = (boundary[py] / maxC) * w;
-      ctx.lineTo(px, py);
+    for (let py = 0; py < h; py += 2) {
+      ctx.lineTo((boundary[py] / maxC) * w, py);
     }
-    // Bottom: black point (L=0, C=0) = bottom-left
     ctx.lineTo(0, h);
     ctx.closePath();
     ctx.stroke();
@@ -3247,12 +3253,14 @@ const GamutPicker = {
     // Crosshair lines through current position
     const dotX = (currentC / maxC) * w;
     const dotY = (1 - currentL) * h;
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 0.5;
+    ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.moveTo(dotX, 0); ctx.lineTo(dotX, h); // vertical
-    ctx.moveTo(0, dotY); ctx.lineTo(w, dotY); // horizontal
+    ctx.moveTo(dotX, 0); ctx.lineTo(dotX, h);
+    ctx.moveTo(0, dotY); ctx.lineTo(w, dotY);
     ctx.stroke();
+    ctx.setLineDash([]);
   },
 
   // Position the dot on the canvas based on L and C
@@ -3372,6 +3380,7 @@ const ColorSystemUI = {
           <div class="cs-oklch-input"><label>C</label><input type="text" value="${base.C.toFixed(3)}" data-palette="${key}" data-param="C-input"></div>
           <div class="cs-oklch-input"><label>H</label><input type="text" value="${base.H.toFixed(1)}" data-palette="${key}" data-param="H-input"></div>
         </div>
+        <div style="font-size:11px;font-weight:600;color:var(--app-accent);margin-top:8px">Shades</div>
         <div class="cs-shade-ramp-large">`;
         for (const step of ShadeGenerator.SHADE_STEPS) {
           const s = palette.shades[step];
@@ -3379,11 +3388,12 @@ const ColorSystemUI = {
           const level = OklchEngine.contrastLevel(contrast);
           const isAnchor = step === 500;
           html += `<div class="cs-shade-large ${isAnchor ? 'anchor' : ''}" style="background:${s.hex}" title="${step}: ${s.hex}&#10;L:${(s.L*100).toFixed(1)}% C:${s.C.toFixed(3)} H:${s.H.toFixed(0)}">
-            <span class="shade-label">${step}</span>
+            ${isAnchor ? '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.8);box-shadow:0 0 3px rgba(0,0,0,0.5)"></div>' : ''}
             ${level !== 'fail' ? `<span class="contrast-badge">${level}</span>` : ''}
           </div>`;
         }
         html += `</div>`;
+        html += `<div style="font-size:9px;color:var(--app-text-dim);margin-top:16px;line-height:1.4">Click a shade to override its generated color, or modify the base color to regenerate the entire palette.</div>`;
       }
       html += `</div>`;
     }
@@ -3475,8 +3485,24 @@ const ColorSystemUI = {
             GamutPicker.positionDot(dot, canvas, palette.baseColor.L, palette.baseColor.C);
             dot.style.background = OklchEngine.oklchToHex(palette.baseColor.L, palette.baseColor.C, palette.baseColor.H);
           }
+          // Update chroma slider gradient for new hue
+          const chromaSlider = e.target.closest('.cs-palette-editor')?.querySelector('[data-param="C"]');
+          if (chromaSlider) {
+            const grayHex = OklchEngine.oklchToHex(palette.baseColor.L, 0, palette.baseColor.H);
+            const satHex = OklchEngine.oklchToHex(palette.baseColor.L, 0.25, palette.baseColor.H);
+            chromaSlider.style.background = `linear-gradient(to right, ${grayHex}, ${satHex})`;
+          }
         }
-        if (param === 'C') palette.baseColor.C = parseFloat(e.target.value);
+        if (param === 'C') {
+          palette.baseColor.C = parseFloat(e.target.value);
+          // Update gamut dot position
+          const canvas = document.getElementById(`gamut-${key}`);
+          const dot = document.getElementById(`gamut-dot-${key}`);
+          if (canvas && dot) {
+            GamutPicker.positionDot(dot, canvas, palette.baseColor.L, palette.baseColor.C);
+            dot.style.background = OklchEngine.oklchToHex(palette.baseColor.L, palette.baseColor.C, palette.baseColor.H);
+          }
+        }
         const { L, C, H } = palette.baseColor;
         ColorSystemModel.updatePaletteBase(key, L, C, H);
         this.applyHarmony(key);
@@ -3684,8 +3710,8 @@ const ColorSystemUI = {
       Toast.show('Template loaded: ' + ColorSystemModel.current.meta.name);
     });
 
-    // Apply button
-    document.getElementById('cs-apply').addEventListener('click', () => {
+    // Apply button (removed from UI but kept as safety fallback)
+    document.getElementById('cs-apply')?.addEventListener('click', () => {
       const mode = document.getElementById('cs-mode').value;
       ColorSystemModel.applyToTheme(mode);
     });
@@ -3923,9 +3949,9 @@ const App = {
       const code = document.getElementById('export-code').textContent;
       const tab = ExportPanel.currentTab;
       const name = (TokenRegistry.theme.meta?.name || 'theme').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const ext = { json: '.json', css: '.css', cpp: '.h', palette: '.h' }[tab] || '.txt';
-      const mime = { json: 'application/json', css: 'text/css', cpp: 'text/plain', palette: 'text/plain' }[tab] || 'text/plain';
-      const filename = tab === 'palette' ? `${name}-palette${ext}` : `${name}${ext}`;
+      const ext = { json: '.json', css: '.css', cpp: '.h', palette: '.h', oklch: '.css', colorsystem: '.colorsystem.json' }[tab] || '.txt';
+      const mime = { json: 'application/json', css: 'text/css', cpp: 'text/plain', palette: 'text/plain', oklch: 'text/css', colorsystem: 'application/json' }[tab] || 'text/plain';
+      const filename = tab === 'palette' ? `${name}-palette${ext}` : tab === 'colorsystem' ? `${name}${ext}` : `${name}${ext}`;
       const blob = new Blob([code], { type: mime });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

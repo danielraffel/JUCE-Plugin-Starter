@@ -2,39 +2,39 @@
 
 ## Critical Fixes
 
-- [ ] 1. **Live preview on ALL interactions** — Verify every slider, dropdown, and drag updates the plugin preview in real-time. Test: hue slider, chroma slider, gamut drag, mode dropdown, harmony dropdown, template dropdown. Fix any path that doesn't call applyLive().
+- [x] 1. **Live preview on ALL interactions** — Verify every slider, dropdown, and drag updates the plugin preview in real-time. Test: hue slider, chroma slider, gamut drag, mode dropdown, harmony dropdown, template dropdown. Fix any path that doesn't call applyLive().
 
-- [ ] 2. **Export modal works** — Verify clicking Export button opens modal, all 6 tabs generate content, Copy button works on file://, Download button saves correct file type.
+- [x] 2. **Export modal works** — Verify clicking Export button opens modal, all 6 tabs generate content, Copy button works on file://, Download button saves correct file type.
 
-- [ ] 3. **Import works** — Verify Import button opens file picker, loading a .json theme applies it correctly.
+- [x] 3. **Import works** — Verify Import button opens file picker, loading a .json theme applies it correctly.
 
-- [ ] 4. **Save/Load color system works** — Verify Save downloads .colorsystem.json, Load imports and applies it.
+- [x] 4. **Save/Load color system works** — Verify Save downloads .colorsystem.json, Load imports and applies it.
 
 ## Color Picker Polish (match supacolors)
 
-- [ ] 5. **Triangular gamut clipping** — Clip the gamut canvas to the actual triangle shape (white top-left, black bottom-left, max chroma right). Out-of-gamut area should be dark/transparent, not filled with colors.
+- [x] 5. **Triangular gamut clipping** — Clip the gamut canvas to the actual triangle shape (white top-left, black bottom-left, max chroma right). Out-of-gamut area should be dark/transparent, not filled with colors.
 
-- [ ] 6. **Higher resolution gamut rendering** — Current step=2 pixels looks blocky. Use step=1 or render at canvas resolution with ImageData for smooth gradients.
+- [x] 6. **Higher resolution gamut rendering** — Current step=2 pixels looks blocky. Use step=1 or render at canvas resolution with ImageData for smooth gradients.
 
 - [ ] 7. **HEX/RGB/HSL/OKLCH format dropdown** — Add a dropdown next to the L/C/H inputs that switches between display formats: HEX (#AA88FF), RGB (R:170 G:136 B:255), HSL (H:260 S:100% L:77%), OKLCH (L:60.6 C:0.25 H:292.7). Default to OKLCH.
 
-- [ ] 8. **Chroma slider gradient updates dynamically** — When hue or lightness changes, the chroma slider background gradient should update to show the current color going from gray to max saturation.
+- [x] 8. **Chroma slider gradient updates dynamically** — When hue or lightness changes, the chroma slider background gradient should update to show the current color going from gray to max saturation.
 
-- [ ] 9. **Ring dot style** — The gamut dot should be a hollow ring (white circle outline with shadow), not a filled dot. Match supacolors' dot style.
+- [x] 9. **Ring dot style** — The gamut dot should be a hollow ring (white circle outline with shadow), not a filled dot. Match supacolors' dot style.
 
-- [ ] 10. **Crosshair lines** — Horizontal and vertical guide lines through the dot position on the gamut canvas, like supacolors.
+- [x] 10. **Crosshair lines** — Horizontal and vertical guide lines through the dot position on the gamut canvas, like supacolors.
 
 ## Shade Swatches Polish
 
-- [ ] 11. **2-row grid layout** — Shades in two rows: first row = 50,100,200,300,400,500,600 / second row = 700,800,900,950. Match supacolors' 7+4 layout.
+- [x] 11. **2-row grid layout** — Shades in two rows: first row = 50,100,200,300,400,500,600 / second row = 700,800,900,950. Match supacolors' 7+4 layout.
 
-- [ ] 12. **Larger swatches** — Each swatch ~40-48px square with 8px rounded corners.
+- [x] 12. **Larger swatches** — Each swatch ~40-48px square with 8px rounded corners.
 
-- [ ] 13. **Anchor dot on base shade** — Show a white dot inside the anchor shade (500 by default) like supacolors.
+- [x] 13. **Anchor dot on base shade** — Show a white dot inside the anchor shade (500 by default) like supacolors.
 
 - [ ] 14. **Click shade to override** — Clicking a shade swatch should open a mini color picker to override that specific shade. Show an indicator (different border) for overridden vs auto-generated shades.
 
-- [ ] 15. **"Shades" label** — Add a "Shades" heading above the swatch grid and the text "Click a shade to override its generated color, or modify the base color to regenerate the entire palette." below.
+- [x] 15. **"Shades" label** — Add a "Shades" heading above the swatch grid and the text "Click a shade to override its generated color, or modify the base color to regenerate the entire palette." below.
 
 ## Templates
 
@@ -54,7 +54,7 @@
 
 ## UX Improvements
 
-- [ ] 22. **Remove "Apply to Theme" button** — Everything should auto-apply. Keep only "Generate Opposite Mode", "Save", "Load".
+- [x] 22. **Remove "Apply to Theme" button** — Everything should auto-apply. Keep only "Generate Opposite Mode", "Save", "Load".
 
 - [ ] 23. **Palette reordering** — Ability to drag palettes to reorder them in the list.
 
