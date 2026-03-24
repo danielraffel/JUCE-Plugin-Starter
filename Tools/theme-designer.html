@@ -679,7 +679,8 @@ button.tb-btn-accent:hover {
   font-family: var(--app-font);
   font-size: var(--st-body-size, 11px);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all 0.3s ease;
+  box-shadow: var(--st-box-shadow, none);
 }
 .preview-btn-accent {
   font-weight: 600;
@@ -2077,6 +2078,22 @@ const StyleSystem = {
       preview.style.setProperty('--st-body-size', t.bodySize + 'px');
       preview.style.setProperty('--st-label-size', t.labelSize + 'px');
       preview.style.setProperty('--st-small-size', t.smallSize + 'px');
+    }
+    // Effects — also map to CSS vars
+    const eff = this.current?.effects;
+    if (eff?.shadows) {
+      const sh = eff.shadows;
+      preview.style.setProperty('--st-shadow-blur', (sh.blur || 0) + 'px');
+      preview.style.setProperty('--st-shadow-offset-x', (sh.offsetX || 0) + 'px');
+      preview.style.setProperty('--st-shadow-offset-y', (sh.offsetY || 0) + 'px');
+      preview.style.setProperty('--st-shadow-alpha', sh.alpha || 0);
+      // Apply box-shadow to preview components
+      if (sh.enabled) {
+        const shadowCSS = `${sh.offsetX || 0}px ${sh.offsetY || 4}px ${sh.blur || 8}px rgba(0,0,0,${sh.alpha || 0.4})`;
+        preview.style.setProperty('--st-box-shadow', shadowCSS);
+      } else {
+        preview.style.setProperty('--st-box-shadow', 'none');
+      }
     }
     // Trigger canvas redraws (knobs read vars)
     CanvasRenderer.scheduleRedraw();
@@ -4968,11 +4985,15 @@ const ChatUI = {
     this.callAgent(text, this.pendingImage).then(response => {
       this.showTyping(false);
       if (response.diff && Object.keys(response.diff).length > 0) {
+        // Debug: log the actual diff
+        console.log('Style diff received:', JSON.stringify(response.diff, null, 2));
         // Apply the style diff
         this.applyStyleDiff(response.diff);
         // Build change summary
         const changes = this.summarizeChanges(response.diff);
-        const msg = response.message ? response.message + '\n\n' + changes : changes;
+        // Clean up message — remove code fences and artifacts
+        let cleanMsg = (response.message || '').replace(/```json/g, '').replace(/```/g, '').trim();
+        const msg = cleanMsg ? cleanMsg + '\n\n' + changes : changes;
         // Capture thumbnail after applying changes
         setTimeout(() => {
           const thumbnail = this.capturePreviewThumbnail();
@@ -5162,12 +5183,16 @@ const ChatUI = {
       }
     }
 
-    // Force re-render preview to pick up any changes
+    // Force re-render preview
     PreviewRenderer.drawWaveform();
     PreviewRenderer.drawMeters();
 
-    // Flash preview
-    document.querySelectorAll('.preview-section').forEach(el => {
+    // Flash only the relevant component area (not entire preview)
+    const selectedComponent = ChatUI.selectedComponent;
+    const selector = selectedComponent
+      ? `[data-component="${selectedComponent}"]`
+      : '.preview-section';
+    document.querySelectorAll(selector).forEach(el => {
       el.classList.remove('token-changed-flash');
       void el.offsetWidth;
       el.classList.add('token-changed-flash');

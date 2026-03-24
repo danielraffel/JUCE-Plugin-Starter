@@ -53,13 +53,25 @@ async fn chat_send(
         // Parse the JSON output format: {"type":"result","result":"..."}
         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&response) {
             if let Some(result) = parsed.get("result").and_then(|r| r.as_str()) {
-                // Extract JSON diff from the result text
-                if let Some(json_start) = result.find('{') {
-                    if let Some(json_end) = result.rfind('}') {
-                        let json_str = &result[json_start..=json_end];
+                // Strip markdown code fences if present
+                let clean = result
+                    .replace("```json", "")
+                    .replace("```", "");
+
+                // Extract JSON diff: find the outermost { } pair
+                if let Some(json_start) = clean.find('{') {
+                    if let Some(json_end) = clean.rfind('}') {
+                        let json_str = &clean[json_start..=json_end];
                         if let Ok(diff) = serde_json::from_str::<serde_json::Value>(json_str) {
+                            // Everything before the JSON is the human explanation
+                            let explanation = clean[..json_start].trim()
+                                .trim_end_matches('\n')
+                                .to_string();
+                            // Everything after is also explanation
+                            let after = clean[json_end+1..].trim().to_string();
+                            let full_msg = if after.is_empty() { explanation } else { format!("{}\n{}", explanation, after) };
                             return Ok(serde_json::json!({
-                                "message": result[..json_start].trim().to_string(),
+                                "message": if full_msg.is_empty() { "Style updated".to_string() } else { full_msg },
                                 "diff": diff
                             }).to_string());
                         }
