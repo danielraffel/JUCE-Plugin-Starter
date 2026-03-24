@@ -1497,6 +1497,28 @@ button.tb-btn:disabled:hover {
   border-top: 1px solid var(--app-border-subtle);
   line-height: 1.3;
 }
+.chat-snapshot-wrap {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.chat-restore-btn {
+  background: var(--app-panel-raised);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  color: var(--app-text-muted);
+  font-size: 9px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-family: var(--app-font);
+  transition: all 0.15s;
+}
+.chat-restore-btn:hover {
+  background: var(--app-accent-dim);
+  color: var(--app-accent);
+  border-color: var(--app-accent);
+}
 .chat-typing {
   display: flex;
   gap: 4px;
@@ -5090,7 +5112,12 @@ const ChatUI = {
         html += `<br><img class="chat-img-preview" src="${m.imageDataUrl}" alt="uploaded">`;
       }
       if (m.thumbnail) {
-        html += `<br><img class="chat-thumb" src="${m.thumbnail}" alt="preview" data-timestamp="${m.timestamp}">`;
+        html += `<div class="chat-snapshot-wrap">`;
+        html += `<img class="chat-thumb" src="${m.thumbnail}" alt="preview" data-timestamp="${m.timestamp}">`;
+        if (m.styleSnapshot) {
+          html += `<button class="chat-restore-btn" data-timestamp="${m.timestamp}">Restore this style</button>`;
+        }
+        html += `</div>`;
       }
       html += '</div>';
       return html;
@@ -5099,15 +5126,14 @@ const ChatUI = {
     // Scroll to bottom
     container.scrollTop = container.scrollHeight;
 
-    // Bind thumbnail clicks
-    container.querySelectorAll('.chat-thumb').forEach(thumb => {
-      thumb.addEventListener('click', () => {
-        const ts = parseInt(thumb.dataset.timestamp);
+    // Bind restore buttons and thumbnail clicks
+    container.querySelectorAll('.chat-restore-btn, .chat-thumb').forEach(el => {
+      el.addEventListener('click', () => {
+        const ts = parseInt(el.dataset.timestamp);
         const msg = this.messages.find(m => m.timestamp === ts);
         if (msg?.styleSnapshot) {
-          // Restore style from snapshot
-          StyleSystem.load(msg.styleSnapshot);
-          Toast.show('Restored style from chat history');
+          this.restoreFullSnapshot(msg.styleSnapshot);
+          Toast.show('Restored style snapshot');
         }
       });
     });
@@ -5343,10 +5369,54 @@ const ChatUI = {
     }
   },
 
+  captureFullSnapshot() {
+    // Capture BOTH color tokens AND style system so restore is complete
+    return {
+      styleSystem: JSON.parse(JSON.stringify(StyleSystem.current)),
+      colorTokens: TokenRegistry.theme ? JSON.parse(JSON.stringify({
+        colors: TokenRegistry.theme.colors,
+        custom: TokenRegistry.theme.custom,
+        values: TokenRegistry.theme.values,
+        juce: TokenRegistry.theme.juce,
+      })) : null,
+    };
+  },
+
+  restoreFullSnapshot(snapshot) {
+    if (!snapshot) return;
+    // Restore style system
+    if (snapshot.styleSystem) {
+      StyleSystem.load(snapshot.styleSystem);
+    }
+    // Restore color tokens
+    if (snapshot.colorTokens) {
+      for (const section of ['colors', 'custom', 'juce']) {
+        const tokens = snapshot.colorTokens[section];
+        if (tokens) {
+          for (const [name, data] of Object.entries(tokens)) {
+            if (typeof data.value === 'string' && data.value.startsWith('#')) {
+              TokenRegistry.setColor(section, name, data.value, data.alpha ?? 1, true);
+            }
+          }
+        }
+      }
+      // Restore values
+      if (snapshot.colorTokens.values) {
+        for (const [name, data] of Object.entries(snapshot.colorTokens.values)) {
+          TokenRegistry.setValue(name, data.value);
+        }
+      }
+      CSSBridge.syncAll();
+    }
+    CanvasRenderer.scheduleRedraw();
+    PreviewRenderer.drawWaveform();
+    PreviewRenderer.drawMeters();
+  },
+
   addMessage(role, text, imageDataUrl, diff, thumbnail, changeSummary) {
     const msg = { role, text, imageDataUrl, diff, thumbnail, changeSummary, timestamp: Date.now() };
     if (diff && Object.keys(diff).length > 0) {
-      msg.styleSnapshot = JSON.parse(JSON.stringify(StyleSystem.current));
+      msg.styleSnapshot = this.captureFullSnapshot();
     }
     this.messages.push(msg);
     this.renderMessages();
