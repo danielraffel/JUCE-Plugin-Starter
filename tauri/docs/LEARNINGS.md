@@ -34,3 +34,9 @@ This file tracks important learnings during development.
 - Cards and panels needed updating from `--app-radius` to `--st-corner-radius` in CSS rules.
 - Toggle `.on` thumb position was hardcoded to `left: 16px` — needs `calc()` to track dynamic width.
 - `drawKnob()` now reads `--st-knob-size` for dynamic sizing and applies canvas shadow when `--st-shadow-alpha > 0`.
+- The BIGGEST factor in visual quality is including COLOR TOKENS in the system prompt. Without them, Claude can only tweak geometry (subtle). With all 36+ color tokens listed, Claude changes backgrounds, accents, text — producing dramatic transformations (126 properties for "80s Macintosh").
+- The system prompt needs concrete full examples (like the 80s Mac example with 30+ color values) to teach Claude the expected diff format and ambition level.
+- `buildFullContext()` sends both current color tokens AND style system to Claude so it can see what it's working with.
+- WebDriver plugin uses port 4445 by default, but mcp-tauri-automation expects 4444. Set `TAURI_WEBDRIVER_PORT=4444` env var when launching.
+- Automated tests via `execute_script` work well: set a StyleSystem property, call applyToCSS(), read getComputedStyle() — confirms the pipeline end-to-end.
+- Raw string literals containing `"#` sequences need `r##"..."##` (two hashes) in Rust since `"#` terminates `r#"..."#`.

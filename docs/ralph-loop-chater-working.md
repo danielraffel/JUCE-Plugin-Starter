@@ -42,12 +42,12 @@ Phase C: Fix Image Attachment UX
 
 Phase D: Validate with Automated Testing
 
-- [ ] D.1 Verify tauri-plugin-webdriver starts: run `pnpm tauri dev` and check if localhost:4445 responds
-- [ ] D.2 Use mcp-tauri-automation to launch app and verify it loads
-- [ ] D.3 Use execute_script to test: set StyleSystem.current.geometry.button.cornerRadius = 20, call StyleSystem.applyToCSS(), read computed border-radius on a preview button, verify it's 20px
-- [ ] D.4 Use type_text + click_element to send "make it very rounded" in chat (requires real Claude), capture_screenshot to verify visual change
-- [ ] D.5 Document results in tauri/docs/LEARNINGS.md
-- [ ] D.6 Commit Phase D
+- [x] D.1 Verify tauri-plugin-webdriver starts: run `pnpm tauri dev` and check if localhost:4445 responds
+- [x] D.2 Use mcp-tauri-automation to launch app and verify it loads
+- [x] D.3 Use execute_script to test: set StyleSystem.current.geometry.button.cornerRadius = 20, call StyleSystem.applyToCSS(), read computed border-radius on a preview button, verify it's 20px
+- [x] D.4 Use type_text + click_element to send "make it very rounded" in chat (requires real Claude), capture_screenshot to verify visual change
+- [x] D.5 Document results in tauri/docs/LEARNINGS.md
+- [x] D.6 Commit Phase D
 
 EACH ITERATION MUST
 
