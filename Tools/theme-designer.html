@@ -685,6 +685,27 @@ button.tb-btn-accent:hover {
 .preview-btn-accent {
   font-weight: 600;
 }
+/* Button style variations via --st-button-style */
+#preview-area[data-button-style="raised"] .preview-btn {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.3), inset 0 -2px 0 rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.2);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+}
+#preview-area[data-button-style="outlined"] .preview-btn {
+  background: transparent !important;
+  border: 2px solid currentColor;
+  box-shadow: none;
+}
+#preview-area[data-button-style="glossy"] .preview-btn {
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 50%, rgba(0,0,0,0.05) 51%, rgba(0,0,0,0.1) 100%) !important;
+  border: 1px solid rgba(0,0,0,0.25);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+}
+#preview-area[data-button-style="beveled"] .preview-btn {
+  border: 2px outset;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4), inset -1px -1px 0 rgba(0,0,0,0.3);
+}
 
 .toggle-row {
   display: flex;
@@ -716,6 +737,24 @@ button.tb-btn-accent:hover {
 }
 .toggle-track.on .toggle-thumb { left: calc(var(--st-toggle-track-width, 32px) - var(--st-toggle-thumb-size, 14px) - 2px); }
 .toggle-label { font-size: var(--st-label-size, 10px); color: var(--app-text-muted); }
+/* Toggle style variations via --st-toggle-style */
+#preview-area[data-toggle-style="checkbox"] .toggle-track {
+  width: 16px !important; height: 16px !important;
+  border-radius: 2px !important; border: 2px solid;
+}
+#preview-area[data-toggle-style="checkbox"] .toggle-thumb {
+  width: 8px !important; height: 8px !important;
+  border-radius: 1px !important; top: 2px !important; left: 2px !important;
+}
+#preview-area[data-toggle-style="checkbox"] .toggle-track.on .toggle-thumb { left: 2px !important; }
+#preview-area[data-toggle-style="rocker"] .toggle-track {
+  border-radius: 3px !important; border: 2px solid rgba(0,0,0,0.3);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+#preview-area[data-toggle-style="rocker"] .toggle-thumb {
+  border-radius: 2px !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+}
 
 .input-row {
   display: flex;
@@ -950,6 +989,8 @@ button.tb-btn-accent:hover {
   border-left: 1px solid var(--app-border);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
 }
 .inspector-header {
   padding: 8px 12px;
@@ -1417,7 +1458,7 @@ button.tb-btn:disabled:hover {
 }
 .right-tab:hover { color: var(--app-text); }
 .right-tab.active { color: var(--app-accent); border-bottom-color: var(--app-accent); }
-.right-tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.right-tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
 .right-tab-content.active { display: flex; }
 
 /* ── CHAT UI ───────────────────────────── */
@@ -1425,6 +1466,7 @@ button.tb-btn:disabled:hover {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 .chat-context-bar {
   padding: 6px 10px;
@@ -1543,6 +1585,7 @@ button.tb-btn:disabled:hover {
   padding: 8px;
   border-top: 1px solid var(--app-border-subtle);
   align-items: flex-end;
+  flex-shrink: 0;
 }
 #chat-input {
   flex: 1;
@@ -2128,6 +2171,15 @@ const StyleSystem = {
       } else {
         preview.style.setProperty('--st-box-shadow', 'none');
       }
+    }
+    // Widget style modes (data attributes drive CSS variations)
+    const ws = this.current.widgetStyles;
+    if (ws) {
+      if (ws.knobStyle) preview.style.setProperty('--st-knob-style', ws.knobStyle);
+      if (ws.buttonStyle) preview.dataset.buttonStyle = ws.buttonStyle;
+      else delete preview.dataset.buttonStyle;
+      if (ws.toggleStyle) preview.dataset.toggleStyle = ws.toggleStyle;
+      else delete preview.dataset.toggleStyle;
     }
     // Trigger canvas redraws (knobs read vars)
     CanvasRenderer.scheduleRedraw();
@@ -2797,7 +2849,6 @@ const CanvasRenderer = {
     const preview = document.getElementById('preview-area');
     const style = getComputedStyle(preview);
 
-    // Read size from style system (allows AI to change knob size)
     const size = parseFloat(style.getPropertyValue('--st-knob-size')) || 56;
     canvas.style.width = size + 'px';
     canvas.style.height = size + 'px';
@@ -2809,66 +2860,119 @@ const CanvasRenderer = {
     const arcColor = style.getPropertyValue('--vt-KnobArc').trim() || '#AA88FF';
     const arcBg = style.getPropertyValue('--vt-KnobArcBackground').trim() || '#3E4245';
     const thumbColor = style.getPropertyValue('--vt-KnobThumb').trim() || 'rgba(255,255,255,0.9)';
-
-    // Apply shadow if enabled
-    const shadowAlpha = parseFloat(style.getPropertyValue('--st-shadow-alpha')) || 0;
-    if (shadowAlpha > 0) {
-      const shadowBlur = parseFloat(style.getPropertyValue('--st-shadow-blur')) || 0;
-      const shadowX = parseFloat(style.getPropertyValue('--st-shadow-offset-x')) || 0;
-      const shadowY = parseFloat(style.getPropertyValue('--st-shadow-offset-y')) || 0;
-      ctx.shadowColor = `rgba(0,0,0,${shadowAlpha})`;
-      ctx.shadowBlur = shadowBlur;
-      ctx.shadowOffsetX = shadowX;
-      ctx.shadowOffsetY = shadowY;
-      // Draw shadow circle behind the knob
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, size / 2 - 8, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.01)';
-      ctx.fill();
-      // Reset shadow for crisp arcs
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
-    }
-
+    const knobStyle = style.getPropertyValue('--st-knob-style')?.trim() || 'arc';
+    const lineWidth = parseFloat(style.getPropertyValue('--st-knob-arc-width')) || 4;
     const cx = size / 2, cy = size / 2;
     const r = size / 2 - 6;
-    const lineWidth = parseFloat(style.getPropertyValue('--st-knob-arc-width')) || 4;
     const startAngle = Math.PI * 0.75;
     const endAngle = Math.PI * 2.25;
     const valAngle = startAngle + (endAngle - startAngle) * value;
 
-    // Background arc
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, startAngle, endAngle);
-    ctx.strokeStyle = arcBg;
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = 'round';
-    ctx.stroke();
+    // Shadow (applies to all styles)
+    const shadowAlpha = parseFloat(style.getPropertyValue('--st-shadow-alpha')) || 0;
+    if (shadowAlpha > 0) {
+      ctx.save();
+      ctx.shadowColor = `rgba(0,0,0,${shadowAlpha})`;
+      ctx.shadowBlur = parseFloat(style.getPropertyValue('--st-shadow-blur')) || 0;
+      ctx.shadowOffsetX = parseFloat(style.getPropertyValue('--st-shadow-offset-x')) || 0;
+      ctx.shadowOffsetY = parseFloat(style.getPropertyValue('--st-shadow-offset-y')) || 0;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.01)'; ctx.fill();
+      ctx.restore();
+    }
 
-    // Value arc
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, startAngle, valAngle);
-    ctx.strokeStyle = arcColor;
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = 'round';
-    ctx.stroke();
+    if (knobStyle === 'filled') {
+      // FILLED STYLE — solid circle with pie-wedge fill and pointer line
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = arcBg; ctx.fill();
+      // Filled wedge showing value
+      ctx.beginPath(); ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, startAngle, valAngle); ctx.closePath();
+      ctx.fillStyle = arcColor; ctx.fill();
+      // Center circle
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = arcBg; ctx.fill();
+      // Pointer line
+      const px = cx + Math.cos(valAngle) * r * 0.85;
+      const py = cy + Math.sin(valAngle) * r * 0.85;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py);
+      ctx.strokeStyle = thumbColor; ctx.lineWidth = 2; ctx.stroke();
+    } else if (knobStyle === 'notched') {
+      // NOTCHED STYLE — circle with tick marks around the outside
+      ctx.beginPath(); ctx.arc(cx, cy, r - 2, 0, Math.PI * 2);
+      ctx.fillStyle = arcBg; ctx.fill();
+      ctx.strokeStyle = arcColor; ctx.lineWidth = 1.5; ctx.stroke();
+      // Draw tick marks
+      const numTicks = 11;
+      for (let i = 0; i <= numTicks; i++) {
+        const t = i / numTicks;
+        const a = startAngle + (endAngle - startAngle) * t;
+        const inner = t <= value ? r - 6 : r - 4;
+        const outer = r + 1;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+        ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+        ctx.strokeStyle = t <= value ? arcColor : arcBg;
+        ctx.lineWidth = t <= value ? 2.5 : 1; ctx.stroke();
+      }
+      // Pointer
+      const px = cx + Math.cos(valAngle) * (r - 10);
+      const py = cy + Math.sin(valAngle) * (r - 10);
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py);
+      ctx.strokeStyle = thumbColor; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = thumbColor; ctx.fill();
+    } else if (knobStyle === 'glossy') {
+      // GLOSSY/3D STYLE — gradient-filled circle with highlight and thick arc
+      const grad = ctx.createRadialGradient(cx - 4, cy - 4, 0, cx, cy, r);
+      grad.addColorStop(0, lightenColor(arcBg, 60));
+      grad.addColorStop(0.5, arcBg);
+      grad.addColorStop(1, darkenColor(arcBg, 40));
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad; ctx.fill();
+      // Glossy highlight
+      const hlGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
+      hlGrad.addColorStop(0, 'rgba(255,255,255,0.35)');
+      hlGrad.addColorStop(0.5, 'rgba(255,255,255,0.05)');
+      hlGrad.addColorStop(1, 'rgba(0,0,0,0.1)');
+      ctx.beginPath(); ctx.arc(cx, cy, r - 1, 0, Math.PI * 2);
+      ctx.fillStyle = hlGrad; ctx.fill();
+      // Ring border
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.strokeStyle = darkenColor(arcBg, 30); ctx.lineWidth = 1.5; ctx.stroke();
+      // Arc on top
+      ctx.beginPath(); ctx.arc(cx, cy, r + 3, startAngle, endAngle);
+      ctx.strokeStyle = darkenColor(arcBg, 20); ctx.lineWidth = lineWidth; ctx.lineCap = 'round'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, r + 3, startAngle, valAngle);
+      ctx.strokeStyle = arcColor; ctx.lineWidth = lineWidth; ctx.lineCap = 'round'; ctx.stroke();
+      // Pointer dot
+      const tx = cx + Math.cos(valAngle) * (r - 8);
+      const ty = cy + Math.sin(valAngle) * (r - 8);
+      ctx.beginPath(); ctx.arc(tx, ty, 3, 0, Math.PI * 2);
+      ctx.fillStyle = thumbColor; ctx.fill();
+    } else {
+      // DEFAULT ARC STYLE — clean arc with thumb dot
+      ctx.beginPath(); ctx.arc(cx, cy, r, startAngle, endAngle);
+      ctx.strokeStyle = arcBg; ctx.lineWidth = lineWidth; ctx.lineCap = 'round'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, r, startAngle, valAngle);
+      ctx.strokeStyle = arcColor; ctx.lineWidth = lineWidth; ctx.lineCap = 'round'; ctx.stroke();
+      const thumbR = parseFloat(style.getPropertyValue('--st-knob-thumb-size')) || 4;
+      const tx = cx + Math.cos(valAngle) * r;
+      const ty = cy + Math.sin(valAngle) * r;
+      ctx.beginPath(); ctx.arc(tx, ty, thumbR, 0, Math.PI * 2);
+      ctx.fillStyle = thumbColor; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = arcBg; ctx.fill();
+    }
 
-    // Thumb dot
-    const tx = cx + Math.cos(valAngle) * r;
-    const ty = cy + Math.sin(valAngle) * r;
-    ctx.beginPath();
-    const thumbR = parseFloat(style.getPropertyValue('--st-knob-thumb-size')) || 4;
-    ctx.arc(tx, ty, thumbR, 0, Math.PI * 2);
-    ctx.fillStyle = thumbColor;
-    ctx.fill();
-
-    // Center dot
-    ctx.beginPath();
-    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
-    ctx.fillStyle = arcBg;
-    ctx.fill();
+    function lightenColor(hex, amt) {
+      const c = hex.replace('#','');
+      const r = Math.min(255, parseInt(c.substr(0,2),16) + amt);
+      const g = Math.min(255, parseInt(c.substr(2,2),16) + amt);
+      const b = Math.min(255, parseInt(c.substr(4,2),16) + amt);
+      return `rgb(${r},${g},${b})`;
+    }
+    function darkenColor(hex, amt) { return lightenColor(hex, -amt); }
   }
 };
 
@@ -5232,6 +5336,7 @@ const ChatUI = {
     if (p.includes('round') || p.includes('soft') || p.includes('warm') || p.includes('analog')) {
       diff.geometry = { global: { cornerRadius: 16 }, button: { cornerRadius: 16 }, toggle: { trackRounding: 12 } };
       diff.effects = { shadows: { enabled: true, blur: 8, offsetY: 3, alpha: 0.3 } };
+      diff.widgetStyles = { knobStyle: 'filled', buttonStyle: 'raised', toggleStyle: 'pill' };
       diff.colors = {
         custom: { PluginBackground: '#2D1F1A', PanelBackground: '#3A2820', PanelBorder: '#5A4030', KnobArc: '#E8A44D', KnobArcBackground: '#4A3828', AccentPrimary: '#E8A44D', AccentSecondary: '#C47B3A', SliderFill: '#E8A44D', WaveformLine: '#E8A44D', TabActive: '#E8A44D', ProgressFill: '#E8A44D' },
         colors: { UiButtonBackground: '#4A3828', UiButtonText: '#E8D0B0', UiActionButtonBackground: '#E8A44D', UiActionButtonText: '#1A1008', ToggleButtonOn: '#E8A44D', TextEditorBackground: '#2A1C14', TextEditorBorder: '#5A4030', TextEditorText: '#E8D0B0' }
@@ -5240,6 +5345,7 @@ const ChatUI = {
     if (p.includes('sharp') || p.includes('flat') || p.includes('pixel') || p.includes('retro') || p.includes('80s') || p.includes('mac')) {
       diff.geometry = { global: { cornerRadius: 0, borderWidth: 2 }, button: { cornerRadius: 0 }, toggle: { trackRounding: 2 }, slider: { trackRounding: 0 } };
       diff.effects = { bloom: { enabled: false }, shadows: { enabled: false } };
+      diff.widgetStyles = { knobStyle: 'notched', buttonStyle: 'beveled', toggleStyle: 'checkbox' };
       diff.colors = {
         custom: { PluginBackground: '#C0C0C0', PanelBackground: '#FFFFFF', PanelBorder: '#000000', KnobArc: '#000000', KnobArcBackground: '#999999', KnobThumb: '#000000', SliderTrack: '#999999', SliderFill: '#000000', AccentPrimary: '#000000', TextPrimary: '#000000', TextSecondary: '#333333', CardEmpty: '#DDDDDD', CardReady: '#FFFFFF', TabActive: '#000000', WaveformLine: '#000000', ProgressFill: '#000000' },
         colors: { UiButtonBackground: '#FFFFFF', UiButtonText: '#000000', UiActionButtonBackground: '#000000', UiActionButtonText: '#FFFFFF', ToggleButtonOn: '#000000', ToggleButtonOff: '#999999', TextEditorBackground: '#FFFFFF', TextEditorBorder: '#000000', TextEditorText: '#000000', PopupMenuBackground: '#FFFFFF', PopupMenuBorder: '#000000', PopupMenuText: '#000000' }
@@ -5249,6 +5355,7 @@ const ChatUI = {
     if (p.includes('glow') || p.includes('neon') || p.includes('cyber')) {
       diff.geometry = { global: { cornerRadius: 0, borderWidth: 1 } };
       diff.effects = { bloom: { enabled: true, size: 20, intensity: 3 }, shadows: { enabled: true, blur: 20, alpha: 0.8 } };
+      diff.widgetStyles = { knobStyle: 'filled', buttonStyle: 'outlined', toggleStyle: 'rocker' };
       diff.colors = {
         custom: { PluginBackground: '#0A0A0F', PanelBackground: '#111118', PanelBorder: '#FF00FF', KnobArc: '#00FFFF', KnobArcBackground: '#1A1A2E', KnobThumb: '#FF00FF', SliderFill: '#00FFFF', AccentPrimary: '#FF00FF', AccentSecondary: '#00FFFF', TextPrimary: '#00FFFF', TextSecondary: '#FF00FF', WaveformLine: '#00FFFF', ProgressFill: '#FF00FF', TabActive: '#FF00FF' },
         colors: { UiButtonBackground: '#1A1A2E', UiButtonText: '#00FFFF', UiActionButtonBackground: '#FF00FF', UiActionButtonText: '#000000', ToggleButtonOn: '#00FFFF', TextEditorBackground: '#0A0A0F', TextEditorBorder: '#FF00FF', TextEditorText: '#00FFFF' }
@@ -5339,33 +5446,85 @@ const ChatUI = {
   },
 
   capturePreviewThumbnail() {
-    // Capture the preview area as a small thumbnail
+    // Capture a color palette swatch showing the current theme's key colors
     try {
-      const preview = document.getElementById('plugin-chrome');
-      // Use html2canvas-like approach: create a small canvas snapshot
-      // For now, return a colored rectangle as placeholder
+      const style = getComputedStyle(document.getElementById('preview-area'));
+      const get = (v, fb) => style.getPropertyValue(v)?.trim() || fb;
       const canvas = document.createElement('canvas');
-      canvas.width = 200; canvas.height = 120;
+      canvas.width = 200; canvas.height = 80;
       const ctx = canvas.getContext('2d');
-      // Draw a simplified preview representation
-      const bg = getComputedStyle(document.getElementById('preview-area')).getPropertyValue('--vt-PluginBackground')?.trim() || '#33393F';
+      const bg = get('--vt-PluginBackground', '#33393F');
+      const panel = get('--vt-PanelBackground', '#2C3033');
+      const accent = get('--vt-AccentPrimary', '#AA88FF');
+      const btnBg = get('--vt-UiButtonBackground', '#4C4F52');
+      const btnText = get('--vt-UiButtonText', '#DDDDDD');
+      const knobArc = get('--vt-KnobArc', '#AA88FF');
+      const textPrimary = get('--vt-TextPrimary', '#EEEEEE');
+      const toggleOn = get('--vt-ToggleButtonOn', '#AA88FF');
+      // Background
       ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, 200, 120);
-      // Draw accent color bar
-      const accent = getComputedStyle(document.getElementById('preview-area')).getPropertyValue('--vt-AccentPrimary')?.trim() || '#AA88FF';
+      ctx.fillRect(0, 0, 200, 80);
+      // Panel strip
+      ctx.fillStyle = panel;
+      ctx.fillRect(0, 0, 200, 24);
+      // Accent bar
       ctx.fillStyle = accent;
-      ctx.fillRect(10, 10, 60, 8);
-      ctx.fillRect(10, 25, 40, 6);
-      // Draw some circles (knobs)
+      ctx.fillRect(0, 22, 200, 3);
+      // Mini button
+      const r = parseFloat(style.getPropertyValue('--st-button-rounding')) || 6;
+      ctx.fillStyle = btnBg;
+      roundRect(ctx, 8, 32, 50, 18, Math.min(r, 9));
+      ctx.fill();
+      ctx.fillStyle = btnText;
+      ctx.font = '9px sans-serif';
+      ctx.fillText('Btn', 20, 44);
+      // Action button
+      ctx.fillStyle = accent;
+      roundRect(ctx, 64, 32, 50, 18, Math.min(r, 9));
+      ctx.fill();
+      // Knob
       ctx.beginPath();
-      ctx.arc(30, 55, 12, 0, Math.PI * 2);
-      ctx.arc(70, 55, 12, 0, Math.PI * 2);
-      ctx.strokeStyle = accent;
-      ctx.lineWidth = 2;
+      ctx.arc(148, 42, 12, 0, Math.PI * 2);
+      ctx.fillStyle = panel;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(148, 42, 10, Math.PI * 0.75, Math.PI * 2.1);
+      ctx.strokeStyle = knobArc;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
       ctx.stroke();
-      return canvas.toDataURL('image/png', 0.5);
+      // Toggle
+      ctx.fillStyle = toggleOn;
+      roundRect(ctx, 172, 35, 22, 12, 6);
+      ctx.fill();
+      // Text sample
+      ctx.fillStyle = textPrimary;
+      ctx.font = '8px sans-serif';
+      ctx.fillText('Text', 8, 68);
+      ctx.fillStyle = get('--vt-TextSecondary', '#848789');
+      ctx.fillText('Secondary', 36, 68);
+      // Color swatches row at bottom
+      const swatches = [bg, panel, accent, knobArc, toggleOn, btnBg];
+      swatches.forEach((c, i) => {
+        ctx.fillStyle = c;
+        ctx.fillRect(8 + i * 30, 72, 26, 6);
+      });
+      return canvas.toDataURL('image/png', 0.7);
     } catch (e) {
       return null;
+    }
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
     }
   },
 
