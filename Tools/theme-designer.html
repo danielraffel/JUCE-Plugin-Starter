@@ -4996,7 +4996,8 @@ const ChatUI = {
       const reader = new FileReader();
       reader.onload = (ev) => {
         this.pendingImage = ev.target.result; // base64 data URL
-        this.addMessage('user', `[Image: ${file.name}]`, this.pendingImage);
+        // Show thumbnail in input area (don't post to chat)
+        this.showPendingImageThumb(file.name);
       };
       reader.readAsDataURL(file);
       e.target.value = ''; // allow re-upload
@@ -5008,12 +5009,37 @@ const ChatUI = {
     });
   },
 
+  showPendingImageThumb(filename) {
+    let container = document.getElementById('chat-image-preview');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'chat-image-preview';
+      container.style.cssText = 'display:flex;align-items:center;gap:4px;padding:4px 8px;background:var(--app-panel);border-radius:4px;margin-bottom:4px;';
+      const inputArea = document.getElementById('chat-input-area');
+      inputArea.parentNode.insertBefore(container, inputArea);
+    }
+    container.innerHTML = `
+      <img src="${this.pendingImage}" style="width:36px;height:36px;object-fit:cover;border-radius:3px;border:1px solid var(--app-border)">
+      <span style="font-size:9px;color:var(--app-text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${filename}</span>
+      <button style="background:none;border:none;color:var(--app-text-dim);cursor:pointer;font-size:12px;padding:2px" id="chat-clear-image">✕</button>
+    `;
+    document.getElementById('chat-clear-image').addEventListener('click', () => this.clearPendingImage());
+  },
+
+  clearPendingImage() {
+    this.pendingImage = null;
+    const container = document.getElementById('chat-image-preview');
+    if (container) container.remove();
+  },
+
   send() {
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
     if (!text) return;
 
-    this.addMessage('user', text);
+    // Include image indicator in user message if attached
+    const userText = this.pendingImage ? `${text} [image attached]` : text;
+    this.addMessage('user', userText);
     input.value = '';
 
     // Show typing indicator
@@ -5048,7 +5074,7 @@ const ChatUI = {
       this.addMessage('agent', 'Error: ' + (err.message || err));
     });
 
-    this.pendingImage = null;
+    this.clearPendingImage();
   },
 
   // addMessage defined below with diff/thumbnail support
@@ -5138,12 +5164,16 @@ const ChatUI = {
 
   async callAgent(prompt, imageBase64) {
     const model = document.getElementById('chat-model')?.value || 'claude-sonnet-4-6';
+    // If image attached, add note to prompt (v1: text-only, image data not sent to Claude CLI)
+    const fullPrompt = imageBase64
+      ? `${prompt}\n\n[Note: User attached a reference image. Use the text description to interpret what style they want.]`
+      : prompt;
 
     // Try Tauri IPC first
     if (window.__TAURI__) {
       try {
         const result = await window.__TAURI__.core.invoke('chat_send', {
-          prompt,
+          prompt: fullPrompt,
           styleJson: this.buildFullContext(),
           selectedComponent: this.selectedComponent || null,
           model,

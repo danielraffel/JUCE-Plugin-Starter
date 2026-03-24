@@ -21,24 +21,24 @@ This is the #1 blocker. Claude returns a JSON diff but nothing visually changes.
 - [x] A.5 Add CSS for box-shadow on preview components: `.preview-section [data-component] { box-shadow: var(--st-box-shadow, none); }`
 - [x] A.6 Add CSS for typography: preview headings use --st-heading-size, labels use --st-label-size, body text uses --st-body-size
 - [x] A.7 Test in browser (no Tauri): type "round" in chat input, verify mock agent applies rounded corners to buttons and toggles
-- [ ] A.8 Test in Tauri: run `pnpm tauri dev`, type "make it look like an 80s Macintosh" in chat, verify flat corners and no shadows
+- [x] A.8 Test in Tauri: run `pnpm tauri dev`, type "make it look like an 80s Macintosh" in chat, verify flat corners and no shadows
 - [x] A.9 Commit Phase A
 
 Phase B: Human-Readable Chat Responses
 
-- [ ] B.1 Update STYLE_SYSTEM_PROMPT in lib.rs: change "Return ONLY a valid JSON object" to "First write 1-2 sentences explaining what you're changing in conversational, designer-friendly language. Then output the JSON diff on a new line. Do not wrap in markdown code fences."
-- [ ] B.2 Update Rust parser: split response at first `{`, text before is explanation, `{...}` is diff JSON
-- [ ] B.3 Frontend: in send() response handler, show explanation text in chat bubble, show change summary (from summarizeChanges) in muted small text below
-- [ ] B.4 Test: send "warm analog synth" in Tauri, verify chat shows something like "I'll warm this up with rounded corners and soft shadows" not "geometry.button.cornerRadius: 16"
-- [ ] B.5 Commit Phase B
+- [x] B.1 Update STYLE_SYSTEM_PROMPT in lib.rs: change "Return ONLY a valid JSON object" to "First write 1-2 sentences explaining what you're changing in conversational, designer-friendly language. Then output the JSON diff on a new line. Do not wrap in markdown code fences."
+- [x] B.2 Update Rust parser: split response at first `{`, text before is explanation, `{...}` is diff JSON
+- [x] B.3 Frontend: in send() response handler, show explanation text in chat bubble, show change summary (from summarizeChanges) in muted small text below
+- [x] B.4 Test: send "warm analog synth" in Tauri, verify chat shows something like "I'll warm this up with rounded corners and soft shadows" not "geometry.button.cornerRadius: 16"
+- [x] B.5 Commit Phase B
 
 Phase C: Fix Image Attachment UX
 
-- [ ] C.1 Remove the line in file input handler that calls `this.addMessage('user', '[Image: ...]', imageDataUrl)` — images should NOT post to chat immediately
-- [ ] C.2 When an image is selected, show a small thumbnail (40x40) in the chat input area (next to the text input) with an "x" button to remove it
-- [ ] C.3 When user sends a message, include pendingImage with the prompt. After sending, clear the thumbnail from the input area.
-- [ ] C.4 Since claude --print doesn't support images: for now, add a note in the prompt saying "[User attached an image for reference]" but don't send actual image data. This is a v2 feature.
-- [ ] C.5 Commit Phase C
+- [x] C.1 Remove the line in file input handler that calls `this.addMessage('user', '[Image: ...]', imageDataUrl)` — images should NOT post to chat immediately
+- [x] C.2 When an image is selected, show a small thumbnail (40x40) in the chat input area (next to the text input) with an "x" button to remove it
+- [x] C.3 When user sends a message, include pendingImage with the prompt. After sending, clear the thumbnail from the input area.
+- [x] C.4 Since claude --print doesn't support images: for now, add a note in the prompt saying "[User attached an image for reference]" but don't send actual image data. This is a v2 feature.
+- [x] C.5 Commit Phase C
 
 Phase D: Validate with Automated Testing
 
