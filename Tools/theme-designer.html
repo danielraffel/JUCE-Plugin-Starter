@@ -1489,6 +1489,14 @@ button.tb-btn:disabled:hover {
   border-radius: 4px;
   margin-top: 4px;
 }
+.chat-change-summary {
+  font-size: 9px;
+  color: var(--app-text-dim);
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--app-border-subtle);
+  line-height: 1.3;
+}
 .chat-typing {
   display: flex;
   gap: 4px;
@@ -5019,15 +5027,18 @@ const ChatUI = {
         console.log('Style diff received:', JSON.stringify(response.diff, null, 2));
         // Apply the style diff
         this.applyStyleDiff(response.diff);
-        // Build change summary
+        // Build change summary (muted detail)
         const changes = this.summarizeChanges(response.diff);
         // Clean up message — remove code fences and artifacts
-        let cleanMsg = (response.message || '').replace(/```json/g, '').replace(/```/g, '').trim();
-        const msg = cleanMsg ? cleanMsg + '\n\n' + changes : changes;
+        let explanation = (response.message || '').replace(/```json/g, '').replace(/```/g, '').trim();
+        // If no explanation, use a default
+        if (!explanation || explanation === 'Style updated') {
+          explanation = changes;
+        }
         // Capture thumbnail after applying changes
         setTimeout(() => {
           const thumbnail = this.capturePreviewThumbnail();
-          this.addMessage('agent', msg, null, response.diff, thumbnail);
+          this.addMessage('agent', explanation, null, response.diff, thumbnail, changes);
         }, 100); // small delay for canvas redraws
       } else {
         this.addMessage('agent', response.message || 'No changes applied');
@@ -5046,6 +5057,9 @@ const ChatUI = {
     const container = document.getElementById('chat-messages');
     container.innerHTML = this.messages.map(m => {
       let html = `<div class="chat-msg ${m.role}">${this.escapeHtml(m.text)}`;
+      if (m.changeSummary && m.changeSummary !== m.text) {
+        html += `<div class="chat-change-summary">${this.escapeHtml(m.changeSummary)}</div>`;
+      }
       if (m.imageDataUrl) {
         html += `<br><img class="chat-img-preview" src="${m.imageDataUrl}" alt="uploaded">`;
       }
@@ -5098,6 +5112,30 @@ const ChatUI = {
     }
   },
 
+  buildFullContext() {
+    // Combine color tokens AND style system into one JSON for Claude
+    const context = {};
+    // Add current color tokens (simplified: just token name → hex value)
+    if (TokenRegistry.theme) {
+      const colorSummary = {};
+      for (const section of ['colors', 'custom']) {
+        const tokens = TokenRegistry.theme[section];
+        if (tokens) {
+          colorSummary[section] = {};
+          for (const [name, data] of Object.entries(tokens)) {
+            colorSummary[section][name] = data.value;
+          }
+        }
+      }
+      context.currentColors = colorSummary;
+    }
+    // Add style system
+    if (StyleSystem.current) {
+      context.styleSystem = StyleSystem.current;
+    }
+    return JSON.stringify(context);
+  },
+
   async callAgent(prompt, imageBase64) {
     const model = document.getElementById('chat-model')?.value || 'claude-sonnet-4-6';
 
@@ -5106,7 +5144,7 @@ const ChatUI = {
       try {
         const result = await window.__TAURI__.core.invoke('chat_send', {
           prompt,
-          styleJson: StyleSystem.current ? StyleSystem.toJSON() : '{}',
+          styleJson: this.buildFullContext(),
           selectedComponent: this.selectedComponent || null,
           model,
         });
@@ -5131,23 +5169,38 @@ const ChatUI = {
     });
   },
 
-  // Mock agent for browser testing
+  // Mock agent for browser testing — produces DRAMATIC changes including colors
   mockStyleDiff(prompt) {
     const p = prompt.toLowerCase();
     const diff = {};
-    if (p.includes('round') || p.includes('soft')) {
+    if (p.includes('round') || p.includes('soft') || p.includes('warm') || p.includes('analog')) {
       diff.geometry = { global: { cornerRadius: 16 }, button: { cornerRadius: 16 }, toggle: { trackRounding: 12 } };
+      diff.effects = { shadows: { enabled: true, blur: 8, offsetY: 3, alpha: 0.3 } };
+      diff.colors = {
+        custom: { PluginBackground: '#2D1F1A', PanelBackground: '#3A2820', PanelBorder: '#5A4030', KnobArc: '#E8A44D', KnobArcBackground: '#4A3828', AccentPrimary: '#E8A44D', AccentSecondary: '#C47B3A', SliderFill: '#E8A44D', WaveformLine: '#E8A44D', TabActive: '#E8A44D', ProgressFill: '#E8A44D' },
+        colors: { UiButtonBackground: '#4A3828', UiButtonText: '#E8D0B0', UiActionButtonBackground: '#E8A44D', UiActionButtonText: '#1A1008', ToggleButtonOn: '#E8A44D', TextEditorBackground: '#2A1C14', TextEditorBorder: '#5A4030', TextEditorText: '#E8D0B0' }
+      };
     }
     if (p.includes('sharp') || p.includes('flat') || p.includes('pixel') || p.includes('retro') || p.includes('80s') || p.includes('mac')) {
-      diff.geometry = { global: { cornerRadius: 0 }, button: { cornerRadius: 0 }, toggle: { trackRounding: 2 }, slider: { trackRounding: 0 } };
+      diff.geometry = { global: { cornerRadius: 0, borderWidth: 2 }, button: { cornerRadius: 0 }, toggle: { trackRounding: 2 }, slider: { trackRounding: 0 } };
       diff.effects = { bloom: { enabled: false }, shadows: { enabled: false } };
+      diff.colors = {
+        custom: { PluginBackground: '#C0C0C0', PanelBackground: '#FFFFFF', PanelBorder: '#000000', KnobArc: '#000000', KnobArcBackground: '#999999', KnobThumb: '#000000', SliderTrack: '#999999', SliderFill: '#000000', AccentPrimary: '#000000', TextPrimary: '#000000', TextSecondary: '#333333', CardEmpty: '#DDDDDD', CardReady: '#FFFFFF', TabActive: '#000000', WaveformLine: '#000000', ProgressFill: '#000000' },
+        colors: { UiButtonBackground: '#FFFFFF', UiButtonText: '#000000', UiActionButtonBackground: '#000000', UiActionButtonText: '#FFFFFF', ToggleButtonOn: '#000000', ToggleButtonOff: '#999999', TextEditorBackground: '#FFFFFF', TextEditorBorder: '#000000', TextEditorText: '#000000', PopupMenuBackground: '#FFFFFF', PopupMenuBorder: '#000000', PopupMenuText: '#000000' }
+      };
+      diff.typography = { fontWeight: 700 };
     }
     if (p.includes('glow') || p.includes('neon') || p.includes('cyber')) {
-      diff.effects = { bloom: { enabled: true, size: 20, intensity: 3 }, shadows: { enabled: true, blur: 16, alpha: 0.6 } };
+      diff.geometry = { global: { cornerRadius: 0, borderWidth: 1 } };
+      diff.effects = { bloom: { enabled: true, size: 20, intensity: 3 }, shadows: { enabled: true, blur: 20, alpha: 0.8 } };
+      diff.colors = {
+        custom: { PluginBackground: '#0A0A0F', PanelBackground: '#111118', PanelBorder: '#FF00FF', KnobArc: '#00FFFF', KnobArcBackground: '#1A1A2E', KnobThumb: '#FF00FF', SliderFill: '#00FFFF', AccentPrimary: '#FF00FF', AccentSecondary: '#00FFFF', TextPrimary: '#00FFFF', TextSecondary: '#FF00FF', WaveformLine: '#00FFFF', ProgressFill: '#FF00FF', TabActive: '#FF00FF' },
+        colors: { UiButtonBackground: '#1A1A2E', UiButtonText: '#00FFFF', UiActionButtonBackground: '#FF00FF', UiActionButtonText: '#000000', ToggleButtonOn: '#00FFFF', TextEditorBackground: '#0A0A0F', TextEditorBorder: '#FF00FF', TextEditorText: '#00FFFF' }
+      };
     }
     if (p.includes('skeuomorphic') || p.includes('3d') || p.includes('depth')) {
       diff.effects = { shadows: { enabled: true, blur: 12, offsetY: 6, alpha: 0.5 } };
-      diff.geometry = { global: { borderWidth: 2 } };
+      diff.geometry = { global: { borderWidth: 2, cornerRadius: 8 } };
     }
     if (p.includes('big') || p.includes('large')) {
       diff.typography = { headingSize: 20, bodySize: 16, labelSize: 13 };
@@ -5260,8 +5313,8 @@ const ChatUI = {
     }
   },
 
-  addMessage(role, text, imageDataUrl, diff, thumbnail) {
-    const msg = { role, text, imageDataUrl, diff, thumbnail, timestamp: Date.now() };
+  addMessage(role, text, imageDataUrl, diff, thumbnail, changeSummary) {
+    const msg = { role, text, imageDataUrl, diff, thumbnail, changeSummary, timestamp: Date.now() };
     if (diff && Object.keys(diff).length > 0) {
       msg.styleSnapshot = JSON.parse(JSON.stringify(StyleSystem.current));
     }

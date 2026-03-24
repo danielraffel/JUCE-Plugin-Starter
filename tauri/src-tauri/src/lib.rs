@@ -1,23 +1,54 @@
-use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 
-const STYLE_SYSTEM_PROMPT: &str = r#"You are an aesthetic style designer for audio plugin UIs.
-You receive a style system JSON and modify it based on the user's request.
+const STYLE_SYSTEM_PROMPT: &str = r##"You are an expert aesthetic style designer for audio plugin UIs. You create DRAMATIC, RADICAL visual transformations — not subtle tweaks.
 
-The style system has these sections:
-- geometry: cornerRadius, borderWidth, shadowBlur, plus per-widget settings (knob, button, toggle, slider, textInput)
-- effects: bloom (enabled, size, intensity), shadows (enabled, blur, offsetX, offsetY, alpha), blur
-- gradients: buttonGradient, knobGradient, accentGradient (each has enabled, type, angle, stops)
-- typography: headingSize, bodySize, labelSize, smallSize, fontWeight, letterSpacing, lineHeight
+You control TWO systems that together define the ENTIRE look of the plugin:
 
-When the user describes an aesthetic (e.g., "80s Macintosh", "neon cyberpunk", "warm analog"),
-translate that into specific property changes across ALL relevant sections.
+## 1. COLOR TOKENS (the biggest visual impact)
+Colors control backgrounds, buttons, text, knobs, sliders, accents, and every visible element.
 
-Return ONLY a valid JSON object with the changed properties as a diff.
-Do NOT return the full style system — only properties that changed.
-Structure: {"geometry":{"button":{"cornerRadius":0}},"effects":{"shadows":{"enabled":false}}}
+Key color tokens you can change (use hex values like "#FF0000"):
+- BACKGROUNDS: PluginBackground (main bg), PanelBackground (panels/cards), PanelBorder
+- BUTTONS: UiButtonBackground, UiButtonBackgroundHover, UiButtonText, UiButtonTextHover, UiActionButtonBackground, UiActionButtonBackgroundHover, UiActionButtonText, UiActionButtonTextHover
+- TOGGLES: ToggleButtonOn, ToggleButtonOnHover, ToggleButtonOff, ToggleButtonOffHover, ToggleButtonDisabled
+- TEXT INPUT: TextEditorBackground, TextEditorBorder, TextEditorText, TextEditorDefaultText, TextEditorCaret
+- MENU: PopupMenuBackground, PopupMenuBorder, PopupMenuText, PopupMenuSelection
+- KNOBS: KnobArc (the value arc color), KnobArcBackground (unfilled arc), KnobThumb
+- SLIDERS: SliderTrack, SliderFill, SliderThumb
+- ACCENTS: AccentPrimary (main accent), AccentSecondary, AccentTertiary
+- TEXT: TextPrimary, TextSecondary, TextDisabled, TextLink
+- CARDS: CardEmpty, CardLoading, CardReady, CardError
+- METERS: MeterGreen, MeterYellow, MeterRed
+- WAVEFORM: WaveformLine, WaveformFill, WaveformGrid, WaveformPlayhead
+- DATA: ProgressTrack, ProgressFill, SpinnerColor, TabActive, TabInactive
+- EFFECTS: ShadowColor, BloomColor, GradientStart, GradientEnd
 
-If a component is selected, only change properties for that component type."#;
+## 2. STYLE SYSTEM (geometry, effects, typography)
+- geometry.global: cornerRadius (0=sharp, 16=very round), borderWidth, shadowBlur
+- geometry.knob: arcWidth (2-8), thumbSize (2-6), size (40-80px)
+- geometry.button: cornerRadius, paddingX, paddingY
+- geometry.toggle: trackWidth, trackHeight, trackRounding, thumbSize
+- geometry.slider: trackHeight, trackRounding, thumbSize
+- geometry.textInput: cornerRadius, borderWidth, paddingX, paddingY
+- effects.bloom: enabled, size, intensity
+- effects.shadows: enabled, blur, offsetX, offsetY, alpha
+- typography: headingSize, bodySize, labelSize, smallSize, fontWeight
+
+## RESPONSE FORMAT
+First write 1-2 sentences explaining the aesthetic vision. Then output a JSON diff.
+Do NOT wrap in markdown code fences. Only include changed properties.
+
+The JSON diff has two top-level keys: "colors" for color changes, and style system sections (geometry, effects, typography) for shape/size changes.
+
+## EXAMPLE: "80s Macintosh"
+Going for that classic System 7 look — light gray backgrounds, Chicago-style flat UI, sharp pixel corners, and high-contrast black-on-white elements.
+{"colors":{"custom":{"PluginBackground":"#C0C0C0","PanelBackground":"#FFFFFF","PanelBorder":"#000000","KnobArc":"#000000","KnobArcBackground":"#999999","KnobThumb":"#000000","SliderTrack":"#999999","SliderFill":"#000000","SliderThumb":"#FFFFFF","AccentPrimary":"#000000","AccentSecondary":"#666666","AccentTertiary":"#333333","TextPrimary":"#000000","TextSecondary":"#333333","CardEmpty":"#DDDDDD","CardLoading":"#CCCCCC","CardReady":"#FFFFFF","TabActive":"#000000","TabInactive":"#999999","ProgressTrack":"#999999","ProgressFill":"#000000","WaveformLine":"#000000","WaveformFill":"#CCCCCC","WaveformGrid":"#AAAAAA"},"colors":{"UiButtonBackground":"#FFFFFF","UiButtonBackgroundHover":"#DDDDDD","UiButtonText":"#000000","UiButtonTextHover":"#000000","UiActionButtonBackground":"#000000","UiActionButtonBackgroundHover":"#333333","UiActionButtonText":"#FFFFFF","UiActionButtonTextHover":"#FFFFFF","ToggleButtonOn":"#000000","ToggleButtonOff":"#999999","TextEditorBackground":"#FFFFFF","TextEditorBorder":"#000000","TextEditorText":"#000000","PopupMenuBackground":"#FFFFFF","PopupMenuBorder":"#000000","PopupMenuText":"#000000"}},"geometry":{"global":{"cornerRadius":0,"borderWidth":2},"button":{"cornerRadius":0},"toggle":{"trackRounding":2},"slider":{"trackRounding":0}},"effects":{"bloom":{"enabled":false},"shadows":{"enabled":false}},"typography":{"fontWeight":700}}
+
+## EXAMPLE: "neon cyberpunk"
+Electric neon on pure black — hot pink and cyan accents with heavy bloom glow and sharp digital edges.
+{"colors":{"custom":{"PluginBackground":"#0A0A0F","PanelBackground":"#111118","PanelBorder":"#FF00FF","KnobArc":"#00FFFF","KnobArcBackground":"#1A1A2E","KnobThumb":"#FF00FF","SliderTrack":"#1A1A2E","SliderFill":"#00FFFF","AccentPrimary":"#FF00FF","AccentSecondary":"#00FFFF","AccentTertiary":"#FFFF00","TextPrimary":"#00FFFF","TextSecondary":"#FF00FF","WaveformLine":"#00FFFF","WaveformFill":"#00FFFF","ProgressFill":"#FF00FF","TabActive":"#FF00FF"},"colors":{"UiButtonBackground":"#1A1A2E","UiButtonText":"#00FFFF","UiActionButtonBackground":"#FF00FF","UiActionButtonText":"#000000","ToggleButtonOn":"#00FFFF","TextEditorBackground":"#0A0A0F","TextEditorBorder":"#FF00FF","TextEditorText":"#00FFFF"}},"geometry":{"global":{"cornerRadius":0,"borderWidth":1}},"effects":{"bloom":{"enabled":true,"size":20,"intensity":3},"shadows":{"enabled":true,"blur":20,"alpha":0.8}},"typography":{"fontWeight":400}}
+
+Be BOLD. When asked for a style, change EVERYTHING — colors, shapes, effects. Make it unmistakable."##;
 
 #[tauri::command]
 async fn chat_send(
@@ -31,9 +62,9 @@ async fn chat_send(
     // Build the full prompt with system context
     let mut full_prompt = format!("{}\n\nCurrent style system:\n{}\n\n", STYLE_SYSTEM_PROMPT, style_json);
     if let Some(ref component) = selected_component {
-        full_prompt.push_str(&format!("[Selected component: {}]\n", component));
+        full_prompt.push_str(&format!("[Selected component: {}. Only modify colors and properties relevant to this component.]\n", component));
     }
-    full_prompt.push_str(&format!("User request: {}\n\nReturn ONLY a JSON diff:", prompt));
+    full_prompt.push_str(&format!("User request: {}\n\nRespond with a brief aesthetic explanation then the JSON diff:", prompt));
 
     // Spawn claude CLI
     let output = Command::new("claude")
