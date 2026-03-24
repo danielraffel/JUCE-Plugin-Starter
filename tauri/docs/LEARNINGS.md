@@ -26,3 +26,11 @@ This file tracks important learnings during development.
 - Mock agent in browser mode is essential for testing without Tauri
 - Deep merge for style diffs: recursive object merge preserves existing properties not in the diff
 - `camel_to_snake` regex: use two-pass regex for proper camelCase conversion (e.g., cornerRadius → corner_radius)
+
+## Phase A (Chat Fix)
+- ROOT CAUSE of style changes not visually applying: inline `style="border-radius:var(--app-radius)"` on buttons, inputs, dropdowns OVERRIDES the CSS class rules that use `--st-button-rounding` etc. Inline styles have higher specificity than class selectors.
+- Fix: remove inline border-radius from HTML elements, let the CSS class rules (which already reference `--st-*` vars) take effect.
+- The CSS class rules for `.preview-btn`, `.toggle-track`, `.preview-slider`, `.preview-input` already used `--st-*` vars correctly — the problem was only the inline overrides.
+- Cards and panels needed updating from `--app-radius` to `--st-corner-radius` in CSS rules.
+- Toggle `.on` thumb position was hardcoded to `left: 16px` — needs `calc()` to track dynamic width.
+- `drawKnob()` now reads `--st-knob-size` for dynamic sizing and applies canvas shadow when `--st-shadow-alpha > 0`.

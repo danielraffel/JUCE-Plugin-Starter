@@ -572,7 +572,7 @@ button.tb-btn-accent:hover {
   margin-bottom: 20px;
 }
 .preview-section-title {
-  font-size: 9px;
+  font-size: var(--st-small-size, 9px);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -638,7 +638,7 @@ button.tb-btn-accent:hover {
   cursor: pointer;
 }
 .knob-label {
-  font-size: 9px;
+  font-size: var(--st-label-size, 9px);
   color: var(--app-text-dim);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -660,7 +660,7 @@ button.tb-btn-accent:hover {
 }
 .preview-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px; height: 14px;
+  width: var(--st-slider-thumb-size, 14px); height: var(--st-slider-thumb-size, 14px);
   border-radius: 50%;
   background: var(--vt-SliderThumb, #fff);
   cursor: pointer;
@@ -714,8 +714,8 @@ button.tb-btn-accent:hover {
   left: 2px;
   transition: left 0.2s;
 }
-.toggle-track.on .toggle-thumb { left: 16px; }
-.toggle-label { font-size: 10px; color: var(--app-text-muted); }
+.toggle-track.on .toggle-thumb { left: calc(var(--st-toggle-track-width, 32px) - var(--st-toggle-thumb-size, 14px) - 2px); }
+.toggle-label { font-size: var(--st-label-size, 10px); color: var(--app-text-muted); }
 
 .input-row {
   display: flex;
@@ -739,9 +739,11 @@ button.tb-btn-accent:hover {
   gap: 4px;
   padding: 6px 10px;
   border: 1px solid;
+  border-radius: var(--st-button-rounding, var(--app-radius));
   font-family: var(--app-font);
-  font-size: 11px;
+  font-size: var(--st-body-size, 11px);
   cursor: default;
+  box-shadow: var(--st-box-shadow, none);
 }
 .dropdown-arrow { font-size: 8px; opacity: 0.5; }
 
@@ -754,14 +756,15 @@ button.tb-btn-accent:hover {
 }
 .preview-card {
   height: 56px;
-  border-radius: var(--app-radius);
-  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--st-corner-radius, var(--app-radius));
+  border: var(--st-border-width, 1px) solid var(--app-border-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: var(--st-small-size, 9px);
   color: var(--app-text-dim);
   position: relative;
+  box-shadow: var(--st-box-shadow, none);
 }
 .preview-card .card-badge {
   position: absolute;
@@ -781,7 +784,7 @@ button.tb-btn-accent:hover {
 }
 .tab-item {
   padding: 6px 14px;
-  font-size: 11px;
+  font-size: var(--st-body-size, 11px);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
@@ -791,9 +794,10 @@ button.tb-btn-accent:hover {
 .tab-item.active { border-bottom-color: var(--vt-TabActive, #AA88FF); color: var(--app-text); }
 .tab-item:hover { color: var(--app-text-muted); }
 .preview-panel {
-  border: 1px solid;
-  border-radius: var(--app-radius);
+  border: var(--st-border-width, 1px) solid;
+  border-radius: var(--st-corner-radius, var(--app-radius));
   padding: 12px;
+  box-shadow: var(--st-box-shadow, none);
   font-size: 11px;
 }
 .preview-divider {
@@ -2760,17 +2764,43 @@ const CanvasRenderer = {
   drawKnob(canvas, value) {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    const size = 56;
+    const preview = document.getElementById('preview-area');
+    const style = getComputedStyle(preview);
+
+    // Read size from style system (allows AI to change knob size)
+    const size = parseFloat(style.getPropertyValue('--st-knob-size')) || 56;
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, size, size);
 
-    const preview = document.getElementById('preview-area');
-    const style = getComputedStyle(preview);
     const arcColor = style.getPropertyValue('--vt-KnobArc').trim() || '#AA88FF';
     const arcBg = style.getPropertyValue('--vt-KnobArcBackground').trim() || '#3E4245';
     const thumbColor = style.getPropertyValue('--vt-KnobThumb').trim() || 'rgba(255,255,255,0.9)';
+
+    // Apply shadow if enabled
+    const shadowAlpha = parseFloat(style.getPropertyValue('--st-shadow-alpha')) || 0;
+    if (shadowAlpha > 0) {
+      const shadowBlur = parseFloat(style.getPropertyValue('--st-shadow-blur')) || 0;
+      const shadowX = parseFloat(style.getPropertyValue('--st-shadow-offset-x')) || 0;
+      const shadowY = parseFloat(style.getPropertyValue('--st-shadow-offset-y')) || 0;
+      ctx.shadowColor = `rgba(0,0,0,${shadowAlpha})`;
+      ctx.shadowBlur = shadowBlur;
+      ctx.shadowOffsetX = shadowX;
+      ctx.shadowOffsetY = shadowY;
+      // Draw shadow circle behind the knob
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2 - 8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.01)';
+      ctx.fill();
+      // Reset shadow for crisp arcs
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    }
 
     const cx = size / 2, cy = size / 2;
     const r = size / 2 - 6;
@@ -3315,10 +3345,10 @@ const PreviewRenderer = {
         </div>
 
         <div class="btn-row" style="margin-top:12px">
-          <button class="preview-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);border-radius:var(--app-radius)" data-tokens="UiButtonBackground,UiButtonText" data-component="Button (Normal)" data-framework="visage">Normal</button>
-          <button class="preview-btn" style="background:var(--vt-UiButtonBackgroundHover);color:var(--vt-UiButtonTextHover);border-radius:var(--app-radius)" data-tokens="UiButtonBackgroundHover,UiButtonTextHover" data-component="Button (Hover)" data-framework="visage">Hover</button>
-          <button class="preview-btn preview-btn-accent" style="background:var(--vt-UiActionButtonBackground);color:var(--vt-UiActionButtonText);border-radius:var(--app-radius)" data-tokens="UiActionButtonBackground,UiActionButtonBackgroundHover,UiActionButtonText,UiActionButtonTextHover" data-component="Action Button" data-framework="visage">Action</button>
-          <button class="preview-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);border-radius:var(--app-radius);opacity:0.4" disabled data-tokens="UiButtonBackground,UiButtonText,ToggleButtonDisabled" data-component="Button (Disabled)" data-framework="visage">Disabled</button>
+          <button class="preview-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText)" data-tokens="UiButtonBackground,UiButtonText" data-component="Button (Normal)" data-framework="visage">Normal</button>
+          <button class="preview-btn" style="background:var(--vt-UiButtonBackgroundHover);color:var(--vt-UiButtonTextHover)" data-tokens="UiButtonBackgroundHover,UiButtonTextHover" data-component="Button (Hover)" data-framework="visage">Hover</button>
+          <button class="preview-btn preview-btn-accent" style="background:var(--vt-UiActionButtonBackground);color:var(--vt-UiActionButtonText)" data-tokens="UiActionButtonBackground,UiActionButtonBackgroundHover,UiActionButtonText,UiActionButtonTextHover" data-component="Action Button" data-framework="visage">Action</button>
+          <button class="preview-btn" style="background:var(--vt-UiButtonBackground);color:var(--vt-UiButtonText);opacity:0.4" disabled data-tokens="UiButtonBackground,UiButtonText,ToggleButtonDisabled" data-component="Button (Disabled)" data-framework="visage">Disabled</button>
         </div>
 
         <div class="toggle-row" style="margin-top:12px">
@@ -3337,12 +3367,12 @@ const PreviewRenderer = {
         </div>
 
         <div class="input-row" data-tokens="TextEditorBackground,TextEditorBorder,TextEditorText,TextEditorDefaultText,TextEditorCaret" data-component="Text Input" data-framework="visage">
-          <input type="text" class="preview-input" value="Some text" style="background:var(--vt-TextEditorBackground);border-color:var(--vt-TextEditorBorder);color:var(--vt-TextEditorText);border-radius:var(--app-radius)">
-          <input type="text" class="preview-input" placeholder="Placeholder..." style="background:var(--vt-TextEditorBackground);border-color:var(--vt-TextEditorBorder);color:var(--vt-TextEditorDefaultText);border-radius:var(--app-radius)">
+          <input type="text" class="preview-input" value="Some text" style="background:var(--vt-TextEditorBackground);border-color:var(--vt-TextEditorBorder);color:var(--vt-TextEditorText)">
+          <input type="text" class="preview-input" placeholder="Placeholder..." style="background:var(--vt-TextEditorBackground);border-color:var(--vt-TextEditorBorder);color:var(--vt-TextEditorDefaultText)">
         </div>
 
         <div style="margin-top:12px" data-tokens="PopupMenuBackground,PopupMenuBorder,PopupMenuText" data-component="Dropdown" data-framework="visage">
-          <div class="dropdown-preview" style="background:var(--vt-PopupMenuBackground);border-color:var(--vt-PopupMenuBorder);color:var(--vt-PopupMenuText);border-radius:var(--app-radius)">
+          <div class="dropdown-preview" style="background:var(--vt-PopupMenuBackground);border-color:var(--vt-PopupMenuBorder);color:var(--vt-PopupMenuText)">
             <span>Select preset...</span>
             <span class="dropdown-arrow">▼</span>
           </div>
@@ -3354,7 +3384,7 @@ const PreviewRenderer = {
         <div class="preview-section-title">Data Display</div>
         <div class="controls-row">
           <div style="flex:1;min-width:200px" data-tokens="WaveformLine,WaveformFill,WaveformGrid,WaveformPlayhead" data-component="Waveform" data-framework="visage">
-            <canvas id="waveform-canvas" width="400" height="80" style="width:100%;height:80px;border-radius:var(--app-radius);background:var(--vt-PanelBackground)"></canvas>
+            <canvas id="waveform-canvas" width="400" height="80" style="width:100%;height:80px;border-radius:var(--st-corner-radius, var(--app-radius));background:var(--vt-PanelBackground)"></canvas>
           </div>
           <div style="display:flex;gap:4px;height:80px" data-tokens="MeterGreen,MeterYellow,MeterRed" data-component="VU Meter" data-framework="visage">
             <canvas id="meter-l" width="12" height="80" style="width:12px;border-radius:2px"></canvas>
