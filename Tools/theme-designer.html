@@ -5125,7 +5125,9 @@ const ChatUI = {
   },
 
   applyStyleDiff(diff) {
-    if (!StyleSystem.current) return;
+    if (!StyleSystem.current) {
+      StyleSystem.current = {};
+    }
     // Deep merge diff into current style
     const merge = (target, source) => {
       for (const key of Object.keys(source)) {
@@ -5138,7 +5140,32 @@ const ChatUI = {
       }
     };
     merge(StyleSystem.current, diff);
+
+    // Apply ALL style changes: CSS vars + canvas redraws + color system
     StyleSystem.applyToCSS();
+    CanvasRenderer.scheduleRedraw();
+
+    // If diff contains color-related changes, also update color system
+    if (diff.colors || diff.colorSystem) {
+      const colorDiff = diff.colors || diff.colorSystem;
+      if (colorDiff && typeof colorDiff === 'object') {
+        for (const [section, tokens] of Object.entries(colorDiff)) {
+          if (typeof tokens === 'object') {
+            for (const [name, value] of Object.entries(tokens)) {
+              if (typeof value === 'string' && value.startsWith('#')) {
+                TokenRegistry.setColor(section, name, value, 1, true);
+              }
+            }
+          }
+        }
+        CSSBridge.syncAll();
+      }
+    }
+
+    // Force re-render preview to pick up any changes
+    PreviewRenderer.drawWaveform();
+    PreviewRenderer.drawMeters();
+
     // Flash preview
     document.querySelectorAll('.preview-section').forEach(el => {
       el.classList.remove('token-changed-flash');
